@@ -1,10 +1,33 @@
 ﻿<script>
 	const iconBase = 'w-7 h-7 opacity-80 hover:opacity-100 transition-opacity';
-	import tiktok from '/svgs/tiktok.svg';
-	import instagram from '/svgs/instagram.svg';
-	import facebook from '/svgs/facebook.svg';
-	import line from '/svgs/line.svg';
-	import X from '/svgs/X.svg';
+
+	const socialIcons = [
+		{
+			name: 'TikTok',
+			icon: '/svgs/tiktok.svg',
+			href: 'https://github.com/khr123123'
+		},
+		{
+			name: 'Instagram',
+			icon: '/svgs/instagram.svg',
+			href: 'https://github.com/khr123123'
+		},
+		{
+			name: 'Facebook',
+			icon: '/svgs/facebook.svg',
+			href: 'https://github.com/khr123123'
+		},
+		{
+			name: 'Line',
+			icon: '/svgs/line.svg',
+			href: 'https://github.com/khr123123'
+		},
+		{
+			name: 'X',
+			icon: '/svgs/X.svg',
+			href: 'https://github.com/khr123123'
+		}
+	];
 </script>
 
 <footer class="border-t border-gray-300 bg-white font-mono">
@@ -102,46 +125,16 @@
 					SNS公式アカウント
 				</h3>
 				<div class="grid grid-cols-2 gap-4">
-					<a
-						href="https://github.com/khr123123"
-						target="_blank"
-						class="flex items-center gap-3 rounded p-3 transition-colors duration-200 hover:bg-gray-50"
-					>
-						<img src={line} class={iconBase} alt="LINE" />
-						<span class="text-sm text-gray-700">LINE</span>
-					</a>
-					<a
-						href="https://github.com/khr123123"
-						target="_blank"
-						class="flex items-center gap-3 rounded p-3 transition-colors duration-200 hover:bg-gray-50"
-					>
-						<img src={X} class={iconBase} alt="X（旧Twitter）" />
-						<span class="text-sm text-gray-700">X</span>
-					</a>
-					<a
-						href="https://github.com/khr123123"
-						target="_blank"
-						class="flex items-center gap-3 rounded p-3 transition-colors duration-200 hover:bg-gray-50"
-					>
-						<img src={instagram} class={iconBase} alt="Instagram" />
-						<span class="text-sm text-gray-700">Instagram</span>
-					</a>
-					<a
-						href="https://github.com/khr123123"
-						target="_blank"
-						class="flex items-center gap-3 rounded p-3 transition-colors duration-200 hover:bg-gray-50"
-					>
-						<img src={facebook} class={iconBase} alt="facebook" />
-						<span class="text-sm text-gray-700">Facebook</span>
-					</a>
-					<a
-						href="https://github.com/khr123123"
-						target="_blank"
-						class="flex items-center gap-3 rounded p-3 transition-colors duration-200 hover:bg-gray-50"
-					>
-						<img src={tiktok} class={iconBase} alt="TikTok" />
-						<span class="text-sm text-gray-700">TikTok</span>
-					</a>
+					{#each socialIcons as icon}
+						<a
+							href={icon.href}
+							target="_blank"
+							class="flex items-center gap-3 rounded p-3 transition-colors duration-200 hover:bg-gray-50"
+						>
+							<img src={icon.icon} class={iconBase} alt={icon.name} />
+							<span class="text-sm text-gray-700">{icon.name}</span>
+						</a>
+					{/each}
 				</div>
 			</div>
 		</div>

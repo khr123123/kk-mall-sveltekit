@@ -1,9 +1,6 @@
 @import 'tailwindcss';
 @import '@fontsource/fira-mono';
 
-/* ======================
-   全局设计变量（黑白灰）
-====================== */
 :root {
 	/* 字体 */
 	--font-body:
@@ -32,9 +29,6 @@ body {
 	background-color: var(--color-bg);
 }
 
-/* ======================
-   排版
-====================== */
 h1,
 h2,
 h3,
@@ -56,9 +50,6 @@ p {
 	color: var(--color-muted);
 }
 
-/* ======================
-   链接（极简）
-====================== */
 a {
 	color: inherit;
 	text-decoration: none;
@@ -68,9 +59,6 @@ a:hover {
 	text-decoration: underline;
 }
 
-/* ======================
-   代码块（保留但收敛）
-====================== */
 pre {
 	font-size: 14px;
 	font-family: var(--font-mono);
@@ -82,18 +70,12 @@ pre {
 	color: var(--color-text);
 }
 
-/* ======================
-   内容列（用于文章页）
-====================== */
 .text-column {
 	max-width: 48rem;
 	margin: 0 auto;
 	padding: 0 1rem;
 }
 
-/* ======================
-   表单元素
-====================== */
 input,
 button {
 	font-size: inherit;
@@ -101,23 +83,16 @@ button {
 	color: inherit;
 }
 
-/* 去除浏览器 focus 噪音 */
 button:focus:not(:focus-visible) {
 	outline: none;
 }
 
-/* ======================
-   响应式
-====================== */
 @media (min-width: 720px) {
 	h1 {
 		font-size: 2.4rem;
 	}
 }
 
-/* ======================
-   无障碍
-====================== */
 .visually-hidden {
 	border: 0;
 	clip: rect(0 0 0 0);
