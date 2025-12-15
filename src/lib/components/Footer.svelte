@@ -113,7 +113,7 @@
 					</a>
 
 					<div class="pt-4">
-						<p class="text-lg font-medium tracking-tight text-gray-900">0120-10-3300</p>
+						<p class="text-lg font-medium tracking-tight text-gray-900">0101-30-3300</p>
 						<p class="mt-1 text-xs text-gray-500">受付時間: 9:00〜18:00</p>
 					</div>
 				</div>

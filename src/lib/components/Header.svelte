@@ -1,40 +1,54 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { quickCategories } from '$lib/mockdata/Category.js';
 
-	// 用户登录状态 - 这里模拟登录状态，实际应该从store或session获取
-	let isLoggedIn = true; // 设置为false模拟未登录，true模拟已登录
-
-	// 用户数据 - 登录状态时使用这些数据
+	// ==================== 状态管理 ====================
+	// 用户登录状态
+	let isLoggedIn = true;
 	let user = {
 		name: 'K.',
 		avatar: '/logo.png',
 		notifications: 3,
-		messages: 2
+		messages: 2,
+		cartItems: 5
 	};
 
 	// 搜索关键词
 	let searchKeyword = '';
 
-	// 分类菜单状态
+	// 菜单状态
 	let showCategoryMenu = false;
 	let activeParentCategory: number | null = null;
 	let categoryMenuTimeout: number;
 
-	// 用户下拉菜单状态
 	let showUserMenu = false;
 	let userMenuTimeout: number;
 
-	// 登录弹窗状态
 	let showLoginModal = false;
 
+	// 底部导航菜单项配置
+	const navMenuItems = [
+		{ path: '/', label: 'ホーム', exact: true },
+		{ path: '/hot', label: '人気商品', exact: false },
+		{ path: '/new', label: '新着商品', exact: false },
+		{ path: '/deals', label: 'タイムセール', exact: false, isSpecial: true },
+		{ path: '/brands', label: 'ブランド', exact: false },
+		{ path: '/about', label: '会社概要', exact: false }
+	];
+
+	// ==================== 响应式状态 ====================
+	$: activeCategory = quickCategories.find((cat) => cat.id === activeParentCategory);
+
+	// ==================== 搜索功能 ====================
 	function handleSearch() {
 		if (searchKeyword.trim()) {
 			console.log('検索:', searchKeyword);
+			// 实际应该导航到搜索结果页
 		}
 	}
 
-	// 分类菜单函数
+	// ==================== 分类菜单功能 ====================
 	function openCategoryMenu() {
 		clearTimeout(categoryMenuTimeout);
 		showCategoryMenu = true;
@@ -53,10 +67,7 @@
 		activeParentCategory = categoryId;
 	}
 
-	// 获取当前激活的分类
-	$: activeCategory = quickCategories.find((cat) => cat.id === activeParentCategory);
-
-	// 用户菜单函数
+	// ==================== 用户菜单功能 ====================
 	function openUserMenu() {
 		clearTimeout(userMenuTimeout);
 		showUserMenu = true;
@@ -72,20 +83,18 @@
 		showUserMenu = !showUserMenu;
 	}
 
-	// 登录相关函数
+	// ==================== 登录/登出功能 ====================
 	function toggleLogin() {
 		if (isLoggedIn) {
-			// 执行登出操作
 			isLoggedIn = false;
+			showUserMenu = false;
 			console.log('用户已登出');
 		} else {
-			// 显示登录弹窗
 			showLoginModal = true;
 		}
 	}
 
 	function handleLogin() {
-		// 模拟登录成功
 		isLoggedIn = true;
 		showLoginModal = false;
 		console.log('用户已登录');
@@ -94,6 +103,14 @@
 	function handleCloseModal() {
 		showLoginModal = false;
 	}
+
+	// ==================== 键盘事件处理 ====================
+	function handleKeydown(event: KeyboardEvent, callback: () => void) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			callback();
+		}
+	}
 </script>
 
 <header class="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
@@ -101,20 +118,24 @@
 	<div class="px-4 py-3">
 		<div class="mx-auto flex max-w-7xl items-center gap-4">
 			<!-- Logo -->
-			<a href="/" class="flex shrink-0 items-center gap-2 no-underline">
+			<a href="/" class="flex shrink-0 items-center gap-2">
 				<img src="/logo.png" alt="Logo" class="h-10 w-10 rounded-lg object-cover" />
 				<span class="text-xl font-bold tracking-tight text-gray-900">K. Portfolio</span>
 			</a>
+
 			<!-- 所有分类按钮 -->
 			<div
+				class="category-menu-container relative"
 				role="button"
 				tabindex="0"
-				class="category-menu-container relative"
 				on:mouseenter={openCategoryMenu}
 				on:mouseleave={closeCategoryMenu}
+				on:keydown={(e) => handleKeydown(e, openCategoryMenu)}
 			>
 				<button
-					class="flex w-41 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-800 hover:text-gray-900"
+					class="flex w-41 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+					aria-haspopup="true"
+					aria-expanded={showCategoryMenu}
 				>
 					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -131,8 +152,9 @@
 				{#if showCategoryMenu}
 					<div
 						class="category-menu-wrapper absolute top-full left-0 mt-1 flex w-[800px] rounded-lg border border-gray-200 bg-white shadow-xl"
-						on:pointerenter={openCategoryMenu}
-						on:pointerleave={closeCategoryMenu}
+						on:mouseenter={openCategoryMenu}
+						on:mouseleave={closeCategoryMenu}
+						role="menu"
 					>
 						<!-- 父分类 -->
 						<div class="w-62 border-r border-gray-100 bg-gray-50 p-2">
@@ -142,8 +164,7 @@
 									category.id
 										? 'bg-gray-100 text-gray-900'
 										: 'text-gray-700 hover:bg-gray-100'}"
-									on:pointerenter={() => handleMouseEnterCategory(category.id)}
-									on:pointerleave={() => {}}
+									on:mouseenter={() => handleMouseEnterCategory(category.id)}
 									role="menuitem"
 									tabindex="0"
 								>
@@ -167,14 +188,13 @@
 						</div>
 
 						<!-- 子分类 -->
-						{#if activeCategory && activeCategory.children}
+						{#if activeCategory?.children}
 							<div class="flex-1 p-6">
 								<div class="grid grid-cols-2 gap-6">
 									{#each activeCategory.children as child}
 										<a
 											href="/category/{activeCategory.id}?sub={child.id}"
 											class="block rounded-lg px-3 py-2 font-semibold text-gray-900 transition hover:bg-gray-100"
-											on:pointerenter={() => handleMouseEnterCategory(activeParentCategory!)}
 										>
 											{child.name}
 										</a>
@@ -182,7 +202,6 @@
 								</div>
 							</div>
 						{:else}
-							<!-- 默认显示第一个分类的子分类或提示信息 -->
 							<div class="flex flex-1 items-center justify-center p-6">
 								<p class="text-gray-500">サブカテゴリーを選択してください</p>
 							</div>
@@ -220,26 +239,25 @@
 				</div>
 			</div>
 
+			<!-- 下载APP按钮 -->
 			<button
-				class="flex w-41 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:border-gray-800 hover:text-gray-900"
+				class="flex w-41 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
 			>
 				<img src="/svgs/二维码.svg" alt="" class="h-6 w-6" />
-				<!-- Text -->
 				<div class="flex flex-col text-left leading-tight">
 					<span class="font-mono text-xs text-gray-500">モバイルアプリを</span>
 					<span class="font-mono text-xs">ダウンロード</span>
 				</div>
 			</button>
 
+			<!-- 语言/货币切换按钮 -->
 			<button
-				class="flex w-31 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:border-gray-800 hover:text-gray-900"
+				class="flex w-31 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
 			>
-				<!-- Flag Icon (Japan) -->
 				<svg class="h-6 w-6 rounded-lg border border-gray-300" viewBox="0 0 24 24">
 					<rect width="24" height="24" rx="4" fill="#fff" />
 					<circle cx="12" cy="12" r="6" fill="#dc2626" />
 				</svg>
-				<!-- Text -->
 				<div class="flex flex-col text-left leading-tight">
 					<span class="font-mono text-xs text-gray-500">日本 / JA</span>
 					<span class="font-mono text-xs">JPY</span>
@@ -248,12 +266,11 @@
 
 			<!-- 右侧用户区域 -->
 			<div class="flex items-center gap-4">
-				<!-- 登录状态判断 -->
 				{#if isLoggedIn}
-					<!-- 已登录状态 - 显示消息和购物车按钮 -->
+					<!-- 已登录 - 消息按钮 -->
 					<button class="relative rounded-lg p-2 transition-colors hover:bg-gray-100">
 						<svg
-							class="text-black-600 h-6 w-6"
+							class="h-6 w-6 text-gray-600"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor"
@@ -267,23 +284,23 @@
 						</svg>
 						{#if user.messages > 0}
 							<span
-								class="absolute -top-0 -right-2 ml-2 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
+								class="absolute top-0 -right-2 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
 							>
 								{user.messages}
 							</span>
 						{/if}
 					</button>
 
+					<!-- 购物车按钮 -->
 					<button
 						class="flex items-center rounded-lg bg-white px-2 py-2 transition hover:bg-gray-100"
 					>
 						<img src="/svgs/购物车.svg" alt="cart" class="h-6 w-6 shrink-0" />
 						<div class="flex flex-col items-start leading-tight">
-							<!-- 数量 -->
 							<span
-								class="ml-2 h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
+								class="ml-2 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
 							>
-								5
+								{user.cartItems}
 							</span>
 							<span class="w-12 font-mono text-[14px] text-gray-700">カート</span>
 						</div>
@@ -295,16 +312,14 @@
 					<!-- 用户下拉菜单 -->
 					<div
 						class="category-menu-container relative"
-						tabindex="0"
-						role="button"
-						aria-haspopup="true"
-						aria-expanded={showUserMenu}
 						on:mouseenter={openUserMenu}
 						on:mouseleave={closeUserMenu}
 					>
 						<button
 							class="group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100"
 							on:click={toggleUserMenu}
+							aria-haspopup="true"
+							aria-expanded={showUserMenu}
 						>
 							<img
 								src={user.avatar}
@@ -332,17 +347,15 @@
 						<!-- 用户下拉菜单内容 -->
 						{#if showUserMenu}
 							<div
-								role="menu"
-								tabindex="0"
-								aria-label="ユーザーメニュー"
 								class="category-menu-wrapper absolute top-full right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-xl"
 								on:mouseenter={openUserMenu}
 								on:mouseleave={closeUserMenu}
+								role="menu"
 							>
 								<a
-									href="/profile"
-									role="menuitem"
+									href="/profile/profile"
 									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+									role="menuitem"
 								>
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path
@@ -355,9 +368,9 @@
 									マイページ
 								</a>
 								<a
-									href="/orders"
-									role="menuitem"
+									href="/profile/orders"
 									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+									role="menuitem"
 								>
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path
@@ -370,9 +383,9 @@
 									注文履歴
 								</a>
 								<a
-									href="/wishlist"
-									role="menuitem"
+									href="/profile/favorites"
 									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+									role="menuitem"
 								>
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path
@@ -385,9 +398,17 @@
 									お気に入り
 								</a>
 								<a
-									href="/settings"
-									role="menuitem"
+									href="/profile/addresses"
 									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+									role="menuitem"
+								>
+									<img src="/svgs/addresses.svg" alt="addresses" class="h-4 w-4" />
+									アドレス
+								</a>
+								<a
+									href="/profile/settings"
+									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+									role="menuitem"
 								>
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path
@@ -408,8 +429,8 @@
 								<div class="my-1 border-t border-gray-100"></div>
 								<button
 									on:click={toggleLogin}
-									role="menuitem"
 									class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50"
+									role="menuitem"
 								>
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path
@@ -425,7 +446,7 @@
 						{/if}
 					</div>
 				{:else}
-					<!-- 未登录状态 - 显示登录和注册按钮 -->
+					<!-- 未登录 - 登录和注册按钮 -->
 					<div class="flex items-center gap-3">
 						<button
 							on:click={toggleLogin}
@@ -444,187 +465,237 @@
 		</div>
 	</div>
 
-	<!-- 快捷导航 - 日语 -->
-	<div class="border-t border-gray-100 bg-white px-4 py-2">
+	<!-- 底部快捷导航 - 带有手绘下划线效果 -->
+	<nav class="border-t border-gray-100 bg-white px-4 py-2">
 		<div class="mx-auto flex max-w-7xl items-center gap-6 text-sm">
-			<a href="/" class="text-gray-700 transition-colors hover:text-gray-900">ホーム</a>
-			<a href="/hot" class="text-gray-700 transition-colors hover:text-gray-900">人気商品</a>
-			<a href="/new" class="text-gray-700 transition-colors hover:text-gray-900">新着商品</a>
-			<a
-				href="/deals"
-				class="flex items-center gap-1 text-red-600 transition-colors hover:text-red-700"
-			>
-				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-				<span class="font-medium">タイムセール</span>
-			</a>
-			<a href="/brands" class="text-gray-700 transition-colors hover:text-gray-900">ブランド</a>
-			<a href={resolve('/about')} class="text-gray-700 transition-colors hover:text-gray-900"
-				>会社概要</a
-			>
+			{#each navMenuItems as item}
+				<a
+					href={item.path}
+					class="nav-item relative py-1 transition-colors {page.url.pathname === item.path
+						? item.isSpecial
+							? 'text-red-600'
+							: 'text-gray-900'
+						: 'text-gray-700 hover:text-gray-900'}"
+				>
+					{#if item.isSpecial}
+						<span class="flex items-center gap-1 font-medium">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+								/>
+							</svg>
+							{item.label}
+						</span>
+					{:else}
+						{item.label}
+					{/if}
+
+					<!-- 手绘风格的不规则下划线 -->
+					{#if page.url.pathname === item.path}
+						<svg
+							class="nav-underline absolute -bottom-1 left-0"
+							width="100%"
+							height="6"
+							viewBox="0 0 100 6"
+							preserveAspectRatio="none"
+						>
+							<path
+								d="M 0,3 Q 10,1 20,3 T 40,3 T 60,3 T 80,3 T 100,3"
+								stroke="#00C050"
+								stroke-width="2.5"
+								fill="none"
+								stroke-linecap="round"
+							/>
+						</svg>
+					{/if}
+				</a>
+			{/each}
 		</div>
-	</div>
+	</nav>
 </header>
 
 <!-- 登录模态框 -->
 {#if showLoginModal}
-	<!-- ログインモーダル背景オーバーレイ -->
 	<div
+		class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+		on:click={handleCloseModal}
+		on:keydown={(e) => handleKeydown(e, handleCloseModal)}
 		role="button"
 		tabindex="0"
 		aria-label="モーダルを閉じる"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-		on:click={handleCloseModal}
-		on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCloseModal()}
 	>
-		<button
-			aria-label="モーダルを閉じる"
-			on:click={handleCloseModal}
-			class="absolute top-4 right-4 rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+		<div
+			class="modal-content relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl"
+			on:click|stopPropagation
+			role="dialog"
+			aria-modal="true"
 		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M6 18L18 6M6 6l12 12"
-				/>
-			</svg>
-		</button>
-
-		<h2 class="mb-6 text-2xl font-bold text-gray-900">ログイン</h2>
-
-		<form class="space-y-4" on:submit|preventDefault={handleLogin}>
-			<div>
-				<label for="email" class="mb-2 block text-sm font-medium text-gray-700"
-					>メールアドレス</label
-				>
-				<input
-					id="email"
-					type="email"
-					class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-gray-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-					placeholder="example@email.com"
-					required
-				/>
-			</div>
-
-			<div>
-				<label for="password" class="mb-2 block text-sm font-medium text-gray-700">パスワード</label
-				>
-				<input
-					id="password"
-					type="password"
-					class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-gray-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-					placeholder="••••••••"
-					required
-				/>
-			</div>
-
-			<div class="flex items-center justify-between">
-				<label class="flex items-center">
-					<input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-600" />
-					<span class="ml-2 text-sm text-gray-600">ログイン状態を保持</span>
-				</label>
-				<a
-					href="/forgot-password"
-					class="text-sm text-gray-600 hover:text-gray-700 hover:underline"
-				>
-					パスワードを忘れた方
-				</a>
-			</div>
-
+			<!-- 关闭按钮 -->
 			<button
-				type="submit"
-				class="w-full rounded-lg bg-gray-200 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-400"
+				on:click={handleCloseModal}
+				class="absolute top-4 right-4 rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+				aria-label="モーダルを閉じる"
 			>
-				ログイン
+				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M6 18L18 6M6 6l12 12"
+					/>
+				</svg>
 			</button>
 
-			<div class="relative my-6">
-				<div class="absolute inset-0 flex items-center">
-					<div class="w-full border-t border-gray-300"></div>
-				</div>
-				<div class="relative flex justify-center text-sm">
-					<span class="bg-white px-2 text-gray-500">または</span>
-				</div>
-			</div>
+			<h2 class="mb-6 text-2xl font-bold text-gray-900">ログイン</h2>
 
-			<div class="space-y-3">
-				<button
-					type="button"
-					class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-				>
-					<svg class="h-5 w-5" viewBox="0 0 24 24">
-						<path
-							fill="#4285F4"
-							d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-						/>
-						<path
-							fill="#34A853"
-							d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-						/>
-						<path
-							fill="#FBBC05"
-							d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-						/>
-						<path
-							fill="#EA4335"
-							d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-						/>
-					</svg>
-					Googleで続ける
-				</button>
-				<button
-					type="button"
-					class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-				>
-					<svg class="h-5 w-5" fill="#000000" viewBox="0 0 24 24">
-						<path
-							d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
-						/>
-					</svg>
-					GitHubで続ける
-				</button>
-			</div>
+			<form class="space-y-4" on:submit|preventDefault={handleLogin}>
+				<div>
+					<label for="email" class="mb-2 block text-sm font-medium text-gray-700">
+						メールアドレス
+					</label>
+					<input
+						id="email"
+						type="email"
+						class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-gray-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+						placeholder="example@email.com"
+						required
+					/>
+				</div>
 
-			<p class="mt-6 text-center text-sm text-gray-600">
-				アカウントをお持ちでないですか？
-				<a href="/register" class="font-medium text-gray-600 hover:text-gray-700 hover:underline">
-					新規登録
-				</a>
-			</p>
-		</form>
+				<div>
+					<label for="password" class="mb-2 block text-sm font-medium text-gray-700">
+						パスワード
+					</label>
+					<input
+						id="password"
+						type="password"
+						class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-gray-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+						placeholder="••••••••"
+						required
+					/>
+				</div>
+
+				<div class="flex items-center justify-between">
+					<label class="flex items-center">
+						<input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-600" />
+						<span class="ml-2 text-sm text-gray-600">ログイン状態を保持</span>
+					</label>
+					<a
+						href="/forgot-password"
+						class="text-sm text-gray-600 transition-colors hover:text-gray-700 hover:underline"
+					>
+						パスワードを忘れた方
+					</a>
+				</div>
+
+				<button
+					type="submit"
+					class="w-full rounded-lg bg-gray-200 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-400"
+				>
+					ログイン
+				</button>
+
+				<div class="relative my-6">
+					<div class="absolute inset-0 flex items-center">
+						<div class="w-full border-t border-gray-300"></div>
+					</div>
+					<div class="relative flex justify-center text-sm">
+						<span class="bg-white px-2 text-gray-500">または</span>
+					</div>
+				</div>
+
+				<div class="space-y-3">
+					<button
+						type="button"
+						class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+					>
+						<svg class="h-5 w-5" viewBox="0 0 24 24">
+							<path
+								fill="#4285F4"
+								d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+							/>
+							<path
+								fill="#34A853"
+								d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+							/>
+							<path
+								fill="#FBBC05"
+								d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+							/>
+							<path
+								fill="#EA4335"
+								d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+							/>
+						</svg>
+						Googleで続ける
+					</button>
+					<button
+						type="button"
+						class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+					>
+						<svg class="h-5 w-5" fill="#000000" viewBox="0 0 24 24">
+							<path
+								d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+							/>
+						</svg>
+						GitHubで続ける
+					</button>
+				</div>
+
+				<p class="mt-6 text-center text-sm text-gray-600">
+					アカウントをお持ちでないですか？
+					<a
+						href="/register"
+						class="font-medium text-gray-600 transition-colors hover:text-gray-700 hover:underline"
+					>
+						新規登録
+					</a>
+				</p>
+			</form>
+		</div>
 	</div>
 {/if}
 
 <style>
-	/* 移除所有a标签的下划线 */
+	/* ==================== 全局样式 ==================== */
 	a {
 		text-decoration: none;
 	}
 
-	a:hover {
-		text-decoration: none;
+	/* ==================== 导航项样式 ==================== */
+	.nav-item {
+		position: relative;
+		font-weight: 500;
 	}
 
-	/* 搜索框圆形效果 */
-	input[type='text'] {
-		border-radius: 9999px;
+	.nav-item.active {
+		font-weight: 600;
 	}
 
-	/* 下拉菜单动画 */
-	[class*='shadow-xl'] {
-		animation: fadeIn 0.2s ease-out;
+	/* 手绘风格下划线动画 */
+	.nav-underline {
+		animation: drawLine 0.4s ease-out;
 	}
 
-	/* 模态框动画 */
-	.fixed {
+	@keyframes drawLine {
+		from {
+			opacity: 0;
+			stroke-dasharray: 100;
+			stroke-dashoffset: 100;
+		}
+		to {
+			opacity: 1;
+			stroke-dasharray: 100;
+			stroke-dashoffset: 0;
+		}
+	}
+
+	/* ==================== 菜单动画 ==================== */
+	.category-menu-wrapper,
+	.modal-overlay {
 		animation: fadeIn 0.2s ease-out;
 	}
 
@@ -639,18 +710,18 @@
 		}
 	}
 
-	/* 平滑过渡 */
+	/* ==================== 交互效果 ==================== */
 	button,
 	a {
 		transition: all 0.2s ease;
+		text-underline-position: none;
 	}
 
-	/* 按钮点击效果 */
 	button:active {
 		transform: scale(0.98);
 	}
 
-	/* 添加一个透明的覆盖层来消除间隙 */
+	/* ==================== 分类菜单容器 ==================== */
 	.category-menu-container {
 		position: relative;
 	}
@@ -661,6 +732,7 @@
 		top: 100%;
 		left: 0;
 		right: 0;
+		height: 4px;
 		background: transparent;
 		pointer-events: none;
 		z-index: 10;
@@ -668,6 +740,42 @@
 
 	.category-menu-wrapper {
 		position: absolute;
-		top: calc(100% + 2px); /* 调整菜单位置 */
+		top: calc(100% + 2px);
+	}
+
+	/* ==================== 模态框样式 ==================== */
+	.modal-content {
+		animation: slideUp 0.3s ease-out;
+	}
+
+	@keyframes slideUp {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* ==================== 搜索框圆形效果 ==================== */
+	input[type='text'],
+	input[type='email'],
+	input[type='password'] {
+		transition: all 0.2s ease;
+	}
+
+	input[type='text'] {
+		border-radius: 9999px;
+	}
+
+	/* ==================== 响应式优化 ==================== */
+	@media (max-width: 768px) {
+		.category-menu-wrapper {
+			width: 100vw;
+			left: 50%;
+			transform: translateX(-50%);
+		}
 	}
 </style>
