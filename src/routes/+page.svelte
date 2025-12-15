@@ -95,16 +95,16 @@
 		for (let i = 0; i < count; i++) {
 			// 使用固定图片，通过取余数确保相同商品总是使用相同图片
 			const imageIndex = i % productImages.length;
-			
+
 			products.push({
 				id: i + 1,
 				title: titles[i % titles.length], // 使用固定顺序而不是随机
 				image: productImages[imageIndex],
-				price: (Math.floor((i % 10 + 1) * 1000)).toFixed(2), // 更确定的定价
-				originalPrice: (Math.floor((i % 10 + 1) * 1500)).toFixed(2),
-				sales: Math.floor((i % 10 + 1) * 5000),
+				price: Math.floor(((i % 10) + 1) * 1000).toFixed(2), // 更确定的定价
+				originalPrice: Math.floor(((i % 10) + 1) * 1500).toFixed(2),
+				sales: Math.floor(((i % 10) + 1) * 5000),
 				rating: (4 + (i % 5) * 0.2).toFixed(1),
-				discount: Math.floor((i % 5 + 1) * 10)
+				discount: Math.floor(((i % 5) + 1) * 10)
 			});
 		}
 		return products;
@@ -206,25 +206,14 @@
 								: 'translate-x-full opacity-0'}"
 					>
 						<a href={banner.link} class="block h-full">
-							<img 
-								src={banner.image} 
-								alt={banner.title} 
-								class="h-full w-full object-cover" 
+							<img
+								src={banner.image}
+								alt={banner.title}
+								class="h-full w-full object-cover"
 								loading="lazy"
 								width="1200"
 								height="400"
 							/>
-							<div class="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent">
-								<div class="flex h-full flex-col justify-center px-12 text-white">
-									<h2 class="mb-4 text-5xl font-bold">{banner.title}</h2>
-									<p class="text-2xl">{banner.subtitle}</p>
-									<button
-										class="mt-8 w-fit rounded-lg bg-orange-500 px-8 py-3 font-medium transition-colors hover:bg-orange-600"
-									>
-										立即选购
-									</button>
-								</div>
-							</div>
 						</a>
 					</div>
 				{/each}
@@ -264,7 +253,7 @@
 							: 'w-2 bg-white/50'}"
 						on:click={() => goToBanner(index)}
 						aria-label={`跳转到轮播图 ${index + 1}`}
-					/>
+					></button>
 				{/each}
 			</div>
 		</div>
@@ -401,7 +390,6 @@
 <style>
 	.line-clamp-2 {
 		display: -webkit-box;
-		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
