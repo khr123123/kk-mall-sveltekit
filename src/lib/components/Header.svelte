@@ -151,7 +151,7 @@
 				<!-- 分类下拉菜单 -->
 				{#if showCategoryMenu}
 					<div
-						class="category-menu-wrapper absolute top-full left-0 mt-1 flex w-[800px] rounded-lg border border-gray-200 bg-white shadow-xl"
+						class="z-50 category-menu-wrapper absolute top-full left-0 mt-1 flex w-[800px] rounded-lg border border-gray-200 bg-white shadow-xl"
 						on:mouseenter={openCategoryMenu}
 						on:mouseleave={closeCategoryMenu}
 						role="menu"
