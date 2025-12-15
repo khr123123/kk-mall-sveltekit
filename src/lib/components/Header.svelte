@@ -114,7 +114,7 @@
 				on:mouseleave={closeCategoryMenu}
 			>
 				<button
-					class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-800 hover:text-gray-900"
+					class="flex w-41 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-800 hover:text-gray-900"
 				>
 					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -221,7 +221,7 @@
 			</div>
 
 			<button
-				class="flex items-center gap-3 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:border-gray-800 hover:text-gray-900"
+				class="flex w-41 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:border-gray-800 hover:text-gray-900"
 			>
 				<img src="/svgs/二维码.svg" alt="" class="h-6 w-6" />
 				<!-- Text -->
@@ -232,19 +232,18 @@
 			</button>
 
 			<button
-				class="flex items-center gap-3 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:border-gray-800 hover:text-gray-900"
+				class="flex w-31 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:border-gray-800 hover:text-gray-900"
 			>
-				<!-- Text -->
-				<div class="flex flex-col text-left leading-tight">
-					<span class="font-mono text-xs text-gray-500">日本 / JA</span>
-					<span class="font-mono text-xs">JPY</span>
-				</div>
-
 				<!-- Flag Icon (Japan) -->
 				<svg class="h-6 w-6 rounded-lg border border-gray-300" viewBox="0 0 24 24">
 					<rect width="24" height="24" rx="4" fill="#fff" />
 					<circle cx="12" cy="12" r="6" fill="#dc2626" />
 				</svg>
+				<!-- Text -->
+				<div class="flex flex-col text-left leading-tight">
+					<span class="font-mono text-xs text-gray-500">日本 / JA</span>
+					<span class="font-mono text-xs">JPY</span>
+				</div>
 			</button>
 
 			<!-- 右侧用户区域 -->
@@ -254,7 +253,7 @@
 					<!-- 已登录状态 - 显示消息和购物车按钮 -->
 					<button class="relative rounded-lg p-2 transition-colors hover:bg-gray-100">
 						<svg
-							class="h-5 w-5 text-gray-600"
+							class="text-black-600 h-6 w-6"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor"
@@ -268,32 +267,26 @@
 						</svg>
 						{#if user.messages > 0}
 							<span
-								class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white"
+								class="absolute -top-0 -right-2 ml-2 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
 							>
 								{user.messages}
 							</span>
 						{/if}
 					</button>
 
-					<button class="relative rounded-lg p-2 transition-colors hover:bg-gray-100">
-						<svg
-							class="h-5 w-5 text-gray-600"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1.5"
-								d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-							/>
-						</svg>
-						<span
-							class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white"
-						>
-							5
-						</span>
+					<button
+						class="flex items-center rounded-lg bg-white px-2 py-2 transition hover:bg-gray-100"
+					>
+						<img src="/svgs/购物车.svg" alt="cart" class="h-6 w-6 shrink-0" />
+						<div class="flex flex-col items-start leading-tight">
+							<!-- 数量 -->
+							<span
+								class="ml-2 h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
+							>
+								5
+							</span>
+							<span class="w-12 font-mono text-[14px] text-gray-700">カート</span>
+						</div>
 					</button>
 
 					<!-- 分隔线 -->
@@ -491,6 +484,7 @@
 		on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCloseModal()}
 	>
 		<button
+			aria-label="モーダルを閉じる"
 			on:click={handleCloseModal}
 			class="absolute top-4 right-4 rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
 		>
