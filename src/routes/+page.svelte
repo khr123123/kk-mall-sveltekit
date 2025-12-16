@@ -325,7 +325,7 @@
 				<!-- 移动端排序下拉菜单 -->
 				<div class="relative sm:hidden">
 					<select
-						class="sort-select h-9 appearance-none rounded-lg border border-gray-300 bg-white pr-8 pl-3 text-sm text-gray-700 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+						class="sort-select h-9 appearance-none rounded-lg border border-gray-300 bg-white pr-8 pl-3 text-sm text-gray-700 transition-all hover:border-gray-400 focus:border-[#05B588] focus:outline-none active:border-[#05B588]"
 						bind:value={currentSort}
 						on:change={(e) => sortProducts((e.target as HTMLSelectElement)?.value ?? 'default')}
 					>
@@ -333,36 +333,36 @@
 							<option value={option.id}>{option.name}</option>
 						{/each}
 					</select>
-					<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-						<svg
-							class="h-4 w-4 text-gray-400"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M19 9l-7 7-7-7"
-							/>
-						</svg>
-					</div>
 				</div>
 			</div>
 
 			<!-- 桌面端排序按钮组 -->
 			<div class="hidden sm:block">
-				<div class="sort-buttons inline-flex items-center gap-2 rounded-lg bg-gray-50 p-1">
+				<!-- 排序按钮组容器 -->
+				<div class="sort-buttons inline-flex items-center gap-1 rounded-lg bg-gray-50 p-1">
 					{#each sortOptions as option}
 						<button
-							class="sort-button flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 {currentSort ===
+							class="sort-button group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:border-gray-400 focus:border-[#05B588] focus:outline-none active:border-[#05B588] {currentSort ===
 							option.id
-								? 'bg-white text-gray-800 shadow-sm'
-								: 'text-gray-600 hover:text-gray-800'}"
+								? 'bg-white text-gray-500 shadow-md'
+								: 'text-gray-600 hover:bg-white/50 hover:text-gray-900'}"
 							on:click={() => sortProducts(option.id)}
 						>
-							<img src={option.icon} alt={option.name} class="h-4 w-4" />
+							<!-- 图标容器 -->
+							<div class="relative">
+								<img
+									src={option.icon}
+									alt={option.name}
+									class="h-4 w-4 transition-transform duration-200 group-hover:scale-110 {currentSort ===
+									option.id
+										? 'filter-blue'
+										: ''}"
+								/>
+								<!-- 选中状态点 -->
+								{#if currentSort === option.id}
+									<span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#05B588]"></span>
+								{/if}
+							</div>
 							<span>{option.name}</span>
 						</button>
 					{/each}
