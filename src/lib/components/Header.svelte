@@ -11,6 +11,8 @@
 	import LocaleDropdown from './headercomponents/LocaleDropdown.svelte';
 	import MobileMenu from './headercomponents/MobileMenu.svelte';
 	import LoginModal from './headercomponents/LoginModal.svelte';
+	import MessageDropdown from './headercomponents/MessageDropdown.svelte';
+	import CartDropdown from './headercomponents/CartDropdown.svelte';
 
 	// ==================== 状态管理 ====================
 	let isLoggedIn = true;
@@ -52,6 +54,51 @@
 		{ path: '/about', label: '会社概要', exact: false, icon: 'info' }
 	];
 
+	// 消息数据
+	const messageItems = [
+		{
+			id: 1,
+			type: 'order',
+			title: '注文が発送されました',
+			content: 'ご注文の商品#12345が発送されました。',
+			time: '2時間前',
+			read: false,
+			icon: '📦'
+		},
+		{
+			id: 2,
+			type: 'promotion',
+			title: '限定セール開始',
+			content: '週末限定！全商品20%オフセール開催中です。',
+			time: '5時間前',
+			read: false,
+			icon: '🎉'
+		}
+	];
+
+	// 购物车数据
+	const cartItems = [
+		{
+			id: 1,
+			name: 'ワイヤレスイヤホン Pro',
+			image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop',
+			price: 12800,
+			originalPrice: 15800,
+			quantity: 1,
+			color: 'ブラック',
+			inStock: true
+		},
+		{
+			id: 2,
+			name: 'スマートウォッチ Series 5',
+			image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop',
+			price: 28900,
+			quantity: 1,
+			color: 'シルバー',
+			inStock: true
+		}
+	];
+
 	// ==================== 事件处理 ====================
 	function handleSearch() {
 		if (searchKeyword.trim()) {
@@ -88,8 +135,6 @@
 			cartItems: 0
 		};
 		console.log('用户已登出');
-		// 这里可以添加登出的API调用
-		// 清除本地存储的token等
 	}
 
 	// LoginModal关闭时的处理
@@ -107,7 +152,6 @@
 		};
 		showLoginModal = false;
 		console.log('登录成功:', userData);
-		// 这里可以更新用户信息，跳转页面等
 	}
 
 	function handleLocaleChange(event: CustomEvent) {
@@ -118,6 +162,46 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape' && showLoginModal) {
 			handleCloseModal();
+		}
+	}
+
+	// 处理消息相关事件
+	function handleMessageOpen() {
+		console.log('消息面板打开');
+	}
+
+	function handleMarkRead(event: CustomEvent) {
+		console.log('标记为已读:', event.detail);
+	}
+
+	function handleMarkAllRead() {
+		console.log('全部标记为已读');
+		user.messages = 0;
+	}
+
+	function handleDeleteMessage(event: CustomEvent) {
+		console.log('删除消息:', event.detail);
+	}
+
+	function handleMessageClick(event: CustomEvent) {
+		console.log('点击消息:', event.detail);
+		goto(`/messages/${event.detail}`);
+	}
+
+	// 处理购物车相关事件
+	function handleCartOpen() {
+		console.log('购物车面板打开');
+	}
+
+	function handleUpdateQuantity(event: CustomEvent) {
+		console.log('更新数量:', event.detail);
+	}
+
+	function handleRemoveItem(event: CustomEvent) {
+		console.log('删除商品:', event.detail);
+		// 更新购物车数量
+		if (user.cartItems > 0) {
+			user.cartItems--;
 		}
 	}
 
@@ -146,8 +230,12 @@
 			<!-- 左侧区域 -->
 			<div class="flex items-center gap-3 lg:gap-4">
 				<!-- 移动端汉堡菜单按钮 -->
-				<button class="lg:hidden" on:click={toggleMobileMenu} aria-label="メニューを開く">
-					<svg class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<button
+					class="p-2 text-gray-600 hover:text-gray-900 focus:outline-none lg:hidden"
+					on:click={toggleMobileMenu}
+					aria-label="メニューを開く"
+				>
+					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -158,12 +246,12 @@
 				</button>
 
 				<!-- Logo -->
-				<a href="/" class="logo shrink-0">
+				<a href="/" class="logo shrink-0" aria-label="ホームページ">
 					<div class="flex items-center gap-2">
 						<img
 							src="/logo.png"
-							alt="Logo"
-							class="h-8 w-8 rounded-lg object-cover lg:h-10 lg:w-10"
+							alt="K. Portfolio Logo"
+							class="h-8 w-8 rounded-lg object-cover transition-transform hover:scale-105 lg:h-10 lg:w-10"
 						/>
 						<span class="text-lg font-bold tracking-tight text-gray-900 lg:text-xl"
 							>K. Portfolio</span
@@ -188,7 +276,7 @@
 							on:keypress={(e) => e.key === 'Enter' && handleSearch()}
 						/>
 						<button
-							class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-gray-200 p-2 text-white transition-colors hover:bg-gray-400"
+							class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-gray-800 p-2 text-white transition-all hover:bg-gray-900 active:scale-95"
 							on:click={handleSearch}
 							aria-label="検索"
 						>
@@ -206,10 +294,14 @@
 			</div>
 
 			<!-- 右侧区域 -->
-			<div class="flex items-center gap-3 lg:gap-4">
+			<div class="flex items-center gap-2 lg:gap-4">
 				<!-- 移动端搜索按钮 -->
-				<button class="lg:hidden" on:click={toggleMobileSearch} aria-label="検索">
-					<svg class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<button
+					class="p-2 text-gray-600 hover:text-gray-900 focus:outline-none lg:hidden"
+					on:click={toggleMobileSearch}
+					aria-label="検索"
+				>
+					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -224,40 +316,24 @@
 
 				<!-- 地区切换下拉组件 -->
 				<LocaleDropdown on:change={handleLocaleChange} />
-
-				<!-- 购物车按钮 -->
-				<button
-					class="cart-button relative flex items-center rounded-lg px-2 py-2 transition hover:bg-gray-100"
-				>
-					<img src="/svgs/购物车.svg" alt="cart" class="h-6 w-6" />
-					<span
-						class="cart-badge absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white lg:top-0 lg:right-0 lg:h-4 lg:w-6 lg:text-[12px]"
-					>
-						{user.cartItems}
-					</span>
-				</button>
-
-				<!-- 桌面端消息按钮 -->
-				<button
-					class="message-button relative hidden rounded-lg p-2 transition-colors hover:bg-gray-100 lg:block"
-				>
-					<svg class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="1.5"
-							d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-						/>
-					</svg>
-					{#if user.messages > 0}
-						<span
-							class="message-badge absolute top-0 right-0 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-medium text-white"
-						>
-							{user.messages}
-						</span>
-					{/if}
-				</button>
-
+				<!-- 购物车下拉组件 -->
+				<CartDropdown
+					{cartItems}
+					itemCount={user.cartItems}
+					on:open={handleCartOpen}
+					on:updateQuantity={handleUpdateQuantity}
+					on:removeItem={handleRemoveItem}
+				/>
+				<!-- 消息下拉组件 -->
+				<MessageDropdown
+					messages={messageItems}
+					unreadCount={user.messages}
+					on:open={handleMessageOpen}
+					on:markRead={handleMarkRead}
+					on:markAllRead={handleMarkAllRead}
+					on:delete={handleDeleteMessage}
+					on:messageClick={handleMessageClick}
+				/>
 				<!-- 用户下拉组件 -->
 				<UserDropdown
 					{user}
@@ -283,7 +359,7 @@
 						on:keypress={(e) => e.key === 'Enter' && handleSearch()}
 					/>
 					<button
-						class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-gray-200 p-2 text-white transition-colors hover:bg-gray-400"
+						class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-gray-800 p-2 text-white transition-all hover:bg-gray-900 active:scale-95"
 						on:click={handleSearch}
 						aria-label="検索"
 					>
@@ -299,7 +375,7 @@
 				</div>
 				<button
 					on:click={toggleMobileSearch}
-					class="cancel-button rounded-lg px-3 py-2 text-sm text-gray-600"
+					class="cancel-button rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
 				>
 					キャンセル
 				</button>
@@ -314,12 +390,12 @@
 				<a
 					href={item.path}
 					class="nav-link relative py-1 transition-colors {page.url.pathname !== item.path
-						? 'hover:bg-gray-50 hover:text-gray-600'
+						? 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
 						: ''} {page.url.pathname === item.path
 						? item.isSpecial
 							? 'font-semibold text-red-600'
 							: 'font-semibold text-gray-900'
-						: 'text-gray-700'}"
+						: ''}"
 				>
 					{#if item.isSpecial}
 						<span class="flex items-center gap-1 text-sm">
@@ -383,13 +459,7 @@
 <LoginModal show={showLoginModal} onClose={handleCloseModal} on:loginSuccess={handleLoginSuccess} />
 
 <style>
-	/* 保留原有样式 */
-	.nav-link {
-		position: relative;
-		font-weight: 500;
-		padding: 0.25rem 0;
-	}
-
+	/* 动画效果 */
 	.nav-underline {
 		animation: drawLine 0.4s ease-out;
 	}
@@ -407,6 +477,7 @@
 		}
 	}
 
+	/* 交互效果 */
 	button,
 	a {
 		transition: all 0.2s ease;
@@ -414,21 +485,26 @@
 	}
 
 	button:active {
-		transform: scale(0.98);
+		transform: scale(0.95);
 	}
 
-	.cart-badge {
-		line-height: 1;
+	/* 搜索框样式 */
+	.search-input,
+	.mobile-search-input {
+		transition: all 0.2s;
 	}
 
-	@media (min-width: 1024px) {
-		.cart-badge {
-			transform: translate(25%, -25%);
+	.search-input:focus,
+	.mobile-search-input:focus {
+		border-color: #9ca3af;
+		box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.2);
+	}
+
+	/* 响应式调整 */
+	@media (max-width: 640px) {
+		.cancel-button {
+			font-size: 0.875rem;
+			padding: 0.5rem 0.75rem;
 		}
-	}
-
-	/* 模态框样式覆盖 */
-	.modal-overlay {
-		z-index: 9999 !important;
 	}
 </style>
