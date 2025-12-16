@@ -26,15 +26,32 @@
 	let userMenuTimeout: number;
 
 	let showLoginModal = false;
+	let showMobileMenu = false;
+	let showMobileSearch = false;
 
 	// 底部导航菜单项配置
 	const navMenuItems = [
-		{ path: '/', label: 'ホーム', exact: true },
-		{ path: '/hot', label: '人気商品', exact: false },
-		{ path: '/new', label: '新着商品', exact: false },
-		{ path: '/deals', label: 'タイムセール', exact: false, isSpecial: true },
-		{ path: '/brands', label: 'ブランド', exact: false },
-		{ path: '/about', label: '会社概要', exact: false }
+		{ path: '/', label: 'ホーム', exact: true, icon: '/mall/首页.svg' },
+		{ path: '/hot', label: '人気商品', exact: false, icon: '/mall/人气.svg' },
+		{ path: '/new', label: '新着商品', exact: false, icon: '/mall/闪电.svg' },
+		{
+			path: '/deals',
+			label: 'タイムセール',
+			exact: false,
+			isSpecial: true,
+			icon: '/mall/时间.svg'
+		},
+		{ path: '/brands', label: 'ブランド', exact: false, icon: '/mall/砍价记录.svg' },
+		{ path: '/about', label: '会社概要', exact: false, icon: 'info' }
+	];
+
+	// 用户菜单项
+	const userMenuItems = [
+		{ label: 'マイページ', href: '/profile/profile', icon: '/svgs/user.svg' },
+		{ label: '注文履歴', href: '/profile/orders', icon: '/svgs/orders.svg' },
+		{ label: 'お気に入り', href: '/profile/favorites', icon: '/svgs/heart.svg' },
+		{ label: 'アドレス', href: '/profile/addresses', icon: '/svgs/addresses.svg' },
+		{ label: '設定', href: '/profile/settings', icon: '/svgs/settings.svg' }
 	];
 
 	// ==================== 响应式状态 ====================
@@ -80,7 +97,28 @@
 	}
 
 	function toggleUserMenu() {
-		showUserMenu = !showUserMenu;
+		if (window.innerWidth >= 1024) {
+			// 桌面端保持下拉菜单
+			showUserMenu = !showUserMenu;
+		} else {
+			// 移动端直接打开登录框
+			toggleLogin();
+		}
+	}
+
+	// ==================== 移动端功能 ====================
+	function toggleMobileMenu() {
+		showMobileMenu = !showMobileMenu;
+	}
+
+	function toggleMobileSearch() {
+		showMobileSearch = !showMobileSearch;
+		if (showMobileSearch) {
+			setTimeout(() => {
+				const searchInput = document.querySelector('.mobile-search-input');
+				if (searchInput) (searchInput as HTMLInputElement).focus();
+			}, 100);
+		}
 	}
 
 	// ==================== 登录/登出功能 ====================
@@ -94,7 +132,8 @@
 		}
 	}
 
-	function handleLogin() {
+	function handleLogin(event: Event) {
+		event.preventDefault();
 		isLoggedIn = true;
 		showLoginModal = false;
 		console.log('用户已登录');
@@ -111,33 +150,20 @@
 			callback();
 		}
 	}
+
+	// ==================== 图标组件函数 ====================
+	// 这是一个独立的图标组件，我们将在模板中直接使用条件语句
 </script>
 
 <header class="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
 	<!-- 主导航栏 -->
 	<div class="px-4 py-3">
-		<div class="mx-auto flex max-w-7xl items-center gap-4">
-			<!-- Logo -->
-			<a href="/" class="flex shrink-0 items-center gap-2">
-				<img src="/logo.png" alt="Logo" class="h-10 w-10 rounded-lg object-cover" />
-				<span class="text-xl font-bold tracking-tight text-gray-900">K. Portfolio</span>
-			</a>
-
-			<!-- 所有分类按钮 -->
-			<div
-				class="category-menu-container relative"
-				role="button"
-				tabindex="0"
-				on:mouseenter={openCategoryMenu}
-				on:mouseleave={closeCategoryMenu}
-				on:keydown={(e) => handleKeydown(e, openCategoryMenu)}
-			>
-				<button
-					class="flex w-41 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-					aria-haspopup="true"
-					aria-expanded={showCategoryMenu}
-				>
-					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		<div class="mx-auto flex max-w-7xl items-center justify-between gap-3">
+			<!-- 左侧区域 -->
+			<div class="flex items-center gap-3 lg:gap-4">
+				<!-- 移动端汉堡菜单按钮 -->
+				<button class="lg:hidden" on:click={toggleMobileMenu} aria-label="メニューを開く">
+					<svg class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -145,80 +171,120 @@
 							d="M4 6h16M4 12h16M4 18h16"
 						/>
 					</svg>
-					<span>すべてのカテゴリ</span>
 				</button>
 
-				<!-- 分类下拉菜单 -->
-				{#if showCategoryMenu}
-					<div
-						class="z-50 category-menu-wrapper absolute top-full left-0 mt-1 flex w-[800px] rounded-lg border border-gray-200 bg-white shadow-xl"
-						on:mouseenter={openCategoryMenu}
-						on:mouseleave={closeCategoryMenu}
-						role="menu"
-					>
-						<!-- 父分类 -->
-						<div class="w-62 border-r border-gray-100 bg-gray-50 p-2">
-							{#each quickCategories as category}
-								<div
-									class="flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors {activeParentCategory ===
-									category.id
-										? 'bg-gray-100 text-gray-900'
-										: 'text-gray-700 hover:bg-gray-100'}"
-									on:mouseenter={() => handleMouseEnterCategory(category.id)}
-									role="menuitem"
-									tabindex="0"
-								>
-									<img src={category.icon} alt={category.name} class="h-5 w-5 object-cover" />
-									<span class="font-medium">{category.name}</span>
-									<svg
-										class="ml-auto h-4 w-4"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M9 5l7 7-7 7"
-										/>
-									</svg>
-								</div>
-							{/each}
-						</div>
-
-						<!-- 子分类 -->
-						{#if activeCategory?.children}
-							<div class="flex-1 p-6">
-								<div class="grid grid-cols-2 gap-6">
-									{#each activeCategory.children as child}
-										<a
-											href="/category/{activeCategory.id}?sub={child.id}"
-											class="block rounded-lg px-3 py-2 font-semibold text-gray-900 transition hover:bg-gray-100"
-										>
-											{child.name}
-										</a>
-									{/each}
-								</div>
-							</div>
-						{:else}
-							<div class="flex flex-1 items-center justify-center p-6">
-								<p class="text-gray-500">サブカテゴリーを選択してください</p>
-							</div>
-						{/if}
+				<!-- Logo -->
+				<a href="/" class="logo shrink-0">
+					<div class="flex items-center gap-2">
+						<img
+							src="/logo.png"
+							alt="Logo"
+							class="h-8 w-8 rounded-lg object-cover lg:h-10 lg:w-10"
+						/>
+						<span class="text-lg font-bold tracking-tight text-gray-900 lg:text-xl">
+							K. Portfolio
+						</span>
 					</div>
-				{/if}
+				</a>
 			</div>
 
-			<!-- 搜索框 -->
-			<div class="flex flex-1">
-				<div class="relative flex items-center">
-					<div class="relative w-[380px]">
+			<!-- 桌面端分类按钮 -->
+			<div class="hidden flex-1 items-center gap-4 lg:flex">
+				<!-- 所有分类按钮 -->
+				<div
+					class="category-menu-container relative"
+					role="button"
+					tabindex="0"
+					on:mouseenter={openCategoryMenu}
+					on:mouseleave={closeCategoryMenu}
+					on:keydown={(e) => handleKeydown(e, openCategoryMenu)}
+				>
+					<button
+						class="category-button ml-5 flex min-w-[180px] items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+						aria-haspopup="true"
+						aria-expanded={showCategoryMenu}
+					>
+						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 6h16M4 12h16M4 18h16"
+							/>
+						</svg>
+						<span>すべてのカテゴリ</span>
+					</button>
+
+					<!-- 分类下拉菜单 -->
+					{#if showCategoryMenu}
+						<div
+							class="category-menu-wrapper absolute top-full left-0 mt-1 flex w-[800px] rounded-lg border border-gray-200 bg-white shadow-xl"
+							on:mouseenter={openCategoryMenu}
+							on:mouseleave={closeCategoryMenu}
+							role="menu"
+						>
+							<!-- 父分类 -->
+							<div class="w-62 border-r border-gray-100 bg-gray-50 p-2">
+								{#each quickCategories as category}
+									<div
+										class="flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors {activeParentCategory ===
+										category.id
+											? 'bg-gray-100 text-gray-900'
+											: 'text-gray-700 hover:bg-gray-100'}"
+										on:mouseenter={() => handleMouseEnterCategory(category.id)}
+										role="menuitem"
+										tabindex="0"
+									>
+										<img src={category.icon} alt={category.name} class="h-5 w-5 object-cover" />
+										<span class="font-medium">{category.name}</span>
+										<svg
+											class="ml-auto h-4 w-4"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 5l7 7-7 7"
+											/>
+										</svg>
+									</div>
+								{/each}
+							</div>
+
+							<!-- 子分类 -->
+							{#if activeCategory?.children}
+								<div class="flex-1 p-6">
+									<div class="grid grid-cols-2 gap-6">
+										{#each activeCategory.children as child}
+											<a
+												href="/category/{activeCategory.id}?sub={child.id}"
+												class="block rounded-lg px-3 py-2 font-semibold text-gray-900 transition hover:bg-gray-100"
+											>
+												{child.name}
+											</a>
+										{/each}
+									</div>
+								</div>
+							{:else}
+								<div class="flex flex-1 items-center justify-center p-6">
+									<p class="text-gray-500">サブカテゴリーを選択してください</p>
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</div>
+
+				<!-- 搜索框 -->
+				<div class="relative max-w-xl flex-1">
+					<div class="relative">
 						<input
 							type="text"
 							bind:value={searchKeyword}
 							placeholder="商品やブランドを検索..."
-							class="w-full rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none"
+							class="search-input w-full rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none"
 							on:keypress={(e) => e.key === 'Enter' && handleSearch()}
 						/>
 						<button
@@ -239,261 +305,260 @@
 				</div>
 			</div>
 
-			<!-- 下载APP按钮 -->
-			<button
-				class="flex w-41 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
-			>
-				<img src="/svgs/二维码.svg" alt="" class="h-6 w-6" />
-				<div class="flex flex-col text-left leading-tight">
-					<span class="font-mono text-xs text-gray-500">モバイルアプリを</span>
-					<span class="font-mono text-xs">ダウンロード</span>
-				</div>
-			</button>
+			<!-- 右侧区域 -->
+			<div class="flex items-center gap-3 lg:gap-4">
+				<!-- 移动端搜索按钮 -->
+				<button class="lg:hidden" on:click={toggleMobileSearch} aria-label="検索">
+					<svg class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+						/>
+					</svg>
+				</button>
 
-			<!-- 语言/货币切换按钮 -->
-			<button
-				class="flex w-31 items-center gap-1 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
-			>
-				<svg class="h-6 w-6 rounded-lg border border-gray-300" viewBox="0 0 24 24">
-					<rect width="24" height="24" rx="4" fill="#fff" />
-					<circle cx="12" cy="12" r="6" fill="#dc2626" />
-				</svg>
-				<div class="flex flex-col text-left leading-tight">
-					<span class="font-mono text-xs text-gray-500">日本 / JA</span>
-					<span class="font-mono text-xs">JPY</span>
-				</div>
-			</button>
+				<!-- 下载APP按钮 (桌面端) -->
+				<button
+					class="app-button hidden min-w-[150px] items-center gap-2 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 lg:flex"
+				>
+					<img src="/svgs/二维码.svg" alt="QRコード" class="h-6 w-6 shrink-0" />
+					<div class="flex flex-col overflow-hidden text-left leading-tight">
+						<span class="truncate text-xs text-gray-500">モバイルアプリを</span>
+						<span class="truncate text-xs font-medium">ダウンロード</span>
+					</div>
+				</button>
 
-			<!-- 右侧用户区域 -->
-			<div class="flex items-center gap-4">
-				{#if isLoggedIn}
-					<!-- 已登录 - 消息按钮 -->
-					<button class="relative rounded-lg p-2 transition-colors hover:bg-gray-100">
-						<svg
-							class="h-6 w-6 text-gray-600"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1.5"
-								d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-							/>
-						</svg>
-						{#if user.messages > 0}
-							<span
-								class="absolute top-0 -right-2 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
-							>
-								{user.messages}
-							</span>
-						{/if}
-					</button>
+				<!-- 语言/货币切换按钮 (桌面端) -->
+				<button
+					class="locale-button hidden min-w-[110px] items-center gap-2 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 lg:flex"
+				>
+					<svg class="h-6 w-6 shrink-0 rounded-lg border border-gray-300" viewBox="0 0 24 24">
+						<rect width="24" height="24" rx="4" fill="#fff" />
+						<circle cx="12" cy="12" r="6" fill="#dc2626" />
+					</svg>
+					<div class="flex flex-col overflow-hidden text-left leading-tight">
+						<span class="truncate text-xs text-gray-500">日本 / JA</span>
+						<span class="truncate text-xs font-medium">JPY</span>
+					</div>
+				</button>
 
-					<!-- 购物车按钮 -->
-					<button
-						class="flex items-center rounded-lg bg-white px-2 py-2 transition hover:bg-gray-100"
+				<!-- 购物车按钮 -->
+				<button
+					class="cart-button relative flex items-center rounded-lg px-2 py-2 transition hover:bg-gray-100"
+				>
+					<img src="/svgs/购物车.svg" alt="cart" class="h-6 w-6" />
+					<span
+						class="cart-badge absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white lg:top-0 lg:right-0 lg:h-4 lg:w-6 lg:text-[12px]"
 					>
-						<img src="/svgs/购物车.svg" alt="cart" class="h-6 w-6 shrink-0" />
-						<div class="flex flex-col items-start leading-tight">
-							<span
-								class="ml-2 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] font-medium text-white"
+						{user.cartItems}
+					</span>
+				</button>
+
+				<!-- 桌面端消息按钮 -->
+				<button
+					class="message-button relative hidden rounded-lg p-2 transition-colors hover:bg-gray-100 lg:block"
+				>
+					<svg class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+						/>
+					</svg>
+					{#if user.messages > 0}
+						<span
+							class="message-badge absolute top-0 right-0 flex h-4 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-medium text-white"
+						>
+							{user.messages}
+						</span>
+					{/if}
+				</button>
+
+				<!-- 用户区域 -->
+				<div class="user-menu-container relative">
+					{#if isLoggedIn}
+						<!-- 已登录状态 -->
+						<div class="hidden lg:block" on:mouseenter={openUserMenu} on:mouseleave={closeUserMenu}>
+							<button
+								class="user-button flex items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100"
+								on:click={toggleUserMenu}
+								aria-haspopup="true"
+								aria-expanded={showUserMenu}
 							>
-								{user.cartItems}
-							</span>
-							<span class="w-12 font-mono text-[14px] text-gray-700">カート</span>
+								<img
+									src={user.avatar}
+									alt={user.name}
+									class="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200"
+								/>
+								<span class="text-sm font-medium text-gray-700">{user.name}</span>
+								<svg
+									class="h-4 w-4 text-gray-500 transition-transform {showUserMenu
+										? 'rotate-180'
+										: ''}"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M19 9l-7 7-7-7"
+									/>
+								</svg>
+							</button>
+
+							{#if showUserMenu}
+								<div
+									class="user-menu-dropdown absolute top-full right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-xl"
+									on:mouseenter={openUserMenu}
+									on:mouseleave={closeUserMenu}
+									role="menu"
+								>
+									{#each userMenuItems as item}
+										<a
+											href={item.href}
+											class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+											role="menuitem"
+										>
+											<img src={item.icon} alt={item.label} class="h-4 w-4" />
+											{item.label}
+										</a>
+									{/each}
+									<div class="my-1 border-t border-gray-100"></div>
+									<button
+										on:click={toggleLogin}
+										class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50"
+									>
+										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="1.5"
+												d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+											/>
+										</svg>
+										ログアウト
+									</button>
+								</div>
+							{/if}
 						</div>
-					</button>
 
-					<!-- 分隔线 -->
-					<div class="h-6 w-px bg-gray-300"></div>
-
-					<!-- 用户下拉菜单 -->
-					<div
-						class="category-menu-container relative"
-						on:mouseenter={openUserMenu}
-						on:mouseleave={closeUserMenu}
-					>
-						<button
-							class="group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100"
-							on:click={toggleUserMenu}
-							aria-haspopup="true"
-							aria-expanded={showUserMenu}
-						>
+						<!-- 移动端用户头像 -->
+						<button class="lg:hidden" on:click={toggleLogin} aria-label="ユーザーメニュー">
 							<img
 								src={user.avatar}
 								alt={user.name}
 								class="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200"
 							/>
-							<span class="text-sm font-medium text-gray-700">{user.name}</span>
-							<svg
-								class="h-4 w-4 text-gray-500 transition-transform {showUserMenu
-									? 'rotate-180'
-									: ''}"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
+						</button>
+					{:else}
+						<!-- 未登录状态 -->
+						<div class="flex items-center gap-3">
+							<button
+								on:click={toggleLogin}
+								class="login-button rounded-lg border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 lg:px-4 lg:py-2 lg:text-sm"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M19 9l-7 7-7-7"
-								/>
-							</svg>
-						</button>
-
-						<!-- 用户下拉菜单内容 -->
-						{#if showUserMenu}
-							<div
-								class="category-menu-wrapper absolute top-full right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-xl"
-								on:mouseenter={openUserMenu}
-								on:mouseleave={closeUserMenu}
-								role="menu"
+								ログイン
+							</button>
+							<button
+								class="register-button hidden rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-400 lg:block"
 							>
-								<a
-									href="/profile/profile"
-									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-									role="menuitem"
-								>
-									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="1.5"
-											d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-										/>
-									</svg>
-									マイページ
-								</a>
-								<a
-									href="/profile/orders"
-									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-									role="menuitem"
-								>
-									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="1.5"
-											d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-										/>
-									</svg>
-									注文履歴
-								</a>
-								<a
-									href="/profile/favorites"
-									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-									role="menuitem"
-								>
-									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="1.5"
-											d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-										/>
-									</svg>
-									お気に入り
-								</a>
-								<a
-									href="/profile/addresses"
-									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-									role="menuitem"
-								>
-									<img src="/svgs/addresses.svg" alt="addresses" class="h-4 w-4" />
-									アドレス
-								</a>
-								<a
-									href="/profile/settings"
-									class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-									role="menuitem"
-								>
-									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="1.5"
-											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-										/>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="1.5"
-											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-										/>
-									</svg>
-									設定
-								</a>
-								<div class="my-1 border-t border-gray-100"></div>
-								<button
-									on:click={toggleLogin}
-									class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50"
-									role="menuitem"
-								>
-									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="1.5"
-											d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-										/>
-									</svg>
-									ログアウト
-								</button>
-							</div>
-						{/if}
-					</div>
-				{:else}
-					<!-- 未登录 - 登录和注册按钮 -->
-					<div class="flex items-center gap-3">
-						<button
-							on:click={toggleLogin}
-							class="rounded-lg border border-gray-600 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
-						>
-							ログイン
-						</button>
-						<button
-							class="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-400"
-						>
-							新規登録
-						</button>
-					</div>
-				{/if}
+								新規登録
+							</button>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
 
-	<!-- 底部快捷导航 - 带有手绘下划线效果 -->
-	<nav class="border-t border-gray-100 bg-white px-4 py-2">
+	<!-- 移动端搜索栏 -->
+	{#if showMobileSearch}
+		<div class="mobile-search-bar border-t border-gray-100 bg-white px-4 py-3 lg:hidden">
+			<div class="flex items-center gap-2">
+				<div class="relative flex-1">
+					<input
+						type="text"
+						bind:value={searchKeyword}
+						placeholder="商品やブランドを検索..."
+						class="mobile-search-input w-full rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none"
+						on:keypress={(e) => e.key === 'Enter' && handleSearch()}
+					/>
+					<button
+						class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-gray-200 p-2 text-white transition-colors hover:bg-gray-400"
+						on:click={handleSearch}
+						aria-label="検索"
+					>
+						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+							/>
+						</svg>
+					</button>
+				</div>
+				<button
+					on:click={toggleMobileSearch}
+					class="cancel-button rounded-lg px-3 py-2 text-sm text-gray-600"
+				>
+					キャンセル
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- 桌面端底部导航 -->
+	<nav class="desktop-nav hidden border-t border-gray-100 bg-white px-4 py-2 lg:block">
 		<div class="mx-auto flex max-w-7xl items-center gap-6 text-sm">
 			{#each navMenuItems as item}
 				<a
 					href={item.path}
-					class="nav-item relative py-1 transition-colors {page.url.pathname === item.path
+					class="nav-link relative py-1 transition-colors {page.url.pathname !== item.path
+						? 'hover:bg-gray-50 hover:text-gray-600'
+						: ''} {page.url.pathname === item.path
 						? item.isSpecial
-							? 'text-red-600'
-							: 'text-gray-900'
-						: 'text-gray-700 hover:text-gray-900'}"
+							? 'font-semibold text-red-600'
+							: 'font-semibold text-gray-900'
+						: 'text-gray-700 '}"
 				>
 					{#if item.isSpecial}
-						<span class="flex items-center gap-1 font-medium">
-							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
+						<data class="flex items-center gap-1 text-sm">
+							<img src={item.icon} alt={item.label} class="h-4 w-4" />
 							{item.label}
-						</span>
+						</data>
 					{:else}
-						{item.label}
+						<div class="flex items-center gap-1">
+							<!-- 直接使用条件语句渲染不同的图标 -->
+							{#if item.icon === '/mall/首页.svg'}
+								<img src={item.icon} alt={item.label} class="h-4 w-4" />
+							{:else if item.icon === '/mall/人气.svg'}
+								<img src={item.icon} alt={item.label} class="h-4 w-4" />
+							{:else if item.icon === '/mall/闪电.svg'}
+								<img src={item.icon} alt={item.label} class="h-5 w-5" />
+							{:else if item.icon === '/mall/时间.svg'}
+								<img src={item.icon} alt={item.label} class="h-4 w-4" />
+							{:else if item.icon === '/mall/砍价记录.svg'}
+								<img src={item.icon} alt={item.label} class="h-4 w-4" />
+							{:else if item.icon === 'info'}
+								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M13 16h-1v-4h1m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+							{/if}
+							{item.label}
+						</div>
 					{/if}
 
-					<!-- 手绘风格的不规则下划线 -->
 					{#if page.url.pathname === item.path}
 						<svg
 							class="nav-underline absolute -bottom-1 left-0"
@@ -515,14 +580,163 @@
 			{/each}
 		</div>
 	</nav>
+
+	<!-- 移动端全屏菜单 -->
+	{#if showMobileMenu}
+		<div class="mobile-menu fixed inset-0 z-40 bg-white lg:hidden">
+			<!-- 菜单头部 -->
+			<div class="flex items-center justify-between border-b border-gray-100 px-4 py-4">
+				<a href="/" class="flex items-center gap-2" on:click={toggleMobileMenu}>
+					<img src="/logo.png" alt="Logo" class="h-8 w-8 rounded-lg object-cover" />
+					<span class="text-lg font-bold tracking-tight text-gray-900">K. Portfolio</span>
+				</a>
+				<button on:click={toggleMobileMenu} class="rounded-lg p-2" aria-label="メニューを閉じる">
+					<svg class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
+					</svg>
+				</button>
+			</div>
+
+			<!-- 菜单内容 -->
+			<div class="mobile-menu-content overflow-y-auto px-4 py-6">
+				<!-- 用户信息 -->
+				{#if isLoggedIn}
+					<div class="user-info mb-6 flex items-center gap-3">
+						<img
+							src={user.avatar}
+							alt={user.name}
+							class="h-12 w-12 rounded-full object-cover ring-2 ring-gray-200"
+						/>
+						<div>
+							<p class="font-medium text-gray-900">{user.name}</p>
+							<p class="text-sm text-gray-500">マイページを見る</p>
+						</div>
+					</div>
+				{/if}
+
+				<!-- 导航菜单 -->
+				<nav class="mobile-nav mb-6 space-y-1">
+					{#each navMenuItems as item}
+						<a
+							href={item.path}
+							class="mobile-nav-link flex items-center justify-between rounded-lg px-4 py-3 text-gray-700 transition-colors hover:bg-gray-50 {page
+								.url.pathname === item.path
+								? 'bg-gray-50 font-medium text-gray-900'
+								: ''}"
+							on:click={toggleMobileMenu}
+						>
+							<span class="flex items-center gap-2">
+								<!-- 移动端菜单图标 -->
+								{#if item.icon === '/mall/首页.svg'}
+									<img src={item.icon} alt={item.label} class="h-5 w-5" />
+								{:else if item.icon === '/mall/人气.svg'}
+									<img src={item.icon} alt={item.label} class="h-5 w-5" />
+								{:else if item.icon === '/mall/闪电.svg'}
+									<img src={item.icon} alt={item.label} class="h-5 w-5" />
+								{:else if item.icon === '/mall/时间.svg'}
+									<img src={item.icon} alt={item.label} class="h-5 w-5" />
+								{:else if item.icon === 'clock'}
+									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+								{:else if item.icon === '/mall/砍价记录.svg'}
+									<img src={item.icon} alt={item.label} class="h-4 w-4" />
+								{:else if item.icon === 'info'}
+									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M13 16h-1v-4h1m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+								{/if}
+								{item.label}
+							</span>
+							<svg
+								class="h-5 w-5 text-gray-400"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 5l7 7-7 7"
+								/>
+							</svg>
+						</a>
+					{/each}
+				</nav>
+
+				<!-- 用户菜单项 -->
+				{#if isLoggedIn}
+					<div class="user-menu-items mb-6 space-y-1">
+						{#each userMenuItems as item}
+							<a
+								href={item.href}
+								class="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition-colors hover:bg-gray-50"
+								on:click={toggleMobileMenu}
+							>
+								<img src={item.icon} alt={item.label} class="h-5 w-5" />
+								{item.label}
+							</a>
+						{/each}
+						<button
+							on:click={() => {
+								toggleLogin();
+								toggleMobileMenu();
+							}}
+							class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-red-600 transition-colors hover:bg-red-50"
+						>
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+								/>
+							</svg>
+							ログアウト
+						</button>
+					</div>
+				{:else}
+					<div class="auth-buttons mb-6 flex gap-3">
+						<button
+							on:click={() => {
+								toggleLogin();
+								toggleMobileMenu();
+							}}
+							class="flex-1 rounded-lg border border-gray-600 py-2.5 text-sm font-medium text-gray-600"
+						>
+							ログイン
+						</button>
+						<button class="flex-1 rounded-lg bg-gray-200 py-2.5 text-sm font-medium text-white">
+							新規登録
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </header>
 
 <!-- 登录模态框 -->
 {#if showLoginModal}
 	<div
-		class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+		class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
 		on:click={handleCloseModal}
-		on:keydown={(e) => handleKeydown(e, handleCloseModal)}
 		role="button"
 		tabindex="0"
 		aria-label="モーダルを閉じる"
@@ -536,7 +750,7 @@
 			<!-- 关闭按钮 -->
 			<button
 				on:click={handleCloseModal}
-				class="absolute top-4 right-4 rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+				class="modal-close absolute top-4 right-4 rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
 				aria-label="モーダルを閉じる"
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -549,9 +763,9 @@
 				</svg>
 			</button>
 
-			<h2 class="mb-6 text-2xl font-bold text-gray-900">ログイン</h2>
+			<h2 class="modal-title mb-6 text-2xl font-bold text-gray-900">ログイン</h2>
 
-			<form class="space-y-4" on:submit|preventDefault={handleLogin}>
+			<form class="space-y-4" on:submit={handleLogin}>
 				<div>
 					<label for="email" class="mb-2 block text-sm font-medium text-gray-700">
 						メールアドレス
@@ -593,12 +807,12 @@
 
 				<button
 					type="submit"
-					class="w-full rounded-lg bg-gray-200 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-400"
+					class="submit-button w-full rounded-lg bg-gray-200 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-400"
 				>
 					ログイン
 				</button>
 
-				<div class="relative my-6">
+				<div class="divider relative my-6">
 					<div class="absolute inset-0 flex items-center">
 						<div class="w-full border-t border-gray-300"></div>
 					</div>
@@ -607,10 +821,10 @@
 					</div>
 				</div>
 
-				<div class="space-y-3">
+				<div class="social-login space-y-3">
 					<button
 						type="button"
-						class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+						class="social-button flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						<svg class="h-5 w-5" viewBox="0 0 24 24">
 							<path
@@ -634,7 +848,7 @@
 					</button>
 					<button
 						type="button"
-						class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+						class="social-button flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						<svg class="h-5 w-5" fill="#000000" viewBox="0 0 24 24">
 							<path
@@ -645,7 +859,7 @@
 					</button>
 				</div>
 
-				<p class="mt-6 text-center text-sm text-gray-600">
+				<p class="register-text mt-6 text-center text-sm text-gray-600">
 					アカウントをお持ちでないですか？
 					<a
 						href="/register"
@@ -661,18 +875,36 @@
 
 <style>
 	/* ==================== 全局样式 ==================== */
-	a {
-		text-decoration: none;
+	* {
+		box-sizing: border-box;
 	}
 
-	/* ==================== 导航项样式 ==================== */
-	.nav-item {
+	/* ==================== 按钮样式 ==================== */
+	.category-button,
+	.app-button,
+	.locale-button {
+		min-width: 180px;
+	}
+
+	@media (max-width: 1280px) {
+		.category-button {
+			min-width: 160px;
+		}
+
+		.app-button {
+			min-width: 140px;
+		}
+
+		.locale-button {
+			min-width: 100px;
+		}
+	}
+
+	/* ==================== 导航样式 ==================== */
+	.nav-link {
 		position: relative;
 		font-weight: 500;
-	}
-
-	.nav-item.active {
-		font-weight: 600;
+		padding: 0.25rem 0;
 	}
 
 	/* 手绘风格下划线动画 */
@@ -695,6 +927,7 @@
 
 	/* ==================== 菜单动画 ==================== */
 	.category-menu-wrapper,
+	.user-menu-dropdown,
 	.modal-overlay {
 		animation: fadeIn 0.2s ease-out;
 	}
@@ -714,7 +947,7 @@
 	button,
 	a {
 		transition: all 0.2s ease;
-		text-underline-position: none;
+		outline: none;
 	}
 
 	button:active {
@@ -726,21 +959,19 @@
 		position: relative;
 	}
 
-	.category-menu-container::after {
-		content: '';
-		position: absolute;
-		top: 100%;
-		left: 0;
-		right: 0;
-		height: 4px;
-		background: transparent;
-		pointer-events: none;
-		z-index: 10;
-	}
-
 	.category-menu-wrapper {
 		position: absolute;
 		top: calc(100% + 2px);
+		left: 0;
+		z-index: 50;
+	}
+
+	/* ==================== 用户菜单 ==================== */
+	.user-menu-dropdown {
+		position: absolute;
+		top: 100%;
+		right: 0;
+		z-index: 50;
 	}
 
 	/* ==================== 模态框样式 ==================== */
@@ -759,23 +990,107 @@
 		}
 	}
 
-	/* ==================== 搜索框圆形效果 ==================== */
-	input[type='text'],
-	input[type='email'],
-	input[type='password'] {
-		transition: all 0.2s ease;
+	/* ==================== 购物车角标 ==================== */
+	.cart-badge {
+		line-height: 1;
 	}
 
-	input[type='text'] {
-		border-radius: 9999px;
+	@media (min-width: 1024px) {
+		.cart-badge {
+			transform: translate(25%, -25%);
+		}
+	}
+
+	/* ==================== 移动端菜单 ==================== */
+	.mobile-menu {
+		animation: slideIn 0.3s ease-out;
+	}
+
+	@keyframes slideIn {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(0);
+		}
+	}
+
+	.mobile-menu-content {
+		height: calc(100vh - 64px);
 	}
 
 	/* ==================== 响应式优化 ==================== */
-	@media (max-width: 768px) {
-		.category-menu-wrapper {
-			width: 100vw;
-			left: 50%;
-			transform: translateX(-50%);
+	@media (max-width: 1024px) {
+		.category-button,
+		.app-button,
+		.locale-button {
+			display: none;
 		}
+
+		.desktop-nav {
+			display: none;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.logo span {
+			font-size: 1rem;
+		}
+
+		.logo img {
+			height: 32px;
+			width: 32px;
+		}
+
+		.cart-button {
+			padding: 0.25rem;
+		}
+
+		.login-button {
+			padding: 0.375rem 0.75rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.logo span {
+			font-size: 0.875rem;
+		}
+
+		.logo img {
+			height: 28px;
+			width: 28px;
+		}
+
+		.cart-badge {
+			font-size: 9px;
+			height: 16px;
+			width: 16px;
+		}
+	}
+
+	/* ==================== 工具类 ==================== */
+	.flex-center {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.truncate {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* ==================== 输入框样式 ==================== */
+	.search-input,
+	.mobile-search-input {
+		border-radius: 9999px;
+		transition: all 0.2s ease;
+	}
+
+	.search-input:focus,
+	.mobile-search-input:focus {
+		outline: none;
+		box-shadow: 0 0 0 3px rgba(209, 213, 219, 0.3);
 	}
 </style>

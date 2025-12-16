@@ -8,28 +8,32 @@
 			image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&h=400&fit=crop',
 			title: '新年セール',
 			subtitle: '全品50%OFF〜',
-			link: '/sale'
+			link: '/sale',
+			color: 'from-red-500/90'
 		},
 		{
 			id: 2,
 			image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&h=400&fit=crop',
 			title: '家電・デジタル',
 			subtitle: '最新ガジェット',
-			link: '/electronics'
+			link: '/electronics',
+			color: 'from-blue-500/90'
 		},
 		{
 			id: 3,
 			image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop',
 			title: 'ファッション',
 			subtitle: '春の新作',
-			link: '/fashion'
+			link: '/fashion',
+			color: 'from-pink-500/90'
 		},
 		{
 			id: 4,
 			image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop',
 			title: 'ホーム&リビング',
 			subtitle: '暮らしを豊かに',
-			link: '/home'
+			link: '/home',
+			color: 'from-green-500/90'
 		}
 	];
 
@@ -198,11 +202,11 @@
 	}
 </script>
 
-<main class="bg-gray-50 font-mono">
+<main class="min-h-screen bg-gray-50">
 	<!-- 轮播图区域 -->
-	<section class="mx-auto max-w-7xl">
-		<div class="relative overflow-hidden rounded-2xl bg-white shadow-lg">
-			<div class="relative h-96">
+	<section class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+		<div class="relative overflow-hidden rounded-2xl bg-white shadow-sm">
+			<div class="relative h-64 sm:h-80 lg:h-96">
 				{#each banners as banner, index}
 					<div
 						class="absolute inset-0 transition-all duration-700 ease-in-out {index === currentBanner
@@ -211,20 +215,25 @@
 								? '-translate-x-full opacity-0'
 								: 'translate-x-full opacity-0'}"
 					>
-						<a href={banner.link} class="block h-full no-underline">
+						<a href={banner.link} class="group relative block h-full overflow-hidden no-underline">
 							<img
 								src={banner.image}
 								alt={banner.title}
-								class="h-full w-full object-cover"
+								class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
 								loading="lazy"
 								width="1200"
 								height="400"
 							/>
 							<div
-								class="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/60 to-transparent p-6"
-							>
-								<h3 class="mb-1 text-3xl font-bold text-white">{banner.title}</h3>
-								<p class="text-lg text-white/90">{banner.subtitle}</p>
+								class="absolute inset-0 bg-gradient-to-r {banner.color} to-transparent opacity-90 lg:opacity-70"
+							></div>
+							<div class="absolute right-0 bottom-0 left-0 p-4 sm:p-6 lg:p-8">
+								<h3 class="mb-1 text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
+									{banner.title}
+								</h3>
+								<p class="text-base text-white/90 sm:text-lg lg:text-xl">
+									{banner.subtitle}
+								</p>
 							</div>
 						</a>
 					</div>
@@ -233,11 +242,11 @@
 
 			<!-- 轮播控制按钮 -->
 			<button
-				class="absolute top-1/2 left-4 -translate-y-1/2 rounded-full bg-white/80 p-3 shadow-lg transition-all hover:scale-110 hover:bg-white"
+				class="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white sm:left-4 sm:p-3"
 				on:click={prevBanner}
 				aria-label="前のバナー"
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -247,22 +256,22 @@
 				</svg>
 			</button>
 			<button
-				class="absolute top-1/2 right-4 -translate-y-1/2 rounded-full bg-white/80 p-3 shadow-lg transition-all hover:scale-110 hover:bg-white"
+				class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white sm:right-4 sm:p-3"
 				on:click={nextBanner}
 				aria-label="次のバナー"
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 				</svg>
 			</button>
 
 			<!-- 轮播指示器 -->
-			<div class="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
+			<div class="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 sm:bottom-6 sm:gap-2">
 				{#each banners as _, index}
 					<button
-						class="h-2 rounded-full transition-all {index === currentBanner
-							? 'w-8 bg-white'
-							: 'w-2 bg-white/50'}"
+						class="h-1.5 rounded-full transition-all sm:h-2 {index === currentBanner
+							? 'w-6 bg-white sm:w-8'
+							: 'w-1.5 bg-white/50 sm:w-2'}"
 						on:click={() => goToBanner(index)}
 						aria-label="バナー {index + 1} へ"
 					></button>
@@ -272,32 +281,31 @@
 	</section>
 
 	<!-- 快捷分类 -->
-	<section class="mx-auto max-w-7xl px-4 py-6">
-		<div class="rounded-2xl bg-white p-6 shadow-sm">
-			<h2 class="mb-4 text-xl font-bold text-gray-900">人気カテゴリー</h2>
-			<div class="grid grid-cols-5 gap-3 md:grid-cols-10">
+	<section class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+		<div class="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
+			<h2 class="mb-4 text-lg font-bold text-gray-900 sm:text-xl">人気カテゴリー</h2>
+			<div class="grid grid-cols-4 gap-2 sm:grid-cols-5 sm:gap-3 md:grid-cols-8 lg:grid-cols-10">
 				{#each quickCategories as category}
 					<a
 						href="/category/{category.id}"
-						class="group relative flex flex-col items-center rounded-xl p-2 no-underline transition-all hover:scale-105 hover:bg-gray-50"
+						class="group relative flex flex-col items-center rounded-xl p-2 no-underline transition-all duration-300 hover:scale-105 hover:bg-gray-50"
 					>
 						<!-- 分类图标容器 -->
 						<div
-							class="relative mb-1 flex h-12 w-12 items-center justify-center rounded-lg {category.color}"
+							class="relative mb-1 flex h-10 w-10 items-center justify-center rounded-lg {category.color} sm:h-12 sm:w-12"
 						>
-							<img src={category.icon} alt={category.name} class="h-6 w-6" />
+							<img src={category.icon} alt={category.name} class="h-5 w-5 sm:h-6 sm:w-6" />
 						</div>
 						<span
-							class="
-    block
-    w-full
-    text-center
-    text-xs
-    leading-tight
-    font-medium
-    wrap-break-word
-    text-gray-700
-  "
+							class="text-xs font-medium text-gray-700 sm:text-xs"
+							style="
+								display: -webkit-box;
+								-webkit-line-clamp: 2;
+								-webkit-box-orient: vertical;
+								overflow: hidden;
+								text-align: center;
+								line-height: 1.2;
+							"
 						>
 							{category.name}
 						</span>
@@ -308,46 +316,82 @@
 	</section>
 
 	<!-- 热门推荐 -->
-	<section class="mx-auto max-w-7xl px-4 py-6">
-		<div class="mb-6 flex items-center justify-between">
-			<h2 class="text-xl font-bold text-gray-900">おすすめ商品</h2>
-			<div class="flex gap-2">
-				{#each sortOptions as option}
-					<button
-						class="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5
-		text-xs font-medium text-gray-700 transition-all
-		hover:border-gray-500 hover:text-gray-500
-		{currentSort === option.id ? 'border-gray-500 bg-gray-50 text-gray-700' : ''}"
-						on:click={() => sortProducts(option.id)}
+	<section class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+		<div class="mb-6">
+			<!-- 标题区域 -->
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-lg font-bold text-gray-900 sm:text-xl">おすすめ商品</h2>
+
+				<!-- 移动端排序下拉菜单 -->
+				<div class="relative sm:hidden">
+					<select
+						class="sort-select h-9 appearance-none rounded-lg border border-gray-300 bg-white pr-8 pl-3 text-sm text-gray-700 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+						bind:value={currentSort}
+						on:change={(e) => sortProducts((e.target as HTMLSelectElement)?.value ?? 'default')}
 					>
-						<img src={option.icon} alt={option.name} class="block h-4 w-4" />
-						<span class="font-mono leading-none">
-							{option.name}
-						</span>
-					</button>
-				{/each}
+						{#each sortOptions as option}
+							<option value={option.id}>{option.name}</option>
+						{/each}
+					</select>
+					<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+						<svg
+							class="h-4 w-4 text-gray-400"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 9l-7 7-7-7"
+							/>
+						</svg>
+					</div>
+				</div>
+			</div>
+
+			<!-- 桌面端排序按钮组 -->
+			<div class="hidden sm:block">
+				<div class="sort-buttons inline-flex items-center gap-2 rounded-lg bg-gray-50 p-1">
+					{#each sortOptions as option}
+						<button
+							class="sort-button flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 {currentSort ===
+							option.id
+								? 'bg-white text-gray-800 shadow-sm'
+								: 'text-gray-600 hover:text-gray-800'}"
+							on:click={() => sortProducts(option.id)}
+						>
+							<img src={option.icon} alt={option.name} class="h-4 w-4" />
+							<span>{option.name}</span>
+						</button>
+					{/each}
+				</div>
 			</div>
 		</div>
+
 		<!-- 商品网格 -->
-		<div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
+		<div
+			class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+		>
 			{#each displayedProducts as product (product.id)}
 				<a
 					href="/product/{product.id}"
-					class="group overflow-hidden rounded-xl bg-white no-underline shadow-sm transition-all hover:shadow-xl"
+					class="product-card group relative overflow-hidden rounded-xl bg-white no-underline shadow-sm transition-all duration-300 hover:shadow-lg"
 				>
 					<!-- 商品图片 -->
-					<div class="relative overflow-hidden bg-gray-100 pb-[100%]">
+					<div class="relative aspect-square overflow-hidden bg-gray-100">
 						<img
 							src={product.image}
 							alt={product.title}
-							class="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-110"
+							class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 							loading="lazy"
 							width="300"
 							height="300"
 						/>
 						{#if product.discount}
 							<div
-								class="absolute top-2 left-2 rounded-lg bg-red-500 px-2 py-1 text-xs font-bold text-white"
+								class="absolute top-2 left-2 rounded-md bg-red-500 px-2 py-1 text-xs font-bold text-white"
 							>
 								-{product.discount}%
 							</div>
@@ -356,7 +400,16 @@
 
 					<!-- 商品信息 -->
 					<div class="p-3">
-						<h3 class="mb-2 line-clamp-2 text-sm text-gray-800 group-hover:text-orange-500">
+						<h3
+							class="product-title mb-2 text-sm text-gray-800 transition-colors group-hover:text-blue-600"
+							style="
+								display: -webkit-box;
+								-webkit-line-clamp: 2;
+								-webkit-box-orient: vertical;
+								overflow: hidden;
+								line-height: 1.3;
+							"
+						>
 							{product.title}
 						</h3>
 
@@ -379,12 +432,17 @@
 						</div>
 
 						<div class="mb-2 flex items-baseline gap-2">
-							<span class="text-lg font-bold text-orange-500">¥{product.price}</span>
-							<span class="text-xs text-gray-400 line-through">¥{product.originalPrice}</span>
+							<span class="text-base font-bold text-red-500 sm:text-lg">¥{product.price}</span>
+							{#if product.originalPrice !== product.price}
+								<span class="text-xs text-gray-400 line-through">
+									¥{product.originalPrice}
+								</span>
+							{/if}
 						</div>
 
 						<div class="text-xs text-gray-500">
-							販売数 {product.sales.toLocaleString('ja-JP')}
+							<span class="font-medium">販売数</span>
+							{product.sales.toLocaleString('ja-JP')}
 						</div>
 					</div>
 				</a>
@@ -394,8 +452,10 @@
 		<!-- 加载更多指示器 -->
 		{#if loading}
 			<div class="mt-8 flex justify-center">
-				<div class="flex items-center gap-3 text-gray-600">
-					<svg class="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
+				<div
+					class="loading-indicator flex items-center gap-3 rounded-lg bg-white px-6 py-3 text-gray-600 shadow-sm"
+				>
+					<svg class="h-5 w-5 animate-spin sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24">
 						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
 						></circle>
 						<path
@@ -404,36 +464,229 @@
 							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 						></path>
 					</svg>
-					<span>読み込み中...</span>
+					<span class="text-sm sm:text-base">読み込み中...</span>
 				</div>
 			</div>
 		{/if}
 
-		{#if !hasMore}
-			<div class="mt-8 text-center text-gray-500">すべて表示しました</div>
+		{#if !hasMore && displayedProducts.length > 0}
+			<div
+				class="end-message mt-8 rounded-lg bg-gray-50 py-4 text-center text-sm text-gray-500 sm:text-base"
+			>
+				すべて表示しました
+			</div>
 		{/if}
 	</section>
+
+	<!-- 底部安全区域 -->
+	<div class="h-8"></div>
 </main>
 
 <style>
-	/* 全局样式 */
-	.font-mono {
-		font-family: 'SF Mono', Monaco, 'Roboto Mono', 'Courier New', monospace;
+	/* ==================== 全局样式 ==================== */
+	* {
+		box-sizing: border-box;
 	}
 
-	.line-clamp-2 {
-		display: -webkit-box;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
+	/* ==================== PocketBase风格样式 ==================== */
+	/* 卡片阴影 */
+	.shadow-sm {
+		box-shadow:
+			0 1px 3px 0 rgba(0, 0, 0, 0.1),
+			0 1px 2px -1px rgba(0, 0, 0, 0.1);
 	}
 
-	/* 移除所有链接的下划线 */
-	a.no-underline {
-		text-decoration: none !important;
+	.shadow-lg {
+		box-shadow:
+			0 10px 15px -3px rgba(0, 0, 0, 0.1),
+			0 4px 6px -4px rgba(0, 0, 0, 0.1);
 	}
 
-	/* 确保所有a标签都没有下划线 */
-	a {
-		text-decoration: none;
+	/* 按钮样式 */
+	.sort-button {
+		min-height: 36px;
+	}
+
+	.sort-button:hover {
+		transform: translateY(-1px);
+	}
+
+	.sort-button:active {
+		transform: translateY(0);
+	}
+
+	/* 选择框样式 */
+	.sort-select {
+		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+		background-position: right 0.5rem center;
+		background-repeat: no-repeat;
+		background-size: 1.5em 1.5em;
+	}
+
+	/* 移除默认选择框图标 */
+	.sort-select::-ms-expand {
+		display: none;
+	}
+
+	/* 商品卡片动画 */
+	.product-card {
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.product-card:hover {
+		transform: translateY(-4px);
+	}
+
+	/* 加载动画 */
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.animate-spin {
+		animation: spin 1s linear infinite;
+	}
+
+	/* 渐变色覆盖层 */
+	.bg-gradient-overlay {
+		background: linear-gradient(to right, rgba(0, 0, 0, 0.6), transparent);
+	}
+
+	/* ==================== 响应式调整 ==================== */
+	@media (max-width: 640px) {
+		/* 移动端商品网格 */
+		.grid-cols-2 > .product-card:nth-child(2n) {
+			margin-right: 0;
+		}
+
+		/* 移动端分类图标容器 */
+		.h-10 {
+			height: 2.5rem;
+		}
+
+		.w-10 {
+			width: 2.5rem;
+		}
+	}
+
+	@media (max-width: 768px) {
+		/* 平板端商品网格 */
+		.product-title {
+			font-size: 0.875rem;
+			line-height: 1.3;
+		}
+	}
+
+	@media (max-width: 1024px) {
+		/* 大平板商品网格 */
+		.grid-cols-5 > .product-card:nth-child(5n) {
+			margin-right: 0;
+		}
+	}
+
+	/* ==================== 优化触摸体验 ==================== */
+	@media (hover: none) and (pointer: coarse) {
+		.product-card:hover {
+			transform: none;
+		}
+
+		.product-card:active {
+			transform: scale(0.98);
+		}
+
+		.sort-button:hover {
+			transform: none;
+		}
+
+		.sort-button:active {
+			background-color: #f3f4f6;
+		}
+	}
+
+	/* ==================== 深色模式支持 ==================== */
+	@media (prefers-color-scheme: dark) {
+		.bg-gray-50 {
+			background-color: #111827;
+		}
+
+		.bg-white {
+			background-color: #1f2937;
+		}
+
+		.text-gray-900 {
+			color: #f9fafb;
+		}
+
+		.text-gray-800 {
+			color: #e5e7eb;
+		}
+
+		.text-gray-700 {
+			color: #d1d5db;
+		}
+
+		.text-gray-600 {
+			color: #9ca3af;
+		}
+
+		.bg-gray-50 {
+			background-color: #374151;
+		}
+
+		.sort-select {
+			background-color: #1f2937;
+			color: #e5e7eb;
+			border-color: #4b5563;
+		}
+
+		.product-card:hover .product-title {
+			color: #60a5fa;
+		}
+
+		.from-red-500\/90 {
+			background: linear-gradient(to right, rgba(239, 68, 68, 0.9), transparent);
+		}
+
+		.from-blue-500\/90 {
+			background: linear-gradient(to right, rgba(59, 130, 246, 0.9), transparent);
+		}
+
+		.from-pink-500\/90 {
+			background: linear-gradient(to right, rgba(236, 72, 153, 0.9), transparent);
+		}
+
+		.from-green-500\/90 {
+			background: linear-gradient(to right, rgba(34, 197, 94, 0.9), transparent);
+		}
+	}
+
+	/* ==================== 无障碍优化 ==================== */
+	button:focus,
+	select:focus {
+		outline: 2px solid #3b82f6;
+		outline-offset: 2px;
+	}
+
+	a:focus {
+		outline: 2px solid #3b82f6;
+		outline-offset: 2px;
+		border-radius: 0.375rem;
+	}
+
+	/* ==================== 打印优化 ==================== */
+	@media print {
+		.shadow-sm,
+		.shadow-lg {
+			box-shadow: none;
+			border: 1px solid #e5e7eb;
+		}
+
+		.bg-gradient-overlay {
+			background: #000 !important;
+		}
 	}
 </style>
