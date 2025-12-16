@@ -60,8 +60,7 @@
 	// ==================== 搜索功能 ====================
 	function handleSearch() {
 		if (searchKeyword.trim()) {
-			console.log('検索:', searchKeyword);
-			// 实际应该导航到搜索结果页
+			goto(`/product?q=${encodeURIComponent(searchKeyword)}`);
 		}
 	}
 	// ==================== 分类菜单功能 ====================
