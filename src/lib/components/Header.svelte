@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { quickCategories } from '$lib/mockdata/Category.js';
 
@@ -64,7 +64,6 @@
 			// 实际应该导航到搜索结果页
 		}
 	}
-
 	// ==================== 分类菜单功能 ====================
 	function openCategoryMenu() {
 		clearTimeout(categoryMenuTimeout);
@@ -234,6 +233,7 @@
 										on:mouseenter={() => handleMouseEnterCategory(category.id)}
 										role="menuitem"
 										tabindex="0"
+										on:click={() => goto(`/category/${category.id}`)}
 									>
 										<img src={category.icon} alt={category.name} class="h-5 w-5 object-cover" />
 										<span class="font-medium">{category.name}</span>
@@ -260,8 +260,9 @@
 									<div class="grid grid-cols-2 gap-6">
 										{#each activeCategory.children as child}
 											<a
-												href="/category/{activeCategory.id}?sub={child.id}"
+												href="/category/{activeCategory.id}/{child.id}"
 												class="block rounded-lg px-3 py-2 font-semibold text-gray-900 transition hover:bg-gray-100"
+												role="categoryitem"
 											>
 												{child.name}
 											</a>
@@ -874,11 +875,6 @@
 {/if}
 
 <style>
-	/* ==================== 全局样式 ==================== */
-	* {
-		box-sizing: border-box;
-	}
-
 	/* ==================== 按钮样式 ==================== */
 	.category-button,
 	.app-button,
