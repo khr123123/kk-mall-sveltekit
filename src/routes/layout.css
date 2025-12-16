@@ -28,7 +28,9 @@ body {
 	margin: 0;
 	background-color: var(--color-bg);
 }
-
+button {
+	cursor: pointer;
+}
 pre {
 	font-size: 14px;
 	font-family: var(--font-mono);
