@@ -5,7 +5,8 @@
 	const banners = [
 		{
 			id: 1,
-			image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&h=400&fit=crop',
+			image:
+				'https://plus.unsplash.com/premium_photo-1664201889922-66bc3c778c1e?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
 			title: '新年セール',
 			subtitle: '全品50%OFF〜',
 			link: '/sale',
@@ -216,24 +217,92 @@
 								: 'translate-x-full opacity-0'}"
 					>
 						<a href={banner.link} class="group relative block h-full overflow-hidden no-underline">
-							<img
-								src={banner.image}
-								alt={banner.title}
-								class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-								loading="lazy"
-								width="1200"
-								height="400"
-							/>
+							<!-- 多层渐变背景 - 根据不同banner使用不同颜色 -->
+							<div class="absolute inset-0">
+								{#if banner.id === 1}
+									<!-- 新年セール - 红色系渐变 -->
+									<div
+										class="absolute inset-0 bg-gradient-to-br from-red-500 via-pink-500 to-orange-500"
+									></div>
+									<div
+										class="absolute inset-0 bg-gradient-to-tl from-red-600/50 via-transparent to-pink-600/30"
+									></div>
+								{:else if banner.id === 2}
+									<!-- 家電・デジタル - 蓝色科技渐变 -->
+									<div
+										class="absolute inset-0 bg-gradient-to-br from-blue-500 via-cyan-500 to-indigo-600"
+									></div>
+									<div
+										class="absolute inset-0 bg-gradient-to-tl from-blue-700/50 via-transparent to-cyan-600/30"
+									></div>
+								{:else if banner.id === 3}
+									<!-- ファッション - 粉紫色渐变 -->
+									<div
+										class="absolute inset-0 bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500"
+									></div>
+									<div
+										class="absolute inset-0 bg-gradient-to-tl from-purple-700/50 via-transparent to-pink-600/30"
+									></div>
+								{:else if banner.id === 4}
+									<!-- ホーム&リビング - 绿色自然渐变 -->
+									<div
+										class="absolute inset-0 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600"
+									></div>
+									<div
+										class="absolute inset-0 bg-gradient-to-tl from-emerald-700/50 via-transparent to-green-600/30"
+									></div>
+								{/if}
+
+								<!-- 动态光晕效果 -->
+								<div
+									class="absolute top-0 right-0 h-96 w-96 rounded-full bg-white/10 blur-3xl transition-transform duration-1000 group-hover:scale-150"
+								></div>
+								<div
+									class="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-black/10 blur-3xl transition-transform duration-1000 group-hover:scale-150"
+								></div>
+							</div>
+
+							<!-- 装饰性几何图案 -->
+							<div class="absolute inset-0 opacity-20">
+								<div
+									class="absolute top-10 right-10 h-32 w-32 rounded-full border-4 border-white/30"
+								></div>
+								<div
+									class="absolute right-32 bottom-20 h-24 w-24 rotate-45 border-4 border-white/20"
+								></div>
+								<div
+									class="absolute top-1/3 right-1/4 h-16 w-16 rotate-12 rounded-lg border-4 border-white/25"
+								></div>
+							</div>
+							<!-- 噪点纹理叠加层 -->
 							<div
-								class="absolute inset-0 bg-gradient-to-r {banner.color} to-transparent opacity-90 lg:opacity-70"
+								class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"
 							></div>
-							<div class="absolute right-0 bottom-0 left-0 p-4 sm:p-6 lg:p-8">
-								<h3 class="mb-1 text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
-									{banner.title}
-								</h3>
-								<p class="text-base text-white/90 sm:text-lg lg:text-xl">
-									{banner.subtitle}
-								</p>
+
+							<!-- 内容区域 -->
+							<div class="absolute inset-0 flex items-center">
+								<div class="container mx-auto px-4 sm:px-6 lg:px-8">
+									<div class="max-w-2xl">
+										<!-- 主内容卡片 -->
+										<div class="space-y-6 sm:space-y-8">
+											<!-- 顶部标签栏 -->
+											<div class="flex items-center gap-3">
+												<!-- 动态脉冲点 -->
+												<div class="relative flex h-3 w-3 items-center justify-center">
+													<div class="absolute h-3 w-3 animate-ping rounded-full bg-white/60"></div>
+													<div class="relative h-2 w-2 rounded-full bg-white"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<!-- 右下角装饰元素 -->
+							<div class="absolute right-0 bottom-0 p-8 opacity-30">
+								<div class="text-9xl font-black text-white/20">
+									0{banner.id}
+								</div>
 							</div>
 						</a>
 					</div>

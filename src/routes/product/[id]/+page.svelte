@@ -49,7 +49,7 @@
 	onMount(async () => {
 		try {
 			if (!productId) throw new Error('商品IDが未定義です');
-			const response = (await pb.collection('products').getOne(productId)) as Product;
+			const response = (await pb.collection('products').getOne(productId as string)) as Product;
 			product = response;
 		} catch (error) {
 			console.error('Error fetching product:', error);
@@ -560,6 +560,7 @@
 						<h3 class="mb-4 text-lg font-normal text-gray-900">シェア</h3>
 						<div class="flex space-x-3">
 							<button
+								aria-label="Facebookでシェア"
 								class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700"
 							>
 								<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -569,6 +570,7 @@
 								</svg>
 							</button>
 							<button
+								aria-label="Twitterでシェア"
 								class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400 text-white transition-colors hover:bg-blue-500"
 							>
 								<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -578,6 +580,7 @@
 								</svg>
 							</button>
 							<button
+								aria-label="YouTube"
 								class="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-red-700"
 							>
 								<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
