@@ -1,17 +1,13 @@
 ﻿<script lang="ts">
 	import { goto } from '$app/navigation';
+	import type { Category } from '$lib/services/categoryService';
 
 	// Props
-	export let categories: Array<{
-		id: number;
-		name: string;
-		icon: string;
-		children?: Array<{ id: number; name: string }>;
-	}> = [];
+	export let categories: Category[] = [];
 
 	// State
 	let showMenu = false;
-	let activeParentId: number | null = null;
+	let activeParentId: string | null = null;
 	let menuTimeout: number;
 
 	$: activeCategory = categories.find((cat) => cat.id === activeParentId);
@@ -20,6 +16,8 @@
 		clearTimeout(menuTimeout);
 		showMenu = true;
 		activeParentId = categories[0]?.id || null;
+		console.log(activeCategory);
+		console.log(categories);
 	}
 
 	function closeMenu() {
@@ -29,12 +27,12 @@
 		}, 150);
 	}
 
-	function handleMouseEnterCategory(categoryId: number) {
+	function handleMouseEnterCategory(categoryId: string) {
 		clearTimeout(menuTimeout);
 		activeParentId = categoryId;
 	}
 
-	function navigateToCategory(categoryId: number) {
+	function navigateToCategory(categoryId: string) {
 		goto(`/category/${categoryId}`);
 	}
 </script>
@@ -76,12 +74,7 @@
 					>
 						<img src={category.icon} alt={category.name} class="h-5 w-5 object-cover" />
 						<span class="font-medium">{category.name}</span>
-						<svg
-							class="ml-auto h-4 w-4"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
+						<svg class="ml-auto h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"
@@ -94,10 +87,10 @@
 			</div>
 
 			<!-- 子分类 -->
-			{#if activeCategory?.children}
+			{#if activeCategory?.expand?.children}
 				<div class="flex-1 p-6">
 					<div class="grid grid-cols-2 gap-6">
-						{#each activeCategory.children as child}
+						{#each activeCategory.expand.children as child}
 							<a
 								href="/category/{activeCategory.id}/{child.id}"
 								class="block rounded-lg px-3 py-2 font-semibold text-gray-900 transition hover:bg-gray-100"

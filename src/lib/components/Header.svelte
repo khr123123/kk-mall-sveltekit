@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { quickCategories } from '$lib/mockdata/Category.js';
 	import { onMount, onDestroy } from 'svelte';
 
 	// 导入组件
@@ -13,13 +12,12 @@
 	import LoginModal from './headercomponents/LoginModal.svelte';
 	import MessageDropdown from './headercomponents/MessageDropdown.svelte';
 	import CartDropdown from './headercomponents/CartDropdown.svelte';
+	import { CategoryService, type Category } from '$lib/services/categoryService';
 
-	// ==================== 状态管理 ====================
 	let isLoggedIn = true;
 	let user = {
 		name: 'K.',
 		avatar: '/logo.png',
-		notifications: 3,
 		messages: 2,
 		cartItems: 5
 	};
@@ -130,7 +128,6 @@
 		user = {
 			name: '',
 			avatar: '/logo.png',
-			notifications: 0,
 			messages: 0,
 			cartItems: 0
 		};
@@ -204,13 +201,23 @@
 			user.cartItems--;
 		}
 	}
+	import { categoryStore } from '$lib/stores/categoryStore';
 
 	// 确保只在客户端执行浏览器相关代码
 	let isBrowser = false;
 
-	onMount(() => {
+	let quickCategories: Category[] = [];
+	onMount(async () => {
+		// 先检查 store 中是否已有数据
+		if (!$categoryStore.isLoaded) {
+			quickCategories = await CategoryService.getAllCategories();
+			// 保存到全局 store
+			categoryStore.setCategories(quickCategories);
+		} else {
+			// 从 store 中获取
+			quickCategories = $categoryStore.categories;
+		}
 		isBrowser = typeof window !== 'undefined';
-
 		if (isBrowser) {
 			document.addEventListener('keydown', handleKeydown);
 		}
@@ -263,8 +270,9 @@
 			<!-- 桌面端分类和搜索 -->
 			<div class="hidden flex-1 items-center gap-4 lg:flex">
 				<!-- 分类下拉组件 -->
-				<CategoryDropdown categories={quickCategories} />
-
+				{#if quickCategories.length > 0}
+					<CategoryDropdown categories={quickCategories} />
+				{/if}
 				<!-- 搜索框 -->
 				<div class="relative max-w-xl flex-1">
 					<div class="relative">

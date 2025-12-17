@@ -2,95 +2,186 @@
 	import { page } from '$app/state';
 	import { afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { quickCategories } from '$lib/mockdata/Category.js';
+	import { categoryStore } from '$lib/stores/categoryStore';
+	import type { RecordModel } from 'pocketbase';
+	import PocketBase from 'pocketbase';
+	let pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL);
 
-	// 状態管理
-	let mainId = $state(0);
-	let subId = $state(0);
-	let currentCategory = $state<any>(null);
-	let currentSubCategory = $state<any>(null);
-	let products = $state<any[]>([]);
+	// 状态管理
+	let parentId = $state('');
+	let childId = $state('');
+	let currentCategory = $state<RecordModel | null>(null);
+	let parentCategory = $state<RecordModel | null>(null);
+	let siblingCategories = $state<RecordModel[]>([]);
+	let products = $state<RecordModel[]>([]);
 	let isLoading = $state(false);
 	let sortBy = $state('newest');
 
-	// 初始化
-	onMount(() => {
-		updateCategory();
+	// 分页
+	let currentPage = $state(1);
+	let totalPages = $state(1);
+	let totalItems = $state(0);
+	let perPage = $state(20);
 
-		afterNavigate((navigation) => {
-			if (navigation.to?.params) {
-				updateCategory();
-			}
-		});
+	// 筛选状态
+	let priceRange = $state<string>('all');
+	let selectedBrands = $state<string[]>([]);
+	let availableBrands = $state<string[]>([]);
+	let showOnlyInStock = $state(false);
+
+	// 初始化
+	onMount(async () => {
+		await loadData();
 	});
 
-	function updateCategory() {
-		mainId = Number(page.params.parentId);
-		subId = Number(page.params.childId);
+	// 监听路由变化
+	afterNavigate(async (navigation) => {
+		if (navigation.to?.params) {
+			await loadData();
+		}
+	});
 
-		currentCategory = quickCategories.find((item) => item.id === mainId) || null;
-		currentSubCategory =
-			currentCategory?.children?.find((child: { id: number }) => child.id === subId) || null;
+	async function loadData() {
+		try {
+			isLoading = true;
 
-		isLoading = true;
-		// 模拟API调用获取商品
-		setTimeout(() => {
-			products = generateProductsForSubCategory(subId);
+			// 等待store数据加载
+			if (!$categoryStore.isLoaded) {
+				await new Promise((resolve) => {
+					const unsubscribe = categoryStore.subscribe((store) => {
+						if (store.isLoaded) {
+							resolve(true);
+							unsubscribe();
+						}
+					});
+				});
+			}
+
+			const parentIdParam = page.params.parentId;
+			const childIdParam = page.params.childId;
+			if (!parentIdParam || !childIdParam) return;
+
+			parentId = parentIdParam;
+			childId = childIdParam;
+
+			// 从 store 获取父分类信息
+			const categories = $categoryStore.categories;
+			parentCategory = categories.find((cat: any) => cat.id === parentIdParam) || null;
+
+			if (!parentCategory) {
+				console.error('父分类未找到:', parentIdParam);
+				return;
+			}
+
+			// 获取当前子分类
+			siblingCategories = parentCategory.expand?.children || [];
+			currentCategory = siblingCategories.find((sub: any) => sub.id === childIdParam) || null;
+
+			if (!currentCategory) {
+				console.error('子分类未找到:', childIdParam);
+				return;
+			}
+
+			// 获取该子分类下的品牌
+			await loadBrands();
+
+			// 加载商品
+			await loadProducts();
+		} catch (error) {
+			console.error('加载数据失败:', error);
+			currentCategory = null;
+			parentCategory = null;
+			siblingCategories = [];
+			products = [];
+		} finally {
 			isLoading = false;
-		}, 300);
+		}
 	}
 
-	function generateProductsForSubCategory(subId: number) {
-		const productNames = {
-			101: [
-				'iPhone 15 Pro 128GB',
-				'iPhone 15 Plus 256GB',
-				'iPhone 14 128GB',
-				'iPhone SE (第3世代)',
-				'Samsung Galaxy S24 256GB',
-				'Google Pixel 8 128GB'
-			],
-			102: [
-				'Apple MagSafe シリコンケース',
-				'Spigen 耐衝撃ケース',
-				'ESR クリアケース',
-				'Casetify カスタムケース',
-				'OtterBox 防弾ケース',
-				'Razer Arctech 冷却ケース'
-			],
-			103: [
-				'Apple 20W USB-C充電器',
-				'Anker 65W GaN充電器',
-				'Samsung 45W 急速充電器',
-				'Belkin 3-in-1 ワイヤレス充電器',
-				'UGREEN 100W 車載充電器',
-				'RAVPower 90W PD充電器'
-			]
-		};
+	async function loadBrands() {
+		try {
+			// 查询该子分类下的商品中的品牌
+			const result = await pb.collection('products').getList(1, 1000, {
+				filter: `category_id = "${childId}"`,
+				fields: 'brand'
+			});
 
-		const names = productNames[subId as keyof typeof productNames] || [
-			'高品質スマートフォン',
-			'最新モデルスマホ',
-			'高性能携帯電話',
-			'人気スマートフォン',
-			'エントリーモデル',
-			'フラッグシップモデル'
-		];
+			// 去重并过滤空值
+			const brands = [
+				...new Set(
+					result.items.map((item) => item.brand).filter((brand) => brand && brand.trim() !== '')
+				)
+			];
 
-		return names.map((name, index) => ({
-			id: subId * 10 + index + 1,
-			name: name,
-			price: Math.floor(20000 + Math.random() * 180000),
-			originalPrice: Math.floor(25000 + Math.random() * 200000),
-			rating: 4.0 + Math.random() * 1.0,
-			reviews: Math.floor(50 + Math.random() * 1000),
-			image: `/products/item-${index + 1}.jpg`,
-			isNew: Math.random() > 0.5,
-			isHot: Math.random() > 0.7,
-			discount: Math.random() > 0.6 ? Math.floor(5 + Math.random() * 30) : 0,
-			inStock: Math.random() > 0.2,
-			tags: ['人気', '新商品', 'おすすめ'].slice(0, Math.floor(Math.random() * 3))
-		}));
+			availableBrands = brands.sort((a, b) => a.localeCompare(b));
+		} catch (error) {
+			console.error('加载品牌失败:', error);
+			availableBrands = [];
+		}
+	}
+
+	async function loadProducts() {
+		try {
+			// 构建筛选条件
+			let filter = `category_id = "${childId}"`;
+
+			// 价格筛选
+			if (priceRange !== 'all') {
+				const ranges: Record<string, [number, number]> = {
+					'0-50000': [0, 50000],
+					'50000-100000': [50000, 100000],
+					'100000-200000': [100000, 200000],
+					'200000+': [200000, 9999999]
+				};
+				const [min, max] = ranges[priceRange] || [0, 9999999];
+				filter += ` && price >= ${min} && price <= ${max}`;
+			}
+
+			// 品牌筛选
+			if (selectedBrands.length > 0) {
+				const brandFilters = selectedBrands.map((brand) => `brand = "${brand}"`).join(' || ');
+				filter += ` && (${brandFilters})`;
+			}
+
+			// 库存筛选
+			if (showOnlyInStock) {
+				filter += ` && inStock = true`;
+			}
+
+			// 构建排序
+			let sort = '-created';
+			switch (sortBy) {
+				case 'price-low':
+					sort = 'price';
+					break;
+				case 'price-high':
+					sort = '-price';
+					break;
+				case 'popular':
+					sort = '-reviews';
+					break;
+				case 'rating':
+					sort = '-rating';
+					break;
+				default:
+					sort = '-created'; // 新着順
+			}
+
+			// 获取商品数据
+			const result = await pb.collection('products').getList(currentPage, perPage, {
+				filter,
+				sort
+			});
+
+			products = result.items;
+			totalItems = result.totalItems;
+			totalPages = result.totalPages;
+		} catch (error) {
+			console.error('加载商品失败:', error);
+			products = [];
+			totalItems = 0;
+			totalPages = 1;
+		}
 	}
 
 	// 格式化价格
@@ -102,43 +193,68 @@
 		}).format(price);
 	}
 
+	// 获取商品图片URL
+	function getProductImageUrl(product: RecordModel) {
+		if (product.image) {
+			return product.image;
+		} else if (product.images && product.images.length > 0) {
+			return product.images[0];
+		}
+		return '/images/placeholder.jpg';
+	}
+
+	// 获取分类图片URL
+	function getCategoryImageUrl(category: RecordModel) {
+		if (category.icon) {
+			return category.icon;
+		}
+		return '/icons/default-category.svg';
+	}
+
 	// 添加到购物车
-	function addToCart(product: any, event: Event) {
+	function addToCart(product: RecordModel, event: Event) {
 		event.stopPropagation();
 		event.preventDefault();
-		console.log('添加到购物车:', product.name);
+		console.log('添加到购物车:', product.name_ja);
 	}
 
 	// 收藏商品
-	function addToWishlist(product: any, event: Event) {
+	function addToWishlist(product: RecordModel, event: Event) {
 		event.stopPropagation();
 		event.preventDefault();
-		console.log('收藏商品:', product.name);
+		console.log('收藏商品:', product.name_ja);
 	}
 
-	// 排序功能
-	function sortProducts(sortType: string) {
-		sortBy = sortType;
-		const sorted = [...products];
+	// 排序变化
+	async function handleSortChange() {
+		currentPage = 1;
+		await loadProducts();
+	}
 
-		switch (sortType) {
-			case 'price-low':
-				sorted.sort((a, b) => a.price - b.price);
-				break;
-			case 'price-high':
-				sorted.sort((a, b) => b.price - a.price);
-				break;
-			case 'popular':
-				sorted.sort((a, b) => b.reviews - a.reviews);
-				break;
-			case 'rating':
-				sorted.sort((a, b) => b.rating - a.rating);
-				break;
-			default:
-				sorted.sort((a, b) => b.id - a.id); // 新着順
-		}
+	// 价格筛选变化
+	async function handlePriceChange() {
+		currentPage = 1;
+		await loadProducts();
+	}
 
-		products = sorted;
+	// 品牌筛选变化
+	async function handleBrandChange() {
+		currentPage = 1;
+		await loadProducts();
+	}
+
+	// 库存筛选变化
+	async function handleStockChange() {
+		currentPage = 1;
+		await loadProducts();
+	}
+
+	// 翻页
+	async function goToPage(pageNum: number) {
+		if (pageNum < 1 || pageNum > totalPages) return;
+		currentPage = pageNum;
+		await loadProducts();
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 </script>
 
@@ -148,7 +264,7 @@
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<nav class="py-3">
 				<div class="flex items-center text-sm">
-					<a href="#" class="text-gray-600 hover:text-gray-900">すべてのカテゴリ</a>
+					<a href="/" class="text-gray-600 hover:text-gray-900">ホーム</a>
 					<svg
 						class="mx-2 h-3 w-3 text-gray-400"
 						fill="none"
@@ -162,8 +278,8 @@
 							d="M9 5l7 7-7 7"
 						/>
 					</svg>
-					<a href="/category/{mainId}" class="text-gray-600 hover:text-gray-900"
-						>{currentCategory?.name}</a
+					<a href="/category/{parentId}" class="text-gray-600 hover:text-gray-900"
+						>{parentCategory?.name}</a
 					>
 					<svg
 						class="mx-2 h-3 w-3 text-gray-400"
@@ -178,7 +294,7 @@
 							d="M9 5l7 7-7 7"
 						/>
 					</svg>
-					<span class="font-medium text-gray-900">{currentSubCategory?.name}</span>
+					<span class="font-medium text-gray-900">{currentCategory?.name}</span>
 				</div>
 			</nav>
 		</div>
@@ -186,152 +302,187 @@
 
 	<main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 		<!-- 页面头部 -->
-		<header class="mb-8">
-			<h1 class="mb-2 text-2xl font-bold text-gray-900 md:text-3xl">
-				{currentSubCategory?.name}
-			</h1>
-			<p class="mb-6 text-gray-600">
-				{currentCategory?.name} › {currentSubCategory?.name} の専門商品
-			</p>
+		<div class="mb-8">
+			<div class="mb-6 flex items-center gap-4">
+				<div class="rounded-xl bg-gray-100 p-3">
+					{#if parentCategory?.icon}
+						<img
+							src={getCategoryImageUrl(parentCategory)}
+							alt={parentCategory.name}
+							class="h-10 w-10 object-contain"
+						/>
+					{:else}
+						<div class="flex h-10 w-10 items-center justify-center text-gray-400">
+							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+								/>
+							</svg>
+						</div>
+					{/if}
+				</div>
+				<div class="flex-1">
+					<h1 class="mb-2 text-2xl font-bold text-gray-900 md:text-3xl">
+						{currentCategory?.name}
+					</h1>
+					<p class="text-gray-600">
+						{parentCategory?.name} › {currentCategory?.name} の専門商品
+					</p>
+				</div>
+			</div>
 
-			<!-- 子分类导航 -->
-			<div class="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
-				{#if currentCategory?.children}
-					{#each currentCategory.children as subCategory}
+			<!-- 兄弟分类导航 -->
+			{#if siblingCategories.length > 0}
+				<div class="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+					<a
+						href="/category/{parentId}"
+						class="rounded-lg border border-gray-300 bg-white px-4 py-2 whitespace-nowrap text-gray-700 transition-colors hover:bg-gray-50"
+					>
+						すべて
+					</a>
+					{#each siblingCategories as subcategory}
 						<a
-							href="/category/{mainId}/{subCategory.id}"
-							class="rounded-lg border px-4 py-2 whitespace-nowrap transition-colors {subId ===
-							subCategory.id
+							href="/category/{parentId}/{subcategory.id}"
+							class="rounded-lg border px-4 py-2 whitespace-nowrap transition-colors {childId ===
+							subcategory.id
 								? 'border-gray-900 bg-gray-900 text-white'
 								: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
 						>
-							{subCategory.name}
+							{subcategory.name}
 						</a>
 					{/each}
-				{/if}
-			</div>
-		</header>
-
-		<!-- 特色商品 -->
-		{#if !isLoading && products.length > 0}
-			<!-- 推荐商品 -->
-			<div class="mb-8">
-				<h2 class="mb-4 text-xl font-semibold text-gray-900">おすすめ商品</h2>
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{#each products.filter((p) => p.isHot).slice(0, 3) as product}
-						<div class="rounded-xl border border-gray-200 bg-gray-50 p-6">
-							<div class="flex items-start gap-4">
-								<div
-									class="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100"
-								>
-									<div class="text-xs text-gray-400">画像</div>
-								</div>
-								<div>
-									<h3 class="mb-1 font-medium text-gray-900">{product.name}</h3>
-									<div class="mb-2 flex items-center gap-2">
-										<span class="text-lg font-bold text-gray-900">{formatPrice(product.price)}</span
-										>
-										{#if product.discount > 0}
-											<span class="text-sm font-medium text-red-600">-{product.discount}%</span>
-										{/if}
-									</div>
-									<button
-										onclick={(e) => {
-											e.preventDefault();
-											addToCart(product, e);
-										}}
-										class="rounded-lg bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800"
-									>
-										カートに追加
-									</button>
-								</div>
-							</div>
-						</div>
-					{/each}
 				</div>
-			</div>
-		{/if}
+			{/if}
+		</div>
 
 		<div class="flex flex-col gap-8 lg:flex-row">
-			<!-- 侧边栏 -->
+			<!-- 侧边栏筛选 -->
 			<aside class="flex-shrink-0 lg:w-64">
 				<div class="sticky top-6 space-y-6">
-					<!-- 排序选项 -->
-					<div class="rounded-lg border border-gray-200 bg-white p-4">
-						<h3 class="mb-3 font-semibold text-gray-900">並び替え</h3>
-						<div class="space-y-2">
-							<button
-								onclick={() => sortProducts('newest')}
-								class="w-full rounded px-3 py-2 text-left hover:bg-gray-50 {sortBy === 'newest'
-									? 'bg-gray-100 font-medium'
-									: ''}"
-							>
-								新着順
-							</button>
-							<button
-								onclick={() => sortProducts('price-low')}
-								class="w-full rounded px-3 py-2 text-left hover:bg-gray-50 {sortBy === 'price-low'
-									? 'bg-gray-100 font-medium'
-									: ''}"
-							>
-								価格が安い順
-							</button>
-							<button
-								onclick={() => sortProducts('price-high')}
-								class="w-full rounded px-3 py-2 text-left hover:bg-gray-50 {sortBy === 'price-high'
-									? 'bg-gray-100 font-medium'
-									: ''}"
-							>
-								価格が高い順
-							</button>
-							<button
-								onclick={() => sortProducts('rating')}
-								class="w-full rounded px-3 py-2 text-left hover:bg-gray-50 {sortBy === 'rating'
-									? 'bg-gray-100 font-medium'
-									: ''}"
-							>
-								評価順
-							</button>
+					<!-- 价格筛选 -->
+					<div class="rounded-lg border border-gray-200 bg-white">
+						<div class="border-b border-gray-200 p-4">
+							<h3 class="font-semibold text-gray-900">価格帯</h3>
+						</div>
+						<div class="space-y-3 p-4">
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
+									value="all"
+									bind:group={priceRange}
+									onchange={handlePriceChange}
+									class="h-4 w-4 text-gray-900"
+								/>
+								<span class="ml-2 text-gray-700">すべて</span>
+							</label>
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
+									value="0-50000"
+									bind:group={priceRange}
+									onchange={handlePriceChange}
+									class="h-4 w-4 text-gray-900"
+								/>
+								<span class="ml-2 text-gray-700">¥0 - ¥50,000</span>
+							</label>
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
+									value="50000-100000"
+									bind:group={priceRange}
+									onchange={handlePriceChange}
+									class="h-4 w-4 text-gray-900"
+								/>
+								<span class="ml-2 text-gray-700">¥50,000 - ¥100,000</span>
+							</label>
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
+									value="100000-200000"
+									bind:group={priceRange}
+									onchange={handlePriceChange}
+									class="h-4 w-4 text-gray-900"
+								/>
+								<span class="ml-2 text-gray-700">¥100,000 - ¥200,000</span>
+							</label>
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
+									value="200000+"
+									bind:group={priceRange}
+									onchange={handlePriceChange}
+									class="h-4 w-4 text-gray-900"
+								/>
+								<span class="ml-2 text-gray-700">¥200,000以上</span>
+							</label>
 						</div>
 					</div>
 
-					<!-- 在库状态 -->
-					<div class="rounded-lg border border-gray-200 bg-white p-4">
-						<h3 class="mb-3 font-semibold text-gray-900">在庫状態</h3>
-						<div class="space-y-2">
-							<label class="flex items-center">
-								<input
-									type="checkbox"
-									class="h-4 w-4 rounded border-gray-300 text-gray-900"
-									checked
-								/>
-								<span class="ml-2 text-gray-700">在庫あり</span>
-							</label>
-							<label class="flex items-center">
-								<input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-900" />
-								<span class="ml-2 text-gray-700">お取り寄せ</span>
-							</label>
+					<!-- 品牌筛选 -->
+					{#if availableBrands.length > 0}
+						<div class="rounded-lg border border-gray-200 bg-white">
+							<div class="border-b border-gray-200 p-4">
+								<h3 class="font-semibold text-gray-900">ブランド</h3>
+							</div>
+							<div class="max-h-80 space-y-3 overflow-y-auto p-4">
+								{#each availableBrands as brand}
+									<label class="flex cursor-pointer items-center">
+										<input
+											type="checkbox"
+											value={brand}
+											bind:group={selectedBrands}
+											onchange={handleBrandChange}
+											class="h-4 w-4 rounded border-gray-300 text-gray-900"
+										/>
+										<span class="ml-2 text-gray-700">{brand}</span>
+									</label>
+								{/each}
+							</div>
 						</div>
+					{/if}
+
+					<!-- 库存筛选 -->
+					<div class="rounded-lg border border-gray-200 bg-white p-4">
+						<label class="flex cursor-pointer items-center">
+							<input
+								type="checkbox"
+								bind:checked={showOnlyInStock}
+								onchange={handleStockChange}
+								class="h-4 w-4 rounded border-gray-300 text-gray-900"
+							/>
+							<span class="ml-2 text-gray-700">在庫ありのみ表示</span>
+						</label>
 					</div>
 				</div>
 			</aside>
 
 			<!-- 主内容区 -->
 			<div class="flex-1">
-				<!-- 统计和排序 -->
+				<!-- 排序和统计 -->
 				<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 					<div class="text-gray-600">
-						全 <span class="font-semibold">{products.length}</span> 件の商品
+						{#if totalItems > 0}
+							全 <span class="font-semibold">{totalItems}</span> 件の商品
+						{/if}
 					</div>
 					<div class="flex items-center gap-3">
 						<select
 							bind:value={sortBy}
-							onchange={(e) => sortProducts((e.target as HTMLSelectElement).value)}
+							onchange={handleSortChange}
 							class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:border-gray-400 focus:ring-1 focus:ring-gray-300"
 						>
 							<option value="newest">新着順</option>
 							<option value="price-low">価格が安い順</option>
 							<option value="price-high">価格が高い順</option>
+							<option value="popular">人気順</option>
 							<option value="rating">評価順</option>
 						</select>
 					</div>
@@ -339,8 +490,8 @@
 
 				<!-- 加载状态 -->
 				{#if isLoading}
-					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-						{#each Array(6) as _}
+					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+						{#each Array(8) as _}
 							<div class="animate-pulse rounded-lg border border-gray-200 bg-white p-4">
 								<div class="mb-4 h-48 rounded-lg bg-gray-200"></div>
 								<div class="mb-2 h-4 rounded bg-gray-200"></div>
@@ -350,10 +501,9 @@
 						{/each}
 					</div>
 				{:else if products.length === 0}
-					<!-- 空状态 -->
-					<div class="rounded-xl bg-gray-50 p-12 text-center">
+					<div class="flex flex-col items-center justify-center py-20">
 						<svg
-							class="mx-auto mb-4 h-12 w-12 text-gray-400"
+							class="mb-4 h-24 w-24 text-gray-300"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor"
@@ -361,24 +511,16 @@
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								stroke-width="1"
+								d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
 							/>
 						</svg>
-						<h3 class="mb-2 text-lg font-medium text-gray-900">商品が見つかりません</h3>
-						<p class="mx-auto mb-6 max-w-md text-gray-600">
-							このカテゴリーにはまだ商品がありません。 他のカテゴリーを探してみましょう。
-						</p>
-						<a
-							href="/category/{mainId}"
-							class="inline-flex items-center rounded-lg bg-gray-900 px-4 py-2 text-white hover:bg-gray-800"
-						>
-							親カテゴリーに戻る
-						</a>
+						<h3 class="mb-2 text-lg font-medium text-gray-900">商品が見つかりませんでした</h3>
+						<p class="text-gray-600">フィルター条件を変更してみてください</p>
 					</div>
 				{:else}
 					<!-- 商品网格 -->
-					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 						{#each products as product}
 							<a
 								href="/product/{product.id}"
@@ -386,9 +528,12 @@
 							>
 								<!-- 商品图片 -->
 								<div class="relative overflow-hidden bg-gray-100">
-									<div class="flex aspect-square items-center justify-center">
-										<div class="text-sm text-gray-400">商品イメージ</div>
-									</div>
+									<img
+										src={getProductImageUrl(product)}
+										alt={product.name_ja || product.name}
+										class="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+										loading="lazy"
+									/>
 
 									<!-- 标签 -->
 									<div class="absolute top-3 left-3 flex flex-col gap-2">
@@ -402,15 +547,18 @@
 												NEW
 											</span>
 										{/if}
+										{#if product.isHot}
+											<span class="rounded bg-orange-600 px-2 py-1 text-xs font-bold text-white">
+												HOT
+											</span>
+										{/if}
 									</div>
 
 									<!-- 收藏按钮 -->
 									<button
-										onclick={(e) => {
-											e.preventDefault();
-											addToWishlist(product, e);
-										}}
+										onclick={(e) => addToWishlist(product, e)}
 										class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-white"
+										aria-label="お気に入りに追加"
 									>
 										<svg
 											class="h-5 w-5 text-gray-600"
@@ -437,12 +585,19 @@
 
 								<!-- 商品信息 -->
 								<div class="p-4">
+									<!-- 品牌 -->
+									{#if product.brand}
+										<div class="mb-1 text-xs font-medium tracking-wide text-gray-500 uppercase">
+											{product.brand}
+										</div>
+									{/if}
+
 									<!-- 评价 -->
 									<div class="mb-2 flex items-center gap-1">
 										<div class="flex">
 											{#each Array(5) as _, i}
 												<svg
-													class="h-4 w-4 {i < Math.floor(product.rating)
+													class="h-4 w-4 {i < Math.floor(product.rating || 0)
 														? 'fill-current text-yellow-400'
 														: 'text-gray-300'}"
 													viewBox="0 0 20 20"
@@ -453,13 +608,15 @@
 												</svg>
 											{/each}
 										</div>
-										<span class="ml-1 text-sm text-gray-600">{product.rating.toFixed(1)}</span>
-										<span class="text-sm text-gray-400">({product.reviews})</span>
+										<span class="ml-1 text-sm text-gray-600"
+											>{(product.rating || 0).toFixed(1)}</span
+										>
+										<span class="text-sm text-gray-400">({product.reviews || 0})</span>
 									</div>
 
 									<!-- 商品名 -->
 									<h3 class="mb-2 line-clamp-2 font-medium text-gray-900 group-hover:text-gray-700">
-										{product.name}
+										{product.name_ja || product.name}
 									</h3>
 
 									<!-- 价格 -->
@@ -474,12 +631,22 @@
 										{/if}
 									</div>
 
+									<!-- 标签 -->
+									{#if product.tags && product.tags.length > 0}
+										<div class="mb-4 flex flex-wrap gap-1">
+											{#each product.tags.slice(0, 3) as tag}
+												<span
+													class="inline-flex items-center rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800"
+												>
+													{tag}
+												</span>
+											{/each}
+										</div>
+									{/if}
+
 									<!-- 添加到购物车按钮 -->
 									<button
-										onclick={(e) => {
-											e.preventDefault();
-											addToCart(product, e);
-										}}
+										onclick={(e) => addToCart(product, e)}
 										class="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
 										disabled={!product.inStock}
 									>
@@ -495,48 +662,58 @@
 					</div>
 
 					<!-- 分页 -->
-					<div class="mt-8 flex justify-center">
-						<nav class="flex items-center gap-2">
-							<button
-								class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-							>
-								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M15 19l-7-7 7-7"
-									/>
-								</svg>
-							</button>
+					{#if totalPages > 1}
+						<div class="mt-8 flex justify-center">
+							<nav class="flex items-center gap-2">
+								<button
+									onclick={() => goToPage(currentPage - 1)}
+									disabled={currentPage === 1}
+									class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 19l-7-7 7-7"
+										/>
+									</svg>
+								</button>
 
-							<button
-								class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-900 font-medium text-white"
-								>1</button
-							>
-							<button
-								class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-								>2</button
-							>
-							<button
-								class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-								>3</button
-							>
+								{#each Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+									if (totalPages <= 5) return i + 1;
+									if (currentPage <= 3) return i + 1;
+									if (currentPage >= totalPages - 2) return totalPages - 4 + i;
+									return currentPage - 2 + i;
+								}) as pageNum}
+									<button
+										onclick={() => goToPage(pageNum)}
+										class="flex h-10 w-10 items-center justify-center rounded-lg font-medium transition-colors {currentPage ===
+										pageNum
+											? 'bg-gray-900 text-white'
+											: 'border border-gray-300 text-gray-700 hover:bg-gray-50'}"
+									>
+										{pageNum}
+									</button>
+								{/each}
 
-							<button
-								class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-							>
-								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 5l7 7-7 7"
-									/>
-								</svg>
-							</button>
-						</nav>
-					</div>
+								<button
+									onclick={() => goToPage(currentPage + 1)}
+									disabled={currentPage === totalPages}
+									class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 5l7 7-7 7"
+										/>
+									</svg>
+								</button>
+							</nav>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		</div>
@@ -549,9 +726,5 @@
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-	}
-
-	.aspect-square {
-		aspect-ratio: 1 / 1;
 	}
 </style>
