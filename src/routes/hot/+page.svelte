@@ -140,9 +140,9 @@
 								: 'border-orange-300 bg-gradient-to-br from-orange-50 to-red-50'}"
 					>
 						<!-- ランクバッジ -->
-						<div class="absolute top-4 left-4 z-10">
+						<div class="absolute top-2 left-2 z-10">
 							<div
-								class="flex h-14 w-14 items-center justify-center rounded-full {index === 0
+								class="flex h-8 w-8 items-center justify-center rounded-full {index === 0
 									? 'bg-gradient-to-br from-yellow-400 to-orange-500'
 									: index === 1
 										? 'bg-gradient-to-br from-gray-400 to-gray-600'
@@ -153,9 +153,9 @@
 						</div>
 
 						<a href="/product/{product.id}" class="block p-6">
-							<div class="flex gap-4">
+							<div class="flex gap-6">
 								<!-- 商品画像 -->
-								<div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-white">
+								<div class="ml-6 h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-white">
 									{#if product.image}
 										<img
 											src={product.image}
