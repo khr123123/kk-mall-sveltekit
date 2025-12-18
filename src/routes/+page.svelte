@@ -23,7 +23,7 @@
 		tags?: string[];
 		specs?: Record<string, string | number>;
 	}
-
+	//fuck
 	const pb = new PocketBase('http://localhost:8090');
 
 	// 主轮播图数据
