@@ -68,8 +68,8 @@
 	let sortBy = $state('default');
 	let loadingMore = $state(false);
 	let hasMore = $state(true);
-	let lazyLoadCount = $state(0); // 懒加载次数计数器
-	const MAX_LAZY_LOAD = 3; // 最多懒加载3次
+	let lazyLoadCount = $state(0);
+	const MAX_LAZY_LOAD = 3;
 
 	// 轮播图相关状态
 	let currentMainBanner = $state(0);
@@ -88,18 +88,13 @@
 		startAutoPlay();
 	});
 
-	// 启动轮播图自动播放
 	function startAutoPlay() {
-		// 主轮播图
 		autoPlayInterval = window.setInterval(() => {
 			currentMainBanner = (currentMainBanner + 1) % mainBanners.length;
 		}, 5000);
-
-		// 监听滚动实现懒加载
 		window.addEventListener('scroll', handleScroll);
 	}
 
-	// 处理滚动懒加载
 	function handleScroll() {
 		if (loadingMore || !hasMore || lazyLoadCount >= MAX_LAZY_LOAD) return;
 
@@ -153,7 +148,7 @@
 
 		loadingMore = true;
 		currentPage++;
-		lazyLoadCount++; // 增加懒加载计数
+		lazyLoadCount++;
 		await loadProducts();
 	}
 
@@ -176,11 +171,10 @@
 		sortBy = newSort;
 		currentPage = 1;
 		hasMore = true;
-		lazyLoadCount = 0; // 重置懒加载计数
+		lazyLoadCount = 0;
 		await loadProducts();
 	}
 
-	// 轮播图控制函数
 	function nextMainBanner() {
 		currentMainBanner = (currentMainBanner + 1) % mainBanners.length;
 		resetAutoPlay();
@@ -203,7 +197,6 @@
 		}, 5000);
 	}
 
-	// 清理函数
 	function cleanup() {
 		if (autoPlayInterval) clearInterval(autoPlayInterval);
 		window.removeEventListener('scroll', handleScroll);
@@ -215,172 +208,149 @@
 </script>
 
 <main class="min-h-screen bg-gray-50">
-	<!-- 主轮播图区域（左侧） -->
-	<section class="bg-gray-900">
-		<div class="relative mx-auto max-w-7xl overflow-hidden">
-			<!-- 桌面端：左中右布局 -->
-			<div class="hidden lg:grid lg:grid-cols-12 lg:gap-6">
-				<!-- 左侧：标题、描述和徽章 -->
-				<div class="lg:col-span-4 xl:col-span-3 flex flex-col justify-center p-6">
-					<div class="rounded-xl bg-gradient-to-r from-gray-800 to-gray-900 p-6 text-white shadow-lg">
-						<div class="mb-6">
-							<h1 class="mb-3 text-3xl font-bold">商品一覧</h1>
-							<p class="mb-6 text-lg text-gray-300">高品質な商品を豊富に取り揃えています</p>
-						</div>
-						<div class="flex flex-col gap-3">
-							<div class="flex items-center gap-3">
-								<div class="rounded-lg bg-gray-700/50 p-4 flex-1 text-center">
-									<span class="text-2xl font-bold block">1000+</span>
-									<p class="text-sm text-gray-300">商品</p>
-								</div>
-								<div class="rounded-lg bg-gray-700/50 p-4 flex-1 text-center">
-									<span class="text-2xl font-bold block">50+</span>
-									<p class="text-sm text-gray-300">カテゴリー</p>
-								</div>
-								<div class="rounded-lg bg-gray-700/50 p-4 flex-1 text-center">
-									<span class="text-2xl font-bold block">24時間</span>
-									<p class="text-sm text-gray-300">配送</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- 中间：轮播图 -->
-				<div class="lg:col-span-5 xl:col-span-6 relative">
-					<div class="relative h-80 overflow-hidden rounded-xl">
-						{#each mainBanners as banner, index}
-							<div
-								class="absolute inset-0 transition-all duration-700 ease-in-out {index ===
-								currentMainBanner
-									? 'translate-x-0 opacity-100'
-									: index < currentMainBanner
-										? '-translate-x-full opacity-0'
-										: 'translate-x-full opacity-0'}"
-							>
-								<a
-									href={banner.link}
-									class="group relative block h-full w-full overflow-hidden no-underline"
+	<!-- 桌面端布局 -->
+	<div class="hidden lg:block">
+		<section class="">
+			<div class="relative mx-auto max-w-7xl px-0 py-0 sm:px-6 lg:px-0">
+				<div class="grid grid-cols-12 gap-6">
+					<!-- 左侧：轮播图 -->
+					<div class="col-span-8">
+						<div class="relative h-80 overflow-hidden rounded-xl">
+							{#each mainBanners as banner, index}
+								<div
+									class="absolute inset-0 transition-all duration-700 ease-in-out {index ===
+									currentMainBanner
+										? 'translate-x-0 opacity-100'
+										: index < currentMainBanner
+											? '-translate-x-full opacity-0'
+											: 'translate-x-full opacity-0'}"
 								>
-									<img
-										src={banner.image}
-										alt={banner.title}
-										class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-										loading="lazy"
-									/>
-									<div class="absolute inset-0 bg-gradient-to-r from-gray-900/70 to-transparent">
-										<div class="flex h-full items-center">
-											<div class="ml-8 max-w-xl text-white">
-												<h2 class="mb-2 text-2xl font-bold xl:text-3xl">{banner.title}</h2>
-												<p class="mb-4 text-lg text-gray-200">{banner.subtitle}</p>
-												<button
-													class="rounded-lg bg-white px-5 py-2.5 font-semibold text-gray-900 transition-colors hover:bg-gray-100"
-												>
-													今すぐ見る →
-												</button>
+									<a
+										href={banner.link}
+										class="group relative block h-full w-full overflow-hidden no-underline"
+									>
+										<img
+											src={banner.image}
+											alt={banner.title}
+											class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+											loading="lazy"
+										/>
+										<div class="absolute inset-0 bg-gradient-to-r from-gray-900/70 to-transparent">
+											<div class="flex h-full items-center">
+												<div class="ml-20 max-w-xl text-white">
+													<h2 class="mb-2 text-2xl font-bold">{banner.title}</h2>
+													<p class="mb-4 text-lg text-gray-200">{banner.subtitle}</p>
+												</div>
 											</div>
 										</div>
-									</div>
-								</a>
-							</div>
-						{/each}
-					</div>
-
-					<!-- 轮播控制按钮 -->
-					<button
-						class="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white"
-						on:click={prevMainBanner}
-						aria-label="前のバナー"
-					>
-						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M15 19l-7-7 7-7"
-							/>
-						</svg>
-					</button>
-					<button
-						class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white"
-						on:click={nextMainBanner}
-						aria-label="次のバナー"
-					>
-						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-						</svg>
-					</button>
-
-					<!-- 轮播指示器 -->
-					<div class="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
-						{#each mainBanners as _, index}
-							<button
-								class="h-1.5 rounded-full transition-all {index === currentMainBanner
-									? 'w-6 bg-white'
-									: 'w-1.5 bg-white/50'}"
-								on:click={() => goToMainBanner(index)}
-								aria-label="バナー {index + 1} へ"
-							></button>
-						{/each}
-					</div>
-				</div>
-
-				<!-- 右侧：分类区域 -->
-				<div class="lg:col-span-3 xl:col-span-3">
-					<div class="h-full rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 p-4 text-white shadow-lg">
-						<h2 class="mb-4 text-lg font-bold">商品カテゴリー</h2>
-						{#if categories.length > 0}
-							<div class="grid grid-cols-5 gap-2">
-								{#each categories.slice(0, 5) as category}
-									<a
-										href="/category/{category.id}"
-										class="group flex flex-col items-center rounded-lg p-2 transition-all hover:scale-105 hover:bg-gray-700/50"
-									>
-										<div
-											class="mb-1 flex h-10 w-10 items-center justify-center rounded-lg bg-gray-700 group-hover:bg-gray-600"
-										>
-											{#if category.icon}
-												<img src={category.icon} alt={category.name} class="h-6 w-6 object-cover" />
-											{:else}
-												<svg class="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="1.5"
-														d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-													/>
-												</svg>
-											{/if}
-										</div>
-										<span class="text-center text-xs">{category.name}</span>
 									</a>
+								</div>
+							{/each}
+
+							<!-- 轮播控制按钮 -->
+							<button
+								class="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white"
+								on:click={prevMainBanner}
+								aria-label="前のバナー"
+							>
+								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M15 19l-7-7 7-7"
+									/>
+								</svg>
+							</button>
+							<button
+								class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white"
+								on:click={nextMainBanner}
+								aria-label="次のバナー"
+							>
+								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 5l7 7-7 7"
+									/>
+								</svg>
+							</button>
+
+							<!-- 轮播指示器 -->
+							<div class="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
+								{#each mainBanners as _, index}
+									<button
+										class="h-1.5 rounded-full transition-all {index === currentMainBanner
+											? 'w-6 bg-white'
+											: 'w-1.5 bg-white/50'}"
+										on:click={() => goToMainBanner(index)}
+										aria-label="バナー {index + 1} へ"
+									></button>
 								{/each}
 							</div>
-						{:else}
-							<div class="grid grid-cols-5 gap-2">
-								{#each Array(5) as _, i}
-									<div class="flex flex-col items-center rounded-lg p-2 bg-gray-700/30">
-										<div class="mb-1 flex h-10 w-10 items-center justify-center rounded-lg bg-gray-700">
-											<svg class="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="1.5"
-													d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-												/>
-											</svg>
-										</div>
-										<span class="text-center text-xs text-gray-400">カテゴリー{i + 1}</span>
+						</div>
+					</div>
+
+					<!-- 右侧：分类区域和小卡片 -->
+					<div class="col-span-4">
+						<div class="h-full space-y-6">
+							<!-- 分类区域 -->
+							<div class="rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 p-9 shadow-lg">
+								<h2 class="mb-4 text-lg font-bold">商品カテゴリー</h2>
+								{#if categories.length > 0}
+									<div class="grid grid-cols-5 gap-1">
+										{#each categories as category}
+											<a
+												href="/category/{category.id}"
+												class="group flex flex-col items-center rounded-lg p-2 transition-all hover:scale-105 hover:bg-gray-700/50"
+											>
+												<div
+													class="mb-1 flex h-10 w-10 items-center justify-center rounded-lg bg-gray-200 group-hover:bg-gray-100"
+												>
+													{#if category.icon}
+														<img
+															src={category.icon}
+															alt={category.name}
+															class="h-6 w-6 object-cover"
+														/>
+													{:else}
+														<svg
+															class="h-5 w-5 text-gray-300"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="1.5"
+																d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+															/>
+														</svg>
+													{/if}
+												</div>
+												<span
+													class="text-center font-mono text-xs text-gray-700 group-hover:text-white"
+													>{category.name}</span
+												>
+											</a>
+										{/each}
 									</div>
-								{/each}
+								{/if}
 							</div>
-						{/if}
+						</div>
 					</div>
 				</div>
 			</div>
+		</section>
+	</div>
 
-			<!-- 移动端：轮播图单独显示 -->
-			<div class="lg:hidden">
+	<!-- 移动端布局 -->
+	<div class="lg:hidden">
+		<!-- 轮播图 -->
+		<section class="bg-gray-900">
+			<div class="relative">
 				<div class="relative h-64 sm:h-80">
 					{#each mainBanners as banner, index}
 						<div
@@ -406,11 +376,6 @@
 										<div class="ml-6 max-w-lg text-white sm:ml-8">
 											<h2 class="mb-2 text-2xl font-bold sm:text-3xl">{banner.title}</h2>
 											<p class="mb-4 text-lg text-gray-200">{banner.subtitle}</p>
-											<button
-												class="rounded-lg bg-white px-5 py-2.5 font-semibold text-gray-900 transition-colors hover:bg-gray-100"
-											>
-												今すぐ見る →
-											</button>
 										</div>
 									</div>
 								</div>
@@ -418,13 +383,17 @@
 						</div>
 					{/each}
 
-					<!-- 轮播控制按钮 -->
 					<button
 						class="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-white/90 p-1.5 shadow transition-all hover:scale-110 hover:bg-white sm:left-4 sm:p-2"
 						on:click={prevMainBanner}
 						aria-label="前のバナー"
 					>
-						<svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<svg
+							class="h-4 w-4 sm:h-5 sm:w-5"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"
@@ -438,13 +407,24 @@
 						on:click={nextMainBanner}
 						aria-label="次のバナー"
 					>
-						<svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+						<svg
+							class="h-4 w-4 sm:h-5 sm:w-5"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 5l7 7-7 7"
+							/>
 						</svg>
 					</button>
 
-					<!-- 轮播指示器 -->
-					<div class="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 sm:bottom-4 sm:gap-2">
+					<div
+						class="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 sm:bottom-4 sm:gap-2"
+					>
 						{#each mainBanners as _, index}
 							<button
 								class="h-1.5 rounded-full transition-all {index === currentMainBanner
@@ -457,77 +437,63 @@
 					</div>
 				</div>
 			</div>
-		</div>
-	</section>
+		</section>
 
-	<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-		<!-- 移动端：标题区域 -->
-		<div class="mb-8 lg:hidden">
-			<div class="rounded-xl bg-gradient-to-r from-gray-800 to-gray-900 p-6 text-white shadow-lg">
-				<div class="mb-6">
-					<h1 class="mb-3 text-2xl font-bold sm:text-3xl">商品一覧</h1>
-					<p class="mb-6 text-base text-gray-300 sm:text-lg">高品質な商品を豊富に取り揃えています</p>
-				</div>
-				<div class="flex flex-wrap gap-3">
-					<div class="flex-1 min-w-[120px] rounded-lg bg-gray-700/50 p-3 text-center">
-						<span class="text-xl font-bold block sm:text-2xl">1000+</span>
-						<p class="text-sm text-gray-300">商品</p>
-					</div>
-					<div class="flex-1 min-w-[120px] rounded-lg bg-gray-700/50 p-3 text-center">
-						<span class="text-xl font-bold block sm:text-2xl">50+</span>
-						<p class="text-sm text-gray-300">カテゴリー</p>
-					</div>
-					<div class="flex-1 min-w-[120px] rounded-lg bg-gray-700/50 p-3 text-center">
-						<span class="text-xl font-bold block sm:text-2xl">24時間</span>
-						<p class="text-sm text-gray-300">配送</p>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- 移动端：分类区域 -->
-		{#if categories.length > 0}
-			<section class="mb-8 lg:hidden">
-				<div class="rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 p-6 shadow-sm">
-					<h2 class="mb-4 text-lg font-bold text-gray-900">商品カテゴリー</h2>
-					<div class="grid grid-cols-4 gap-3 sm:grid-cols-5">
-						{#each categories.slice(0, 8) as category}
-							<a
-								href="/category/{category.id}"
-								class="group flex flex-col items-center rounded-lg p-3 transition-all hover:scale-105 hover:bg-white hover:shadow-md"
-							>
-								<div
-									class="mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-gray-200 to-gray-300 group-hover:from-gray-300 group-hover:to-gray-400"
+		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+			<!-- 移动端分类 -->
+			{#if categories.length > 0}
+				<section class="mb-6">
+					<div class="rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 p-4 shadow-sm">
+						<h2 class="mb-4 text-lg font-bold text-gray-900">商品カテゴリー</h2>
+						<div class="grid grid-cols-5 gap-2">
+							{#each categories as category}
+								<a
+									href="/category/{category.id}"
+									class="group flex flex-col items-center rounded-lg p-2 transition-all hover:scale-105 hover:bg-white hover:shadow-md"
 								>
-									{#if category.icon}
-										<img src={category.icon} alt={category.name} class="h-8 w-8 object-cover" />
-									{:else}
-										<svg class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="1.5"
-												d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-											/>
-										</svg>
-									{/if}
-								</div>
-								<span class="text-center text-xs font-medium text-gray-700">{category.name}</span>
-							</a>
-						{/each}
+									<div
+										class="mb-1 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-gray-200 to-gray-300 group-hover:from-gray-300 group-hover:to-gray-400"
+									>
+										{#if category.icon}
+											<img src={category.icon} alt={category.name} class="h-6 w-6 object-cover" />
+										{:else}
+											<svg
+												class="h-5 w-5 text-gray-700"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="1.5"
+													d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+												/>
+											</svg>
+										{/if}
+									</div>
+									<span class="text-center text-xs font-medium text-gray-700">{category.name}</span>
+								</a>
+							{/each}
+						</div>
 					</div>
-				</div>
-			</section>
-		{/if}
+				</section>
+			{/if}
+		</div>
+	</div>
 
+	<!-- 商品列表区域 -->
+	<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 		<!-- ソートバー -->
 		<div class="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
-			<div class="text-sm text-gray-600">
-				<span class="font-semibold">{products.length}</span> 件の商品
+			<div class="flex items-center gap-4">
+				<span class="text-lg font-bold text-gray-900">商品一覧</span>
+				<div class="text-sm text-gray-600">
+					<span class="font-semibold">{products.length}</span> 件の商品
+				</div>
 			</div>
 
 			<div class="flex items-center gap-2">
-				<!-- デスクトップ用ソートボタン -->
 				<div class="hidden items-center gap-2 sm:flex">
 					{#each sortOptions as option}
 						<button
@@ -542,7 +508,6 @@
 					{/each}
 				</div>
 
-				<!-- モバイル用セレクト -->
 				<select
 					bind:value={sortBy}
 					on:change={(e) => handleSort(e.currentTarget.value)}
@@ -577,7 +542,6 @@
 						href="/product/{product.id}"
 						class="group overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
 					>
-						<!-- 商品画像 -->
 						<div class="relative aspect-square overflow-hidden bg-gray-100">
 							{#if product.image}
 								<img
@@ -599,7 +563,6 @@
 								</div>
 							{/if}
 
-							<!-- バッジ -->
 							<div class="absolute top-2 left-2 flex flex-col gap-1">
 								{#if product.isNew}
 									<span class="rounded bg-blue-600 px-2 py-1 text-xs font-bold text-white shadow">
@@ -614,13 +577,11 @@
 							</div>
 						</div>
 
-						<!-- 商品情報 -->
 						<div class="p-3">
 							<h3 class="mb-2 line-clamp-2 text-sm font-medium text-gray-900">
 								{product.name_ja || product.name}
 							</h3>
 
-							<!-- 評価 -->
 							{#if product.rating}
 								<div class="mb-2 flex items-center gap-1">
 									<div class="flex">
@@ -642,7 +603,6 @@
 								</div>
 							{/if}
 
-							<!-- 価格 -->
 							<div class="flex items-baseline gap-2">
 								<span class="text-base font-bold text-gray-900"
 									>¥{product.price.toLocaleString()}</span
@@ -658,7 +618,6 @@
 				{/each}
 			</div>
 
-			<!-- 懒加载指示器 -->
 			{#if loadingMore}
 				<div class="mt-8 flex justify-center">
 					<div class="flex items-center gap-3 rounded-lg bg-gray-50 px-6 py-3 shadow-sm">
@@ -677,19 +636,35 @@
 								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 							></path>
 						</svg>
-						<span class="text-sm text-gray-600">読み込み中... ({lazyLoadCount}/{MAX_LAZY_LOAD})</span>
+						<span class="text-sm text-gray-600"
+							>読み込み中... ({lazyLoadCount}/{MAX_LAZY_LOAD})</span
+						>
 					</div>
 				</div>
 			{/if}
 
 			{#if lazyLoadCount >= MAX_LAZY_LOAD}
-				<div class="mt-8 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 py-6 text-center shadow-sm">
+				<div
+					class="mt-8 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 py-6 text-center shadow-sm"
+				>
 					<div class="mx-auto max-w-md">
-						<svg class="mx-auto mb-3 h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+						<svg
+							class="mx-auto mb-3 h-12 w-12 text-gray-400"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
+							/>
 						</svg>
 						<p class="mb-2 text-gray-700">これ以上の商品は従来のページネーションをご利用ください</p>
-						<p class="text-sm text-gray-500">最大 {MAX_LAZY_LOAD} 回の自動読み込みを制限しています</p>
+						<p class="text-sm text-gray-500">
+							最大 {MAX_LAZY_LOAD} 回の自動読み込みを制限しています
+						</p>
 					</div>
 				</div>
 			{:else if !hasMore && products.length > 0}
@@ -717,7 +692,6 @@
 		{/if}
 	</div>
 
-	<!-- 底部安全区域 -->
 	<div class="h-8"></div>
 </main>
 
@@ -729,7 +703,6 @@
 		overflow: hidden;
 	}
 
-	/* 加载动画 */
 	@keyframes spin {
 		from {
 			transform: rotate(0deg);
