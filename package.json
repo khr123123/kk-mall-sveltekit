@@ -38,6 +38,7 @@
 		"vite": "^7.2.6"
 	},
 	"dependencies": {
+		"@paypayopa/paypayopa-sdk-node": "^2.1.0",
 		"pocketbase": "^0.26.5"
 	}
 }

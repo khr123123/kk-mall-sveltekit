@@ -72,7 +72,7 @@
 <main class="min-h-screen bg-white">
 	<!-- ヘッダー -->
 	<section class="bg-gradient-to-r from-orange-600 to-red-600 text-white">
-		<div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<div class="flex items-center gap-3">
 				<svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path

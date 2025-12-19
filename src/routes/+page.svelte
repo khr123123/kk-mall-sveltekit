@@ -2,6 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import PocketBase from 'pocketbase';
 	import type { RecordModel } from 'pocketbase';
+	import { browser } from '$app/environment'; // 重要！追加
 
 	interface Product extends RecordModel {
 		name: string;
@@ -23,8 +24,13 @@
 		tags?: string[];
 		specs?: Record<string, string | number>;
 	}
-	//fuck
-	const pb = new PocketBase('http://localhost:8090');
+
+	// ブラウザ環境でのみPocketBaseを初期化
+	let pb: PocketBase | null = null;
+
+	if (browser) {
+		pb = new PocketBase('http://localhost:8090');
+	}
 
 	// 主轮播图数据
 	const mainBanners = [
@@ -34,28 +40,28 @@
 				'https://plus.unsplash.com/premium_photo-1664201889922-66bc3c778c1e?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
 			title: '新年セール',
 			subtitle: '全品50%OFF〜',
-			link: '/sale'
+			link: '/'
 		},
 		{
 			id: 2,
 			image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&h=400&fit=crop',
 			title: '家電・デジタル',
 			subtitle: '最新ガジェット',
-			link: '/electronics'
+			link: '/'
 		},
 		{
 			id: 3,
 			image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop',
 			title: 'ファッション',
 			subtitle: '春の新作',
-			link: '/fashion'
+			link: '/'
 		},
 		{
 			id: 4,
 			image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop',
 			title: 'ホーム&リビング',
 			subtitle: '暮らしを豊かに',
-			link: '/home'
+			link: '/'
 		}
 	];
 
@@ -84,11 +90,20 @@
 	];
 
 	onMount(async () => {
-		await Promise.all([loadProducts(), loadCategories()]);
-		startAutoPlay();
+		// ブラウザ環境でのみ実行
+		if (browser) {
+			await Promise.all([loadProducts(), loadCategories()]);
+			startAutoPlay();
+		} else {
+			// SSR時はローディングを終了
+			isLoading = false;
+		}
 	});
 
 	function startAutoPlay() {
+		// ブラウザ環境でのみ実行
+		if (!browser) return;
+
 		autoPlayInterval = window.setInterval(() => {
 			currentMainBanner = (currentMainBanner + 1) % mainBanners.length;
 		}, 5000);
@@ -96,7 +111,8 @@
 	}
 
 	function handleScroll() {
-		if (loadingMore || !hasMore || lazyLoadCount >= MAX_LAZY_LOAD) return;
+		// ブラウザ環境でのみ実行
+		if (!browser || loadingMore || !hasMore || lazyLoadCount >= MAX_LAZY_LOAD) return;
 
 		const scrollTop = window.scrollY || document.documentElement.scrollTop;
 		const windowHeight = window.innerHeight;
@@ -110,6 +126,14 @@
 	async function loadProducts() {
 		try {
 			isLoading = true;
+
+			// pbが初期化されているか確認
+			if (!pb) {
+				console.error('PocketBase is not initialized');
+				isLoading = false;
+				return;
+			}
+
 			const resultList = await pb.collection('products').getList(currentPage, 20, {
 				filter: 'inStock = true',
 				expand: 'category_id',
@@ -134,6 +158,12 @@
 
 	async function loadCategories() {
 		try {
+			// pbが初期化されているか確認
+			if (!pb) {
+				console.error('PocketBase is not initialized');
+				return;
+			}
+
 			const result = await pb.collection('category').getFullList({
 				sort: 'created'
 			});
@@ -144,7 +174,8 @@
 	}
 
 	async function loadMore() {
-		if (loadingMore || !hasMore || lazyLoadCount >= MAX_LAZY_LOAD) return;
+		// pbが初期化されているか確認
+		if (!pb || loadingMore || !hasMore || lazyLoadCount >= MAX_LAZY_LOAD) return;
 
 		loadingMore = true;
 		currentPage++;
@@ -168,6 +199,9 @@
 	}
 
 	async function handleSort(newSort: string) {
+		// pbが初期化されているか確認
+		if (!pb) return;
+
 		sortBy = newSort;
 		currentPage = 1;
 		hasMore = true;
@@ -191,6 +225,9 @@
 	}
 
 	function resetAutoPlay() {
+		// ブラウザ環境でのみ実行
+		if (!browser) return;
+
 		clearInterval(autoPlayInterval);
 		autoPlayInterval = window.setInterval(() => {
 			currentMainBanner = (currentMainBanner + 1) % mainBanners.length;
@@ -199,7 +236,11 @@
 
 	function cleanup() {
 		if (autoPlayInterval) clearInterval(autoPlayInterval);
-		window.removeEventListener('scroll', handleScroll);
+
+		// ブラウザ環境でのみ実行
+		if (browser) {
+			window.removeEventListener('scroll', handleScroll);
+		}
 	}
 
 	onDestroy(() => {
@@ -207,6 +248,7 @@
 	});
 </script>
 
+<!-- 以下、HTMLテンプレート部分は変更なし -->
 <main class="min-h-screen bg-gray-50">
 	<!-- 桌面端布局 -->
 	<div class="hidden lg:block">

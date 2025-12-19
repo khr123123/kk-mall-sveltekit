@@ -47,7 +47,7 @@
 			title: 'ポイント付与のお知らせ',
 			content: '500ポイントが付与されました。次回のお買い物でご利用いただけます。',
 			time: '1日前',
-			read: true,
+			read: false,
 			icon: '💎'
 		},
 		{
@@ -56,7 +56,7 @@
 			title: 'レビュー依頼',
 			content: '購入された商品のレビューをお待ちしています。',
 			time: '2日前',
-			read: true,
+			read: false,
 			icon: '⭐'
 		},
 		{
@@ -65,7 +65,7 @@
 			title: 'アカウント更新',
 			content: 'プロフィール情報が正常に更新されました。',
 			time: '3日前',
-			read: true,
+			read: false,
 			icon: '✓'
 		}
 	];
@@ -150,7 +150,7 @@
 <div class="relative" bind:this={dropdownElement}>
 	<!-- 消息按钮 -->
 	<button
-		class="cursor-pointer relative rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none"
+		class="relative cursor-pointer rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none"
 		on:click={toggleDropdown}
 		aria-label="メッセージ"
 		aria-expanded={isOpen}
@@ -246,7 +246,18 @@
 										<div
 											class={`flex h-12 w-12 items-center justify-center rounded-full text-xl ${!message.read ? 'bg-blue-50' : 'bg-gray-100'}`}
 										>
-											{message.icon}
+											{#if message.type === 'order'}
+												<img src="/logo.png" alt="order" class="h-9 w-9" />
+											{/if}
+											{#if message.type === 'promotion'}
+												<img src="/svgs/notification.svg" alt="notification" class="h-9 w-9" />
+											{/if}
+											{#if message.type === 'system'}
+												<img src="/svgs/system.svg" alt="system" class="h-5 w-5" />
+											{/if}
+											{#if message.type === 'message'}
+												<img src="/svgs/message.svg" alt="message" class="h-5 w-5" />
+											{/if}
 										</div>
 										<div class="mt-2">
 											<span
