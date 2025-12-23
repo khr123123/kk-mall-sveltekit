@@ -120,7 +120,11 @@
 		<!-- 成功消息 -->
 		<div class="mb-8 text-center">
 			<div class="mb-4 flex justify-center">
-				<div class="flex h-24 w-24 items-center justify-center rounded-full bg-green-100 text-green-600 {showConfetti ? 'animate-bounce' : ''}">
+				<div
+					class="flex h-24 w-24 items-center justify-center rounded-full bg-green-100 text-green-600 {showConfetti
+						? 'animate-bounce'
+						: ''}"
+				>
 					{@html icons.checkCircle}
 				</div>
 			</div>
@@ -218,7 +222,9 @@
 								/>
 								<div class="flex-1">
 									<p class="font-medium text-gray-900">{item.name}</p>
-									<div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+									<div
+										class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500"
+									>
 										{#if item.color}
 											<span>カラー: {item.color}</span>
 										{/if}
@@ -321,7 +327,9 @@
 			<h3 class="mb-4 text-lg font-semibold text-gray-900">次のステップ</h3>
 			<div class="space-y-3">
 				<div class="flex items-start gap-3">
-					<div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+					<div
+						class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600"
+					>
 						1
 					</div>
 					<div>
@@ -330,7 +338,9 @@
 					</div>
 				</div>
 				<div class="flex items-start gap-3">
-					<div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+					<div
+						class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600"
+					>
 						2
 					</div>
 					<div>
@@ -339,7 +349,9 @@
 					</div>
 				</div>
 				<div class="flex items-start gap-3">
-					<div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+					<div
+						class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600"
+					>
 						3
 					</div>
 					<div>
@@ -363,7 +375,8 @@
 
 <style>
 	@keyframes bounce {
-		0%, 100% {
+		0%,
+		100% {
 			transform: translateY(-25%);
 			animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
 		}

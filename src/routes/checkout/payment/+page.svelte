@@ -13,13 +13,13 @@
 		link: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>`
 	};
 
-	// 状态变量 - 每次都重新开始
+	// 状态变量
 	let paymentStatus: 'processing' | 'created' | 'success' | 'failed' = 'processing';
 	let progress = 0;
 	let orderData: any = null;
 	let countdown = 10;
-	let paypayUrl = '';
-	let paymentId = '';
+	let qrCode: string | null = null;
+	let merchantPaymentId = '';
 	let pollingInterval: NodeJS.Timeout | null = null;
 	let progressInterval: NodeJS.Timeout | null = null;
 	let countdownInterval: NodeJS.Timeout | null = null;
@@ -45,21 +45,55 @@
 		}
 	}
 
-	// 重置所有状态 - 用于重新开始
+	// 重置所有状态
 	function resetAllState() {
 		cleanupTimers();
 		paymentStatus = 'processing';
 		progress = 0;
 		countdown = 10;
-		paypayUrl = '';
-		paymentId = '';
-		// orderData 保持，因为需要用于创建订单
+		qrCode = null;
+		merchantPaymentId = '';
 	}
 
-	// 创建PayPay支付订单
+	// 检查支付状态
+	async function checkStatus() {
+		try {
+			const res = await fetch(`/api/paypay/status/${merchantPaymentId}`);
+			const data = await res.json();
+			console.log('支付状态响应:', data);
+
+			const status = data?.data?.BODY?.data?.status;
+			console.log('当前支付状态:', status);
+
+			if (status === 'COMPLETED') {
+				// 支付成功
+				cleanupTimers();
+				progress = 100;
+				paymentStatus = 'success';
+				startCountdown();
+			} else if (status === 'FAILED' || status === 'CANCELED') {
+				// 支付失败
+				cleanupTimers();
+				progress = 100;
+				paymentStatus = 'failed';
+			} else if (status === 'CREATED') {
+				// 待支付
+				if (progress < 70) {
+					progress = 70;
+				}
+			}
+		} catch (error) {
+			console.error('查询支付状态失败:', error);
+		}
+	}
+
+	// 创建 PayPay 支付订单
 	async function createPayPayOrder() {
 		resetAllState();
-		
+
+		// 生成唯一的支付ID
+		merchantPaymentId = crypto.randomUUID();
+
 		// 进度动画（创建订单阶段）
 		progressInterval = setInterval(() => {
 			if (progress < 40) {
@@ -68,8 +102,7 @@
 		}, 300);
 
 		try {
-			// 这里可以接收从父组件传递的订单数据
-			// 如果没有传递，使用默认测试数据
+			// 如果没有订单数据，使用默认测试数据
 			if (!orderData) {
 				orderData = {
 					total: 42200,
@@ -93,26 +126,17 @@
 			console.log('创建订单数据:', orderData);
 
 			// 调用后端API创建PayPay订单
-			const response = await fetch('http://127.0.0.1:5000/create-qr', {
+			const res = await fetch('/api/paypay/create', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					merchantPaymentId,
+					codeType: 'ORDER_QR',
+					orderDescription: 'Example - Mune Cake shop',
 					amount: {
 						amount: 1, // 测试用1日元
 						currency: 'JPY'
-					},
-					orderItems: (orderData.items || []).map((item: any, index: number) => ({
-						category: item.category || 'General',
-						name: item.name || item.title || `商品 ${index + 1}`,
-						productId: item.productId || `prod_${index + 1}`,
-						quantity: item.quantity || 1,
-						unitPrice: {
-							amount: item.price || item.unitPrice?.amount || 1,
-							currency: 'JPY'
-						}
-					}))
+					}
 				})
 			});
 
@@ -122,39 +146,33 @@
 				progressInterval = null;
 			}
 
-			if (!response.ok) {
-				const errorText = await response.text();
+			if (!res.ok) {
+				const errorText = await res.text();
 				console.error('创建订单失败:', errorText);
-				throw new Error(`HTTP error! status: ${response.status}`);
+				throw new Error(`HTTP error! status: ${res.status}`);
 			}
 
-			const result = await response.json();
+			const result = await res.json();
 			console.log('PayPay创建订单响应:', result);
 
-			// 检查结果格式
-			if (result && (result.data || result.qrCodeData)) {
-				// 保存支付信息
-				const paypayData = result.data || result.qrCodeData;
-				paypayUrl = paypayData.url;
-				paymentId = paypayData.merchantPaymentId || result.merchantPaymentId;
+			// 保存二维码链接
+			qrCode = result?.data?.BODY?.data?.url;
 
+			if (qrCode) {
 				// 更新状态
 				paymentStatus = 'created';
 				progress = 60;
 
-				console.log('✅ 订单创建成功，支付ID:', paymentId);
-				console.log('支付链接:', paypayUrl);
+				console.log('✅ 订单创建成功，支付ID:', merchantPaymentId);
+				console.log('支付链接:', qrCode);
 
 				// 自动打开支付页面
-				if (paypayUrl) {
-					window.open(paypayUrl, '_blank');
-				}
+				window.open(qrCode);
 
 				// 开始轮询支付状态
 				startPolling();
 			} else {
-				console.error('PayPay响应格式错误:', result);
-				throw new Error('PayPay响应格式错误');
+				throw new Error('未获取到支付链接');
 			}
 		} catch (error) {
 			console.error('创建支付失败:', error);
@@ -163,15 +181,10 @@
 				clearInterval(progressInterval);
 				progressInterval = null;
 			}
-			
+
 			// 更新失败状态
 			paymentStatus = 'failed';
 			progress = 100;
-
-			// 显示具体错误信息
-			if (error instanceof Error) {
-				console.error('错误详情:', error.message);
-			}
 		}
 	}
 
@@ -190,71 +203,8 @@
 			}
 		}, 500);
 
-		// 清理之前的轮询定时器
-		if (pollingInterval) {
-			clearInterval(pollingInterval);
-		}
-
-		pollingInterval = setInterval(async () => {
-			if (!paymentId) {
-				cleanupTimers();
-				return;
-			}
-
-			try {
-				console.log(`轮询支付状态: ${paymentId}`);
-				const response = await fetch(`http://127.0.0.1:5000/order-status/${paymentId}`);
-
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const result = await response.json();
-				console.log('支付状态响应:', result);
-
-				// 检查支付状态
-				const payStatus = result.data?.status;
-				console.log('当前支付状态:', payStatus);
-
-				if (payStatus === 'COMPLETED') {
-					// 支付成功
-					cleanupTimers();
-					progress = 100;
-					paymentStatus = 'success';
-
-					console.log('✅ 支付成功！');
-
-					// 开始倒计时跳转
-					startCountdown();
-				} else if (payStatus === 'FAILED' || payStatus === 'CANCELED') {
-					// 支付失败
-					cleanupTimers();
-					progress = 100;
-					paymentStatus = 'failed';
-
-					console.log('❌ 支付失败:', payStatus);
-				} else if (payStatus === 'CREATED' || payStatus === 'PENDING') {
-					// 支付进行中
-					console.log('⏳ 支付进行中:', payStatus);
-
-					// 根据状态微调进度
-					if (payStatus === 'CREATED' && progress < 70) {
-						progress = 70;
-					} else if (payStatus === 'PENDING' && progress < 80) {
-						progress = 80;
-					}
-				} else if (payStatus === 'AUTHORIZED') {
-					// 已授权
-					console.log('🔒 支付已授权，等待完成');
-					if (progress < 85) progress = 85;
-				} else {
-					// 未知状态
-					console.log('❓ 未知支付状态:', payStatus);
-				}
-			} catch (error) {
-				console.error('查询支付状态失败:', error);
-			}
-		}, 2000);
+		// 开始轮询
+		pollingInterval = setInterval(checkStatus, 3000);
 	}
 
 	// 倒计时跳转
@@ -275,7 +225,7 @@
 		goto('/checkout/success');
 	}
 
-	// 重试支付 - 完全重新开始
+	// 重试支付
 	function retryPayment() {
 		resetAllState();
 		createPayPayOrder();
@@ -289,18 +239,16 @@
 
 	// 复制支付链接
 	function copyPaymentLink() {
-		if (paypayUrl) {
+		if (qrCode) {
 			navigator.clipboard
-				.writeText(paypayUrl)
+				.writeText(qrCode)
 				.then(() => alert('リンクをコピーしました'))
 				.catch((err) => console.error('コピー失敗:', err));
 		}
 	}
 
-	// 组件挂载 - 每次进入页面都重新开始
+	// 组件挂载
 	onMount(() => {
-		// 这里可以接收从父页面传递的订单数据
-		// 例如通过URL参数或props
 		createPayPayOrder();
 	});
 
@@ -366,7 +314,7 @@
 				{/if}
 
 				<!-- 支付链接（当订单已创建时显示） -->
-				{#if paymentStatus === 'created' && paypayUrl}
+				{#if paymentStatus === 'created' && qrCode}
 					<div class="mb-6 space-y-4">
 						<p class="text-sm text-gray-600">支払いページが自動的に開かれました。</p>
 						<p class="text-sm text-gray-500">
@@ -375,7 +323,7 @@
 
 						<div class="rounded-lg bg-gray-50 p-4">
 							<a
-								href={paypayUrl}
+								href={qrCode}
 								target="_blank"
 								rel="noopener noreferrer"
 								class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
@@ -410,7 +358,8 @@
 						<div class="space-y-2 text-sm">
 							<div class="flex justify-between">
 								<span class="text-gray-600">注文番号</span>
-								<span class="font-mono text-gray-900">{orderData.orderId || paymentId}</span>
+								<span class="font-mono text-gray-900">{orderData.orderId || merchantPaymentId}</span
+								>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済金額</span>
@@ -425,7 +374,7 @@
 				{/if}
 			</div>
 
-		<!-- 支付成功 -->
+			<!-- 支付成功 -->
 		{:else if paymentStatus === 'success'}
 			<div class="rounded-lg border border-green-200 bg-white p-8 text-center shadow-sm">
 				<div class="mb-6 flex justify-center">
@@ -463,7 +412,8 @@
 						<div class="space-y-2 text-sm">
 							<div class="flex justify-between">
 								<span class="text-gray-600">注文番号</span>
-								<span class="font-mono text-gray-900">{orderData.orderId || paymentId}</span>
+								<span class="font-mono text-gray-900">{orderData.orderId || merchantPaymentId}</span
+								>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済金額</span>
@@ -489,7 +439,7 @@
 				</button>
 			</div>
 
-		<!-- 支付失败 -->
+			<!-- 支付失败 -->
 		{:else if paymentStatus === 'failed'}
 			<div class="rounded-lg border border-red-200 bg-white p-8 text-center shadow-sm">
 				<div class="mb-6 flex justify-center">
@@ -542,7 +492,8 @@
 						<div class="space-y-2 text-sm">
 							<div class="flex justify-between">
 								<span class="text-gray-600">注文番号</span>
-								<span class="font-mono text-gray-900">{orderData.orderId || paymentId}</span>
+								<span class="font-mono text-gray-900">{orderData.orderId || merchantPaymentId}</span
+								>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済金額</span>
