@@ -1,74 +1,285 @@
 ﻿<script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { userStore } from '$lib/stores/userStore';
+	import {
+		profileService,
+		type Order,
+		type Address,
+		type Favorite
+	} from '$lib/services/profileService';
+	import { onMount } from 'svelte';
 
-	// 使用 $effect 响应式监听路由变化
+	// 响应式监听路由变化
 	let currentTab = $state('profile');
+	let isLoading = $state(true);
 
 	$effect(() => {
 		currentTab = $page.params.tab ?? 'profile';
+		loadTabData();
 	});
 
-	// 用户信息
-	const user = {
-		name: '山田 太郎',
-		email: 'yamada.taro@example.com',
-		avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user',
-		memberSince: '2023年4月',
-		points: 1250,
-		level: 'ゴールド会員'
-	};
+	// 订阅用户状态
+	let user = $state($userStore.user);
+	let isLoggedIn = $state($userStore.isLoggedIn);
 
-	// 最近的订单
-	const recentOrders = [
-		{ id: 'ORD-202400123', date: '2024-01-15', total: 42800, status: '発送済み', items: 2 },
-		{ id: 'ORD-202400118', date: '2024-01-12', total: 25600, status: '配送中', items: 1 },
-		{ id: 'ORD-202400112', date: '2024-01-08', total: 15200, status: '完了', items: 3 }
-	];
+	$effect(() => {
+		user = $userStore.user;
+		isLoggedIn = $userStore.isLoggedIn;
 
-	// 收藏商品
-	const favoriteProducts = [
-		{
-			id: 101,
-			name: 'iPhone 15 Pro Max',
-			price: 148000,
-			image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=200&h=200&fit=crop'
-		},
-		{
-			id: 102,
-			name: 'SONY WH-1000XM5',
-			price: 39800,
-			image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop'
-		},
-		{
-			id: 103,
-			name: 'Dyson 掃除機',
-			price: 65800,
-			image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop'
+		// 如果未登录,重定向到登录页
+		if (!isLoggedIn && !$userStore.isLoading) {
+			goto('/login');
 		}
-	];
+	});
 
-	// 收货地址
-	const addresses = [
-		{
-			id: 1,
-			name: '自宅',
-			recipient: '山田 太郎',
-			phone: '080-1234-5678',
-			address: '〒150-0001 東京都渋谷区神宮前1-1-1',
-			isDefault: true
-		},
-		{
-			id: 2,
-			name: '会社',
-			recipient: '山田 太郎',
-			phone: '03-1234-5678',
-			address: '〒100-0005 東京都千代田区丸の内1-1-1',
-			isDefault: false
+	// 数据状态
+	let orders: Order[] = $state([]);
+	let addresses: Address[] = $state([]);
+	let favorites: Favorite[] = $state([]);
+	let userStats = $state({ totalOrders: 0, totalFavorites: 0, totalAddresses: 0 });
+
+	// 模态框状态
+	let showAddressModal = $state(false);
+	let showAvatarModal = $state(false);
+	let editingAddress: Address | null = $state(null);
+
+	// 表单数据
+	let addressForm = $state({
+		label: '',
+		recipient: '',
+		phone: '',
+		postal_code: '',
+		address: '',
+		is_default: false
+	});
+
+	let avatarFile: File | null = $state(null);
+	let avatarPreview: string | null = $state(null);
+
+	// 加载标签页数据
+	async function loadTabData() {
+		if (!user?.id) return;
+
+		isLoading = true;
+
+		try {
+			switch (currentTab) {
+				case 'profile':
+					await loadUserStats();
+					break;
+				case 'orders':
+					await loadOrders();
+					break;
+				case 'addresses':
+					await loadAddresses();
+					break;
+				case 'favorites':
+					await loadFavorites();
+					break;
+			}
+		} finally {
+			isLoading = false;
 		}
-	];
+	}
 
-	// SVG 图标组件
+	// 加载用户统计
+	async function loadUserStats() {
+		if (!user?.id) return;
+		const result = await profileService.getUserStats(user.id);
+		if (result.success) {
+			userStats = result.stats!;
+		}
+	}
+
+	// 加载订单
+	async function loadOrders() {
+		if (!user?.id) return;
+		const result = await profileService.getOrders(user.id);
+		if (result.success) {
+			orders = result.orders || [];
+		}
+	}
+
+	// 加载地址
+	async function loadAddresses() {
+		if (!user?.id) return;
+		const result = await profileService.getAddresses(user.id);
+		if (result.success) {
+			addresses = result.addresses || [];
+		}
+	}
+	function mapFavorites(items: any[] = []) {
+		return items.map((item: any) => {
+			const product = item.expand?.product_id;
+
+			return {
+				id: item.id,
+				product_name: product?.name ?? '',
+				product_price: product?.price ?? 0,
+				product_image: product?.images?.[0] ?? ''
+			};
+		});
+	}
+
+	// 加载收藏
+	async function loadFavorites() {
+		if (!user?.id) return;
+		const result = await profileService.getFavorites(user.id);
+		if (result.success) {
+			console.log(result.favorites);
+			console.log(result.favorites);
+			favorites = mapFavorites(result.favorites || []);
+		}
+	}
+
+	// ============ 地址管理 ============
+	function openAddressModal(address: Address | null = null) {
+		editingAddress = address;
+		if (address) {
+			addressForm = {
+				label: address.label,
+				recipient: address.recipient,
+				phone: address.phone,
+				postal_code: address.postal_code,
+				address: address.address,
+				is_default: address.is_default
+			};
+		} else {
+			addressForm = {
+				label: '',
+				recipient: '',
+				phone: '',
+				postal_code: '',
+				address: '',
+				is_default: false
+			};
+		}
+		showAddressModal = true;
+	}
+
+	function closeAddressModal() {
+		showAddressModal = false;
+		editingAddress = null;
+	}
+
+	async function saveAddress() {
+		if (!user?.id) return;
+
+		const result = editingAddress
+			? await profileService.updateAddress(editingAddress.id, user.id, addressForm)
+			: await profileService.createAddress(user.id, addressForm);
+
+		if (result.success) {
+			await loadAddresses();
+			closeAddressModal();
+		} else {
+			alert(`住所の${editingAddress ? '更新' : '作成'}に失敗しました: ${result.error}`);
+		}
+	}
+
+	async function deleteAddress(addressId: string) {
+		if (!confirm('この住所を削除してもよろしいですか?')) return;
+
+		const result = await profileService.deleteAddress(addressId);
+		if (result.success) {
+			await loadAddresses();
+		} else {
+			alert(`住所の削除に失敗しました: ${result.error}`);
+		}
+	}
+
+	async function setDefaultAddress(addressId: string) {
+		if (!user?.id) return;
+
+		const result = await profileService.setDefaultAddress(addressId, user.id);
+		if (result.success) {
+			await loadAddresses();
+		}
+	}
+
+	// ============ 收藏管理 ============
+	async function removeFavorite(favoriteId: string) {
+		const result = await profileService.removeFavorite(favoriteId);
+		if (result.success) {
+			await loadFavorites();
+		}
+	}
+
+	async function clearAllFavorites() {
+		if (!user?.id) return;
+		if (!confirm('すべてのお気に入りを削除してもよろしいですか?')) return;
+
+		const result = await profileService.clearFavorites(user.id);
+		if (result.success) {
+			await loadFavorites();
+		}
+	}
+
+	// ============ 头像管理 ============
+	function openAvatarModal() {
+		showAvatarModal = true;
+		avatarFile = null;
+		avatarPreview = null;
+	}
+
+	function closeAvatarModal() {
+		showAvatarModal = false;
+		avatarFile = null;
+		avatarPreview = null;
+	}
+
+	function handleAvatarSelect(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (input.files && input.files[0]) {
+			avatarFile = input.files[0];
+
+			// 生成预览
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				avatarPreview = e.target?.result as string;
+			};
+			reader.readAsDataURL(avatarFile);
+		}
+	}
+
+	async function uploadAvatar() {
+		if (!user?.id || !avatarFile) return;
+
+		const result = await profileService.updateAvatar(user.id, avatarFile);
+		if (result.success) {
+			// 更新用户 store
+			await userStore.refresh();
+			closeAvatarModal();
+		} else {
+			alert(`アバターのアップロードに失敗しました: ${result.error}`);
+		}
+	}
+
+	// ============ 订单状态映射 ============
+	function getStatusLabel(status: string): string {
+		const statusMap: Record<string, string> = {
+			pending: '処理待ち',
+			processing: '処理中',
+			shipped: '発送済み',
+			delivered: '配送完了',
+			cancelled: 'キャンセル'
+		};
+		return statusMap[status] || status;
+	}
+
+	function getStatusClass(status: string): string {
+		const classMap: Record<string, string> = {
+			pending: 'status-default',
+			processing: 'status-info',
+			shipped: 'status-info',
+			delivered: 'status-success',
+			cancelled: 'status-danger'
+		};
+		return classMap[status] || 'status-default';
+	}
+
+	// SVG 图标
 	const icons = {
 		profile: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`,
 		orders: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`,
@@ -82,7 +293,8 @@
 		delete: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
 		cart: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
 		close: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
-		arrow: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`
+		arrow: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`,
+		camera: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`
 	};
 
 	// 导航菜单
@@ -94,7 +306,7 @@
 		{ id: 'settings', label: '設定', icon: icons.settings }
 	];
 
-	// 生成导航链接
+	// 导航切换
 	function changeTab(itemId: string) {
 		goto(`/profile/${itemId}`, {
 			replaceState: false,
@@ -102,381 +314,573 @@
 			keepFocus: true
 		});
 	}
+
+	// 组件挂载时加载数据
+	onMount(() => {
+		loadTabData();
+	});
 </script>
 
-<div class="min-h-screen bg-[#f5f5f5] px-4 py-6 md:px-6 lg:px-8">
-	<div class="mx-auto max-w-7xl">
-		<div class="flex flex-col gap-6 lg:flex-row">
-			<!-- 左侧导航栏 -->
-			<aside class="shrink-0 lg:w-64">
-				<div class="sticky top-6 space-y-4">
-					<!-- 用户信息卡片 -->
-					<div class="rounded-lg border border-[#e0e0e0] bg-white p-5">
-						<div class="mb-5 flex items-center gap-3">
-							<img
-								src={user.avatar}
-								alt={user.name}
-								class="h-12 w-12 rounded-full border-2 border-[#e0e0e0]"
-							/>
-							<div>
-								<h3 class="font-semibold text-[#1a1a1a]">{user.name}</h3>
-								<p class="text-xs text-[#666]">{user.email}</p>
+{#if !isLoggedIn}
+	<div class="flex min-h-screen items-center justify-center">
+		<p class="text-[#718096]">ログインしてください...</p>
+	</div>
+{:else if user}
+	<div class="min-h-screen bg-[#f5f5f5] px-4 py-6 md:px-6 lg:px-8">
+		<div class="mx-auto max-w-7xl">
+			<div class="flex flex-col gap-6 lg:flex-row">
+				<!-- 左侧导航栏 -->
+				<aside class="shrink-0 lg:w-64">
+					<div class="sticky top-6 space-y-4">
+						<!-- 用户信息卡片 -->
+						<div class="rounded-lg border border-[#e0e0e0] bg-white p-5">
+							<div class="mb-5 flex items-center gap-3">
+								<div class="relative">
+									<img
+										src={user.avatar || '/logo.png'}
+										alt={user.name}
+										class="h-12 w-12 rounded-full border-2 border-[#e0e0e0] object-cover"
+									/>
+									<button
+										onclick={openAvatarModal}
+										class="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#2d3748] text-white hover:bg-[#1a202c]"
+										title="アバターを変更"
+									>
+										{@html icons.camera}
+									</button>
+								</div>
+								<div class="flex-1 overflow-hidden">
+									<h3 class="truncate font-semibold text-[#1a1a1a]">{user.name}</h3>
+									<p class="truncate text-xs text-[#666]">{user.email}</p>
+								</div>
 							</div>
-						</div>
 
-						<div class="rounded-md bg-[#2d3748] px-4 py-3 text-white">
-							<div class="flex items-center justify-between">
-								<div>
-									<div class="text-xs text-[#a0aec0]">会員ランク</div>
-									<div class="mt-0.5 text-sm font-semibold">{user.level}</div>
-								</div>
-								<div class="text-right">
-									<div class="text-xs text-[#a0aec0]">ポイント</div>
-									<div class="mt-0.5 text-lg font-bold">{user.points.toLocaleString('ja-JP')}</div>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- 导航菜单 -->
-					<nav class="rounded-lg border border-[#e0e0e0] bg-white p-2">
-						<div class="space-y-1">
-							{#each menuItems as item}
-								<button
-									onclick={() => changeTab(item.id)}
-									class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors
-										{currentTab === item.id ? 'bg-[#b9b9b9] text-white' : 'text-[#4a5568] hover:bg-[#f7fafc]'}"
-								>
-									<span class="flex-shrink-0">{@html item.icon}</span>
-									<span class="flex-1 text-left">{item.label}</span>
-									{#if item.id === 'orders' && recentOrders.length > 0}
-										<span class="rounded-full bg-[#718096] px-2 py-0.5 text-xs text-white">
-											{recentOrders.length}
-										</span>
-									{/if}
-									{#if item.id === 'favorites' && favoriteProducts.length > 0}
-										<span class="rounded-full bg-[#718096] px-2 py-0.5 text-xs text-white">
-											{favoriteProducts.length}
-										</span>
-									{/if}
-								</button>
-							{/each}
-						</div>
-					</nav>
-
-					<!-- 底部快速链接 -->
-					<div class="rounded-lg border border-[#e0e0e0] bg-white p-2">
-						<a
-							href="/support"
-							class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#4a5568] no-underline transition-colors hover:bg-[#f7fafc]"
-						>
-							{@html icons.support}
-							<span>サポート</span>
-						</a>
-						<a
-							href="/logout"
-							class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#e53e3e] no-underline transition-colors hover:bg-[#fff5f5]"
-						>
-							{@html icons.logout}
-							<span>ログアウト</span>
-						</a>
-					</div>
-				</div>
-			</aside>
-
-			<!-- 右侧内容区域 -->
-			<main class="flex-1">
-				{#if currentTab === 'profile'}
-					<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
-						<div class="mb-6 flex items-center justify-between">
-							<h2 class="text-xl font-semibold text-[#1a1a1a]">プロフィール</h2>
-							<button class="btn-secondary">
-								{@html icons.edit}
-								<span>編集</span>
-							</button>
-						</div>
-
-						<div class="space-y-6">
-							<!-- 个人信息 -->
-							<div class="grid gap-4 md:grid-cols-2">
-								<div class="space-y-2">
-									<label class="block text-sm font-medium text-[#4a5568]">お名前</label>
-									<div class="input-display">{user.name}</div>
-								</div>
-								<div class="space-y-2">
-									<label class="block text-sm font-medium text-[#4a5568]">メールアドレス</label>
-									<div class="input-display">{user.email}</div>
-								</div>
-								<div class="space-y-2">
-									<label class="block text-sm font-medium text-[#4a5568]">会員ランク</label>
-									<div class="input-display flex items-center gap-2">
-										<span class="rounded bg-[#2d3748] px-2 py-1 text-xs font-semibold text-white">
-											{user.level}
-										</span>
-										<span class="text-sm text-[#718096]">
-											{user.points.toLocaleString('ja-JP')} ポイント
-										</span>
+							<div class="rounded-md bg-[#2d3748] px-4 py-3 text-white">
+								<div class="flex items-center justify-between">
+									<div>
+										<div class="text-xs text-[#a0aec0]">会員ランク</div>
+										<div class="mt-0.5 text-sm font-semibold">
+											{user.memberLevel || 'ゴールド会員'}
+										</div>
+									</div>
+									<div class="text-right">
+										<div class="text-xs text-[#a0aec0]">ポイント</div>
+										<div class="mt-0.5 text-lg font-bold">
+											{(user.points || 1250).toLocaleString('ja-JP')}
+										</div>
 									</div>
 								</div>
-								<div class="space-y-2">
-									<label class="block text-sm font-medium text-[#4a5568]">会員登録日</label>
-									<div class="input-display">{user.memberSince}</div>
-								</div>
-							</div>
-
-							<!-- 统计数据 -->
-							<div class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-								<div class="stat-card">
-									<div class="text-2xl font-bold text-[#1a1a1a]">{recentOrders.length}</div>
-									<div class="text-sm text-[#718096]">今月の注文</div>
-								</div>
-								<div class="stat-card">
-									<div class="text-2xl font-bold text-[#1a1a1a]">{favoriteProducts.length}</div>
-									<div class="text-sm text-[#718096]">お気に入り</div>
-								</div>
-								<div class="stat-card">
-									<div class="text-2xl font-bold text-[#1a1a1a]">3</div>
-									<div class="text-sm text-[#718096]">利用中のクーポン</div>
-								</div>
-								<div class="stat-card">
-									<div class="text-2xl font-bold text-[#1a1a1a]">97%</div>
-									<div class="text-sm text-[#718096]">配信成功率</div>
-								</div>
 							</div>
 						</div>
-					</div>
-				{/if}
 
-				{#if currentTab === 'orders'}
-					<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
-						<h2 class="mb-6 text-xl font-semibold text-[#1a1a1a]">注文履歴</h2>
-
-						<div class="overflow-x-auto">
-							<table class="w-full">
-								<thead>
-									<tr class="border-b border-[#e0e0e0]">
-										<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>注文番号</th
-										>
-										<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">注文日</th>
-										<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">商品数</th>
-										<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>合計金額</th
-										>
-										<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>ステータス</th
-										>
-										<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">操作</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each recentOrders as order}
-										<tr class="border-b border-[#f0f0f0] transition-colors hover:bg-[#fafafa]">
-											<td class="px-4 py-3">
-												<div class="text-sm font-medium text-[#1a1a1a]">{order.id}</div>
-											</td>
-											<td class="px-4 py-3 text-sm text-[#718096]">{order.date}</td>
-											<td class="px-4 py-3 text-sm text-[#718096]">{order.items}点</td>
-											<td class="px-4 py-3">
-												<div class="font-semibold text-[#1a1a1a]">
-													¥{order.total.toLocaleString('ja-JP')}
-												</div>
-											</td>
-											<td class="px-4 py-3">
-												<span
-													class="status-badge
-													{order.status === '完了'
-														? 'status-success'
-														: order.status === '配送中'
-															? 'status-info'
-															: 'status-default'}"
-												>
-													{order.status}
-												</span>
-											</td>
-											<td class="px-4 py-3">
-												<button class="btn-link">詳細</button>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-
-						{#if recentOrders.length === 0}
-							<div class="py-12 text-center">
-								<div class="mb-3 text-5xl opacity-30">📦</div>
-								<p class="text-[#718096]">注文履歴がありません</p>
+						<!-- 导航菜单 -->
+						<nav class="rounded-lg border border-[#e0e0e0] bg-white p-2">
+							<div class="space-y-1">
+								{#each menuItems as item}
+									<button
+										onclick={() => changeTab(item.id)}
+										class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors
+											{currentTab === item.id ? 'bg-[#2d3748] text-white' : 'text-[#4a5568] hover:bg-[#f7fafc]'}"
+									>
+										<span class="flex-shrink-0">{@html item.icon}</span>
+										<span class="flex-1 text-left">{item.label}</span>
+										{#if item.id === 'orders' && userStats.totalOrders > 0}
+											<span class="rounded-full bg-[#718096] px-2 py-0.5 text-xs text-white">
+												{userStats.totalOrders}
+											</span>
+										{/if}
+										{#if item.id === 'favorites' && userStats.totalFavorites > 0}
+											<span class="rounded-full bg-[#718096] px-2 py-0.5 text-xs text-white">
+												{userStats.totalFavorites}
+											</span>
+										{/if}
+									</button>
+								{/each}
 							</div>
-						{/if}
-					</div>
-				{/if}
+						</nav>
 
-				{#if currentTab === 'addresses'}
-					<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
-						<div class="mb-6 flex items-center justify-between">
-							<h2 class="text-xl font-semibold text-[#1a1a1a]">住所管理</h2>
-							<button class="btn-primary">
-								{@html icons.add}
-								<span>新しい住所を追加</span>
+						<!-- 底部快速链接 -->
+						<div class="rounded-lg border border-[#e0e0e0] bg-white p-2">
+							<a
+								href="/support"
+								class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#4a5568] no-underline transition-colors hover:bg-[#f7fafc]"
+							>
+								{@html icons.support}
+								<span>サポート</span>
+							</a>
+							<button
+								onclick={() => userStore.logout()}
+								class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[#e53e3e] transition-colors hover:bg-[#fff5f5]"
+							>
+								{@html icons.logout}
+								<span>ログアウト</span>
 							</button>
 						</div>
+					</div>
+				</aside>
 
-						<div class="grid gap-4 md:grid-cols-2">
-							{#each addresses as address}
-								<div class="address-card">
-									<div class="mb-4 flex items-start justify-between">
-										<div class="flex items-center gap-2">
-											<h3 class="font-semibold text-[#1a1a1a]">{address.name}</h3>
-											{#if address.isDefault}
-												<span
-													class="rounded bg-[#2d3748] px-2 py-0.5 text-xs font-medium text-white"
+				<!-- 右侧内容区域 -->
+				<main class="flex-1">
+					{#if isLoading}
+						<div class="flex items-center justify-center py-12">
+							<div class="text-[#718096]">読み込み中...</div>
+						</div>
+					{:else if currentTab === 'profile'}
+						<!-- 个人资料 -->
+						<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
+							<div class="mb-6 flex items-center justify-between">
+								<h2 class="text-xl font-semibold text-[#1a1a1a]">プロフィール</h2>
+								<button class="btn-secondary">
+									{@html icons.edit}
+									<span>編集</span>
+								</button>
+							</div>
+
+							<div class="space-y-6">
+								<!-- 个人信息 -->
+								<div class="grid gap-4 md:grid-cols-2">
+									<div class="space-y-2">
+										<label class="block text-sm font-medium text-[#4a5568]">お名前</label>
+										<div class="input-display">{user.name}</div>
+									</div>
+									<div class="space-y-2">
+										<label class="block text-sm font-medium text-[#4a5568]">メールアドレス</label>
+										<div class="input-display">{user.email}</div>
+									</div>
+									<div class="space-y-2">
+										<label class="block text-sm font-medium text-[#4a5568]">会員ランク</label>
+										<div class="input-display flex items-center gap-2">
+											<span class="rounded bg-[#2d3748] px-2 py-1 text-xs font-semibold text-white">
+												{user.member_level || 'ゴールド会員'}
+											</span>
+											<span class="text-sm text-[#718096]">
+												{(user.points || 1250).toLocaleString('ja-JP')} ポイント
+											</span>
+										</div>
+									</div>
+									<div class="space-y-2">
+										<label class="block text-sm font-medium text-[#4a5568]">会員登録日</label>
+										<div class="input-display">
+											{new Date(user.created).toLocaleDateString('ja-JP')}
+										</div>
+									</div>
+								</div>
+
+								<!-- 统计数据 -->
+								<div class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+									<div class="stat-card">
+										<div class="text-2xl font-bold text-[#1a1a1a]">{userStats.totalOrders}</div>
+										<div class="text-sm text-[#718096]">総注文数</div>
+									</div>
+									<div class="stat-card">
+										<div class="text-2xl font-bold text-[#1a1a1a]">{userStats.totalFavorites}</div>
+										<div class="text-sm text-[#718096]">お気に入り</div>
+									</div>
+									<div class="stat-card">
+										<div class="text-2xl font-bold text-[#1a1a1a]">{userStats.totalAddresses}</div>
+										<div class="text-sm text-[#718096]">登録住所</div>
+									</div>
+									<div class="stat-card">
+										<div class="text-2xl font-bold text-[#1a1a1a]">97%</div>
+										<div class="text-sm text-[#718096]">配信成功率</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if currentTab === 'orders'}
+						<!-- 订单历史 -->
+						<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
+							<h2 class="mb-6 text-xl font-semibold text-[#1a1a1a]">注文履歴</h2>
+
+							{#if orders.length > 0}
+								<div class="overflow-x-auto">
+									<table class="w-full">
+										<thead>
+											<tr class="border-b border-[#e0e0e0]">
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>注文番号</th
 												>
-													既定
-												</span>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>注文日</th
+												>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>商品数</th
+												>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>合計金額</th
+												>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>ステータス</th
+												>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>操作</th
+												>
+											</tr>
+										</thead>
+										<tbody>
+											{#each orders as order}
+												<tr class="border-b border-[#f0f0f0] transition-colors hover:bg-[#fafafa]">
+													<td class="px-4 py-3">
+														<div class="text-sm font-medium text-[#1a1a1a]">
+															{order.order_number}
+														</div>
+													</td>
+													<td class="px-4 py-3 text-sm text-[#718096]">
+														{new Date(order.order_date).toLocaleDateString('ja-JP')}
+													</td>
+													<td class="px-4 py-3 text-sm text-[#718096]">{order.items_count}点</td>
+													<td class="px-4 py-3">
+														<div class="font-semibold text-[#1a1a1a]">
+															¥{order.total_amount.toLocaleString('ja-JP')}
+														</div>
+													</td>
+													<td class="px-4 py-3">
+														<span class="status-badge {getStatusClass(order.status)}">
+															{getStatusLabel(order.status)}
+														</span>
+													</td>
+													<td class="px-4 py-3">
+														<button class="btn-link">詳細</button>
+													</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+							{:else}
+								<div class="py-12 text-center">
+									<div class="mb-3 text-5xl opacity-30">📦</div>
+									<p class="text-[#718096]">注文履歴がありません</p>
+								</div>
+							{/if}
+						</div>
+					{:else if currentTab === 'addresses'}
+						<!-- 地址管理 -->
+						<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
+							<div class="mb-6 flex items-center justify-between">
+								<h2 class="text-xl font-semibold text-[#1a1a1a]">住所管理</h2>
+								<button class="btn-primary" onclick={() => openAddressModal()}>
+									{@html icons.add}
+									<span>新しい住所を追加</span>
+								</button>
+							</div>
+
+							{#if addresses.length > 0}
+								<div class="grid gap-4 md:grid-cols-2">
+									{#each addresses as address}
+										<div class="address-card">
+											<div class="mb-4 flex items-start justify-between">
+												<div class="flex items-center gap-2">
+													<h3 class="font-semibold text-[#1a1a1a]">{address.label}</h3>
+													{#if address.is_default}
+														<span
+															class="rounded bg-[#2d3748] px-2 py-0.5 text-xs font-medium text-white"
+														>
+															既定
+														</span>
+													{/if}
+												</div>
+												<div class="flex gap-1">
+													<button class="icon-btn" onclick={() => openAddressModal(address)}>
+														{@html icons.edit}
+													</button>
+													<button
+														class="icon-btn text-[#e53e3e]"
+														onclick={() => deleteAddress(address.id)}
+													>
+														{@html icons.delete}
+													</button>
+												</div>
+											</div>
+											<div class="space-y-1 text-sm text-[#4a5568]">
+												<p class="font-medium text-[#1a1a1a]">{address.recipient}</p>
+												<p>{address.phone}</p>
+												<p>{address.postal_code}</p>
+												<p class="leading-relaxed">{address.address}</p>
+											</div>
+											{#if !address.is_default}
+												<button
+													class="mt-3 w-full rounded-md border border-[#e0e0e0] px-3 py-1.5 text-xs text-[#4a5568] transition-colors hover:bg-[#f7fafc]"
+													onclick={() => setDefaultAddress(address.id)}
+												>
+													既定に設定
+												</button>
 											{/if}
 										</div>
-										<div class="flex gap-1">
-											<button class="icon-btn">
-												{@html icons.edit}
-											</button>
-											<button class="icon-btn text-[#e53e3e]">
-												{@html icons.delete}
-											</button>
+									{/each}
+								</div>
+							{:else}
+								<div class="py-12 text-center">
+									<div class="mb-3 text-5xl opacity-30">📍</div>
+									<p class="text-[#718096]">登録された住所がありません</p>
+								</div>
+							{/if}
+						</div>
+					{:else if currentTab === 'favorites'}
+						<!-- 收藏管理 -->
+						<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
+							<div class="mb-6 flex items-center justify-between">
+								<h2 class="text-xl font-semibold text-[#1a1a1a]">お気に入り商品</h2>
+								{#if favorites.length > 0}
+									<button class="btn-secondary" onclick={clearAllFavorites}>
+										{@html icons.delete}
+										<span>すべて削除</span>
+									</button>
+								{/if}
+							</div>
+
+							{#if favorites.length > 0}
+								<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+									{#each favorites as favorite}
+										<div class="product-card">
+											<img
+												src={favorite.product_image || 'https://via.placeholder.com/200'}
+												alt={favorite.product_name}
+												class="mb-3 h-40 w-full rounded-md border border-[#e0e0e0] object-cover"
+											/>
+											<h3 class="mb-2 line-clamp-2 text-sm font-semibold text-[#1a1a1a]">
+												{favorite.product_name}
+											</h3>
+											<div class="mb-3 text-lg font-bold text-[#1a1a1a]">
+												¥{favorite.product_price.toLocaleString('ja-JP')}
+											</div>
+											<div class="flex gap-2">
+												<button class="btn-primary flex-1">
+													{@html icons.cart}
+													<span>カートに入れる</span>
+												</button>
+												<button
+													class="icon-btn text-[#e53e3e]"
+													onclick={() => removeFavorite(favorite.id)}
+												>
+													{@html icons.close}
+												</button>
+											</div>
 										</div>
-									</div>
-									<div class="space-y-1 text-sm text-[#4a5568]">
-										<p class="font-medium text-[#1a1a1a]">{address.recipient}</p>
-										<p>{address.phone}</p>
-										<p class="leading-relaxed">{address.address}</p>
+									{/each}
+								</div>
+							{:else}
+								<div class="py-12 text-center">
+									<div class="mb-3 text-5xl opacity-30">❤️</div>
+									<p class="text-[#718096]">お気に入り商品がありません</p>
+								</div>
+							{/if}
+						</div>
+					{:else if currentTab === 'settings'}
+						<!-- 设置 -->
+						<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
+							<h2 class="mb-6 text-xl font-semibold text-[#1a1a1a]">設定</h2>
+
+							<div class="space-y-6">
+								<!-- 通知设置 -->
+								<div class="border-b border-[#e0e0e0] pb-6">
+									<h3 class="mb-4 text-sm font-semibold text-[#1a1a1a]">通知設定</h3>
+									<div class="space-y-2">
+										<label class="setting-item">
+											<span class="text-sm text-[#4a5568]">メール通知</span>
+											<input type="checkbox" class="toggle" checked />
+										</label>
+										<label class="setting-item">
+											<span class="text-sm text-[#4a5568]">SMS通知</span>
+											<input type="checkbox" class="toggle" />
+										</label>
+										<label class="setting-item">
+											<span class="text-sm text-[#4a5568]">新商品の通知</span>
+											<input type="checkbox" class="toggle" checked />
+										</label>
 									</div>
 								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
 
-				{#if currentTab === 'favorites'}
-					<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
-						<div class="mb-6 flex items-center justify-between">
-							<h2 class="text-xl font-semibold text-[#1a1a1a]">お気に入り商品</h2>
-							<button class="btn-secondary">
-								{@html icons.delete}
-								<span>すべて削除</span>
-							</button>
-						</div>
-
-						<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-							{#each favoriteProducts as product}
-								<div class="product-card">
-									<img
-										src={product.image}
-										alt={product.name}
-										class="mb-3 h-40 w-full rounded-md border border-[#e0e0e0] object-cover"
-									/>
-									<h3 class="mb-2 line-clamp-2 text-sm font-semibold text-[#1a1a1a]">
-										{product.name}
-									</h3>
-									<div class="mb-3 text-lg font-bold text-[#1a1a1a]">
-										¥{product.price.toLocaleString('ja-JP')}
-									</div>
-									<div class="flex gap-2">
-										<button class="btn-primary flex-1">
-											{@html icons.cart}
-											<span>カートに入れる</span>
+								<!-- プライバシー -->
+								<div class="border-b border-[#e0e0e0] pb-6">
+									<h3 class="mb-4 text-sm font-semibold text-[#1a1a1a]">プライバシー設定</h3>
+									<div class="space-y-2">
+										<button class="setting-btn">
+											<span>パスワードを変更</span>
+											{@html icons.arrow}
 										</button>
-										<button class="icon-btn text-[#e53e3e]">
-											{@html icons.close}
+										<button class="setting-btn">
+											<span>2段階認証を設定</span>
+											{@html icons.arrow}
 										</button>
 									</div>
 								</div>
-							{/each}
-						</div>
 
-						{#if favoriteProducts.length === 0}
-							<div class="py-12 text-center">
-								<div class="mb-3 text-5xl opacity-30">❤️</div>
-								<p class="text-[#718096]">お気に入り商品がありません</p>
-							</div>
-						{/if}
-					</div>
-				{/if}
-
-				{#if currentTab === 'settings'}
-					<div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
-						<h2 class="mb-6 flex items-center text-xl font-semibold text-[#1a1a1a]">
-							<img src="/svgs/settings.svg" alt="" class="mr-2 h-5 w-5" />
-							設定
-						</h2>
-
-						<div class="space-y-6">
-							<!-- 通知設定 -->
-							<div class="border-b border-[#e0e0e0] pb-6">
-								<h3 class="mb-4 flex items-center text-sm font-semibold text-[#1a1a1a]">
-									<img src="/svgs/notification.svg" alt="" class="mr-2 h-5 w-5" />
-									通知設定
-								</h3>
-								<div class="space-y-2">
-									<label class="setting-item">
-										<span class="text-sm text-[#4a5568]">メール通知</span>
-										<input type="checkbox" class="toggle" checked />
-									</label>
-									<label class="setting-item">
-										<span class="text-sm text-[#4a5568]">SMS通知</span>
-										<input type="checkbox" class="toggle" />
-									</label>
-									<label class="setting-item">
-										<span class="text-sm text-[#4a5568]">新商品の通知</span>
-										<input type="checkbox" class="toggle" checked />
-									</label>
-								</div>
-							</div>
-
-							<!-- プライバシー -->
-							<div class="border-b border-[#e0e0e0] pb-6">
-								<h3 class="mb-4 flex items-center text-sm font-semibold text-[#1a1a1a]">
-									<img src="/svgs/lock.svg" alt="" class="mr-2 h-5 w-5" />
-									プライバシー設定
-								</h3>
-								<div class="space-y-2">
-									<button class="setting-btn">
-										<span>パスワードを変更</span>
-										{@html icons.arrow}
-									</button>
-									<button class="setting-btn">
-										<span>2段階認証を設定</span>
-										{@html icons.arrow}
-									</button>
-								</div>
-							</div>
-
-							<!-- データ管理 -->
-							<div>
-								<h3 class="mb-4 flex items-center text-sm font-semibold text-[#1a1a1a]">
-									<img src="/svgs/data.svg" alt="" class="mr-2 h-5 w-5" />
-									データ管理
-								</h3>
-								<div class="space-y-2">
-									<button class="setting-btn">
-										<span>ダウンロードデータ</span>
-										{@html icons.arrow}
-									</button>
-									<button class="setting-btn text-[#e53e3e] hover:bg-[#fff5f5]">
-										<span>アカウントを削除</span>
-										{@html icons.arrow}
-									</button>
+								<!-- データ管理 -->
+								<div>
+									<h3 class="mb-4 text-sm font-semibold text-[#1a1a1a]">データ管理</h3>
+									<div class="space-y-2">
+										<button class="setting-btn">
+											<span>ダウンロードデータ</span>
+											{@html icons.arrow}
+										</button>
+										<button class="setting-btn text-[#e53e3e] hover:bg-[#fff5f5]">
+											<span>アカウントを削除</span>
+											{@html icons.arrow}
+										</button>
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				{/if}
-			</main>
+					{/if}
+				</main>
+			</div>
 		</div>
 	</div>
-</div>
+
+	<!-- 地址编辑模态框 -->
+	{#if showAddressModal}
+		<div class="modal-overlay" onclick={closeAddressModal}>
+			<div class="modal-content" onclick={(e) => e.stopPropagation()}>
+				<div class="mb-4 flex items-center justify-between">
+					<h3 class="text-lg font-semibold text-[#1a1a1a]">
+						{editingAddress ? '住所を編集' : '新しい住所を追加'}
+					</h3>
+					<button class="icon-btn" onclick={closeAddressModal}>
+						{@html icons.close}
+					</button>
+				</div>
+
+				<form
+					onsubmit={(e) => {
+						e.preventDefault();
+						saveAddress();
+					}}
+					class="space-y-4"
+				>
+					<div>
+						<label class="mb-1 block text-sm font-medium text-[#4a5568]">ラベル</label>
+						<input
+							type="text"
+							bind:value={addressForm.label}
+							placeholder="例: 自宅、会社"
+							class="input-field"
+							required
+						/>
+					</div>
+
+					<div>
+						<label class="mb-1 block text-sm font-medium text-[#4a5568]">受取人</label>
+						<input
+							type="text"
+							bind:value={addressForm.recipient}
+							placeholder="山田 太郎"
+							class="input-field"
+							required
+						/>
+					</div>
+
+					<div>
+						<label class="mb-1 block text-sm font-medium text-[#4a5568]">電話番号</label>
+						<input
+							type="tel"
+							bind:value={addressForm.phone}
+							placeholder="080-1234-5678"
+							class="input-field"
+							required
+						/>
+					</div>
+
+					<div>
+						<label class="mb-1 block text-sm font-medium text-[#4a5568]">郵便番号</label>
+						<input
+							type="text"
+							bind:value={addressForm.postal_code}
+							placeholder="〒150-0001"
+							class="input-field"
+							required
+						/>
+					</div>
+
+					<div>
+						<label class="mb-1 block text-sm font-medium text-[#4a5568]">住所</label>
+						<textarea
+							bind:value={addressForm.address}
+							placeholder="東京都渋谷区神宮前1-1-1"
+							class="input-field"
+							rows="3"
+							required
+						></textarea>
+					</div>
+
+					<label class="flex items-center gap-2">
+						<input type="checkbox" bind:checked={addressForm.is_default} class="checkbox" />
+						<span class="text-sm text-[#4a5568]">既定の住所として設定</span>
+					</label>
+
+					<div class="flex gap-3 pt-2">
+						<button type="button" class="btn-secondary flex-1" onclick={closeAddressModal}>
+							キャンセル
+						</button>
+						<button type="submit" class="btn-primary flex-1">保存</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- 头像上传模态框 -->
+	{#if showAvatarModal}
+		<div class="modal-overlay" onclick={closeAvatarModal}>
+			<div class="modal-content" onclick={(e) => e.stopPropagation()}>
+				<div class="mb-4 flex items-center justify-between">
+					<h3 class="text-lg font-semibold text-[#1a1a1a]">アバターを変更</h3>
+					<button class="icon-btn" onclick={closeAvatarModal}>
+						{@html icons.close}
+					</button>
+				</div>
+
+				<div class="space-y-4">
+					<!-- 预览区域 -->
+					<div class="flex justify-center">
+						<img
+							src={avatarPreview || user.avatar || '/logo.png'}
+							alt="プレビュー"
+							class="h-32 w-32 rounded-full border-2 border-[#e0e0e0] object-cover"
+						/>
+					</div>
+
+					<!-- 文件选择 -->
+					<div>
+						<label
+							class="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-[#cbd5e0] bg-[#f7fafc] px-4 py-8 transition-colors hover:border-[#2d3748] hover:bg-[#edf2f7]"
+						>
+							{@html icons.camera}
+							<span class="text-sm text-[#4a5568]">
+								{avatarFile ? avatarFile.name : 'クリックして画像を選択'}
+							</span>
+							<input
+								type="file"
+								accept="image/jpeg,image/png,image/gif,image/webp"
+								onchange={handleAvatarSelect}
+								class="hidden"
+							/>
+						</label>
+						<p class="mt-2 text-xs text-[#718096]">JPG、PNG、GIF、WebP形式、最大5MB</p>
+					</div>
+
+					<!-- 操作按钮 -->
+					<div class="flex gap-3">
+						<button type="button" class="btn-secondary flex-1" onclick={closeAvatarModal}>
+							キャンセル
+						</button>
+						<button
+							type="button"
+							class="btn-primary flex-1"
+							onclick={uploadAvatar}
+							disabled={!avatarFile}
+						>
+							アップロード
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	{/if}
+{/if}
 
 <style>
-	/* PocketBase 风格按钮 */
+	/* 按钮样式 */
 	.btn-primary {
 		display: inline-flex;
 		align-items: center;
@@ -492,8 +896,13 @@
 		transition: background-color 0.2s;
 	}
 
-	.btn-primary:hover {
+	.btn-primary:hover:not(:disabled) {
 		background-color: #1a202c;
+	}
+
+	.btn-primary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.btn-secondary {
@@ -560,6 +969,30 @@
 		border-radius: 0.375rem;
 	}
 
+	.input-field {
+		width: 100%;
+		padding: 0.625rem 0.75rem;
+		font-size: 0.875rem;
+		color: #1a1a1a;
+		background-color: white;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		transition: border-color 0.2s;
+	}
+
+	.input-field:focus {
+		outline: none;
+		border-color: #2d3748;
+	}
+
+	.checkbox {
+		width: 1rem;
+		height: 1rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.25rem;
+		cursor: pointer;
+	}
+
 	/* 统计卡片 */
 	.stat-card {
 		padding: 1rem;
@@ -590,6 +1023,11 @@
 	.status-default {
 		color: #4a5568;
 		background-color: #edf2f7;
+	}
+
+	.status-danger {
+		color: #742a2a;
+		background-color: #fed7d7;
 	}
 
 	/* 地址卡片 */
@@ -684,6 +1122,28 @@
 
 	.toggle:checked:before {
 		transform: translateX(20px);
+	}
+
+	/* 模态框样式 */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		z-index: 50;
+	}
+
+	.modal-content {
+		background-color: white;
+		border-radius: 0.5rem;
+		padding: 1.5rem;
+		max-width: 500px;
+		width: 100%;
+		max-height: 90vh;
+		overflow-y: auto;
 	}
 
 	/* 文字截断 */

@@ -3,24 +3,37 @@ import { writable, derived } from 'svelte/store';
 import { pbService } from '../services/userService';
 import { browser } from '$app/environment';
 
+/**
+ * 用户模型
+ */
 export interface User {
     id: string;
     email: string;
     name: string;
     avatar?: string;
     username?: string;
+
+    // ✅ 新增字段
+    points: number;
+    memberLevel: number;
+
     verified: boolean;
     created: string;
     updated: string;
 }
 
+/**
+ * Store 内部状态
+ */
 interface UserState {
     user: User | null;
     isLoggedIn: boolean;
     isLoading: boolean;
 }
 
-// 创建初始状态
+/**
+ * 创建 User Store
+ */
 function createUserStore() {
     const { subscribe, set, update } = writable<UserState>({
         user: null,
@@ -28,9 +41,12 @@ function createUserStore() {
         isLoading: true
     });
 
-    // 初始化：从 PocketBase 加载用户状态
+    /**
+     * 初始化：从 PocketBase 加载用户状态
+     */
     if (browser) {
         const currentUser = pbService.getCurrentUser();
+
         if (currentUser && pbService.isLoggedIn()) {
             set({
                 user: formatUser(currentUser),
@@ -46,7 +62,7 @@ function createUserStore() {
         }
 
         // 监听认证状态变化
-        pbService.onAuthChange((token, model) => {
+        pbService.onAuthChange((_token, model) => {
             if (model) {
                 set({
                     user: formatUser(model),
@@ -70,7 +86,7 @@ function createUserStore() {
          * 登录
          */
         login: async (email: string, password: string) => {
-            update(state => ({ ...state, isLoading: true }));
+            update((state) => ({ ...state, isLoading: true }));
 
             const result = await pbService.login(email, password);
 
@@ -81,7 +97,7 @@ function createUserStore() {
                     isLoading: false
                 });
             } else {
-                update(state => ({ ...state, isLoading: false }));
+                update((state) => ({ ...state, isLoading: false }));
             }
 
             return result;
@@ -90,14 +106,25 @@ function createUserStore() {
         /**
          * 注册
          */
-        register: async (email: string, password: string, passwordConfirm: string, name?: string) => {
-            update(state => ({ ...state, isLoading: true }));
+        register: async (
+            email: string,
+            password: string,
+            passwordConfirm: string,
+            name?: string
+        ) => {
+            update((state) => ({ ...state, isLoading: true }));
 
-            const result = await pbService.register(email, password, passwordConfirm, name);
+            const result = await pbService.register(
+                email,
+                password,
+                passwordConfirm,
+                name
+            );
 
             if (result.success && result.user) {
                 // 注册成功后自动登录
                 const loginResult = await pbService.login(email, password);
+
                 if (loginResult.success && loginResult.user) {
                     set({
                         user: formatUser(loginResult.user),
@@ -106,7 +133,7 @@ function createUserStore() {
                     });
                 }
             } else {
-                update(state => ({ ...state, isLoading: false }));
+                update((state) => ({ ...state, isLoading: false }));
             }
 
             return result;
@@ -116,7 +143,7 @@ function createUserStore() {
          * OAuth 登录
          */
         loginWithOAuth: async (provider: 'google' | 'github') => {
-            update(state => ({ ...state, isLoading: true }));
+            update((state) => ({ ...state, isLoading: true }));
 
             const result = await pbService.loginWithOAuth(provider);
 
@@ -127,7 +154,7 @@ function createUserStore() {
                     isLoading: false
                 });
             } else {
-                update(state => ({ ...state, isLoading: false }));
+                update((state) => ({ ...state, isLoading: false }));
             }
 
             return result;
@@ -149,7 +176,7 @@ function createUserStore() {
          * 更新用户信息
          */
         updateUser: async (userId: string, data: any) => {
-            update(state => ({ ...state, isLoading: true }));
+            update((state) => ({ ...state, isLoading: true }));
 
             const result = await pbService.updateUser(userId, data);
 
@@ -160,7 +187,7 @@ function createUserStore() {
                     isLoading: false
                 });
             } else {
-                update(state => ({ ...state, isLoading: false }));
+                update((state) => ({ ...state, isLoading: false }));
             }
 
             return result;
@@ -171,6 +198,7 @@ function createUserStore() {
          */
         refresh: () => {
             const currentUser = pbService.getCurrentUser();
+
             if (currentUser && pbService.isLoggedIn()) {
                 set({
                     user: formatUser(currentUser),
@@ -189,29 +217,32 @@ function createUserStore() {
 }
 
 /**
- * 格式化用户数据
+ * PocketBase 用户 → 前端 User 模型
  */
 function formatUser(pbUser: any): User {
     return {
         id: pbUser.id,
         email: pbUser.email,
         name: pbUser.name || pbUser.username || pbUser.email.split('@')[0],
-        avatar: pbUser.avatar ? pbService.getUserAvatarUrl(pbUser, pbUser.avatar) : '/logo.png',
+        avatar: pbUser.avatar
+            ? pbService.getUserAvatarUrl(pbUser, pbUser.avatar)
+            : '/logo.png',
         username: pbUser.username,
+
+        // ✅ 新增字段（安全兜底）
+        points: pbUser.points ?? 0,
+        memberLevel: pbUser.member_level ,
+
         verified: pbUser.verified || false,
         created: pbUser.created,
         updated: pbUser.updated
     };
 }
 
-// 导出 store
+/**
+ * 导出主 Store
+ */
 export const userStore = createUserStore();
-
-// 派生 store：仅用户信息
-export const currentUser = derived(userStore, $userStore => $userStore.user);
-
-// 派生 store：登录状态
-export const isLoggedIn = derived(userStore, $userStore => $userStore.isLoggedIn);
-
-// 派生 store：加载状态
-export const isLoading = derived(userStore, $userStore => $userStore.isLoading);
+export const currentUser = derived(userStore, ($store) => $store.user);
+export const isLoggedIn = derived(userStore, ($store) => $store.isLoggedIn);
+export const isLoading = derived(userStore, ($store) => $store.isLoading);
