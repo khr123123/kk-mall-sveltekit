@@ -1,4 +1,5 @@
-﻿<script lang="ts">
+﻿<!-- routes/profile/[tab]/+page.svelte -->
+<script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { userStore } from '$lib/stores/userStore';
@@ -97,7 +98,7 @@
 		if (!user?.id) return;
 		const result = await profileService.getOrders(user.id);
 		if (result.success) {
-			orders = result.orders || [];
+			orders = (result.orders as unknown as Order[]) || [];
 		}
 	}
 
@@ -106,9 +107,10 @@
 		if (!user?.id) return;
 		const result = await profileService.getAddresses(user.id);
 		if (result.success) {
-			addresses = result.addresses || [];
+			addresses = (result.addresses as unknown as Address[]) || [];
 		}
 	}
+
 	function mapFavorites(items: any[] = []) {
 		return items.map((item: any) => {
 			const product = item.expand?.product_id;
@@ -127,9 +129,7 @@
 		if (!user?.id) return;
 		const result = await profileService.getFavorites(user.id);
 		if (result.success) {
-			console.log(result.favorites);
-			console.log(result.favorites);
-			favorites = mapFavorites(result.favorites || []);
+			favorites = mapFavorites(result.favorites || []) as unknown as Favorite[];
 		}
 	}
 
@@ -294,7 +294,11 @@
 		cart: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
 		close: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
 		arrow: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`,
-		camera: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`
+		camera: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+		// 空状态图标
+		emptyBox: `<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`,
+		emptyLocation: `<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+		emptyHeart: `<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`
 	};
 
 	// 导航菜单
@@ -451,7 +455,7 @@
 										<label class="block text-sm font-medium text-[#4a5568]">会員ランク</label>
 										<div class="input-display flex items-center gap-2">
 											<span class="rounded bg-[#2d3748] px-2 py-1 text-xs font-semibold text-white">
-												{user.member_level || 'ゴールド会員'}
+												{user.memberLevel || 'ゴールド会員'}
 											</span>
 											<span class="text-sm text-[#718096]">
 												{(user.points || 1250).toLocaleString('ja-JP')} ポイント
@@ -549,7 +553,9 @@
 								</div>
 							{:else}
 								<div class="py-12 text-center">
-									<div class="mb-3 text-5xl opacity-30">📦</div>
+									<div class="mb-3 flex justify-center text-gray-300">
+										{@html icons.emptyBox}
+									</div>
 									<p class="text-[#718096]">注文履歴がありません</p>
 								</div>
 							{/if}
@@ -611,7 +617,9 @@
 								</div>
 							{:else}
 								<div class="py-12 text-center">
-									<div class="mb-3 text-5xl opacity-30">📍</div>
+									<div class="mb-3 flex justify-center text-gray-300">
+										{@html icons.emptyLocation}
+									</div>
 									<p class="text-[#718096]">登録された住所がありません</p>
 								</div>
 							{/if}
@@ -661,7 +669,9 @@
 								</div>
 							{:else}
 								<div class="py-12 text-center">
-									<div class="mb-3 text-5xl opacity-30">❤️</div>
+									<div class="mb-3 flex justify-center text-gray-300">
+										{@html icons.emptyHeart}
+									</div>
 									<p class="text-[#718096]">お気に入り商品がありません</p>
 								</div>
 							{/if}
@@ -1173,5 +1183,13 @@
 
 	:global(.h-4) {
 		height: 1rem;
+	}
+
+	:global(.w-16) {
+		width: 4rem;
+	}
+
+	:global(.h-16) {
+		height: 4rem;
 	}
 </style>
