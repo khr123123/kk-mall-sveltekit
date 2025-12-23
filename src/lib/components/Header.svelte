@@ -9,23 +9,29 @@
 	import QRCodeDropdown from './headercomponents/QRCodeDropdown.svelte';
 	import LocaleDropdown from './headercomponents/LocaleDropdown.svelte';
 	import MobileMenu from './headercomponents/MobileMenu.svelte';
-	import LoginModal from './headercomponents/LoginModal.svelte';
+	import AuthModal from './headercomponents/LoginModal.svelte';
 	import MessageDropdown from './headercomponents/MessageDropdown.svelte';
 	import CartDropdown from './headercomponents/CartDropdown.svelte';
 	import { CategoryService, type Category } from '$lib/services/categoryService';
-
-	let isLoggedIn = true;
-	let user = {
-		name: 'K.',
-		avatar: '/logo.png',
-		messages: 2,
-		cartItems: 5
-	};
+	import { categoryStore } from '$lib/stores/categoryStore';
+	import { userStore, currentUser, isLoggedIn } from '$lib/stores/userStore';
 
 	let searchKeyword = '';
-	let showLoginModal = false;
+	let showAuthModal = false;
 	let showMobileMenu = false;
 	let showMobileSearch = false;
+
+	// 订阅用户状态
+	$: user = $currentUser;
+	$: loggedIn = $isLoggedIn;
+
+	// 用户显示信息（兼容旧代码）
+	$: displayUser = {
+		name: user?.name || 'ゲスト',
+		avatar: user?.avatar || '/logo.png',
+		messages: 2, // 这个需要从API获取
+		cartItems: 5 // 这个需要从API获取
+	};
 
 	// 用户菜单项
 	const userMenuItems = [
@@ -120,35 +126,37 @@
 
 	// 处理用户登录相关事件
 	function handleUserLogin() {
-		showLoginModal = true;
+		showAuthModal = true;
 	}
 
 	function handleUserLogout() {
-		isLoggedIn = false;
-		user = {
-			name: '',
-			avatar: '/logo.png',
-			messages: 0,
-			cartItems: 0
-		};
+		// 调用 userStore 的 logout 方法
+		userStore.logout();
 		console.log('用户已登出');
+
+		// 可选：显示退出成功提示
+		// toast.success('ログアウトしました');
 	}
 
-	// LoginModal关闭时的处理
+	// AuthModal关闭时的处理
 	function handleCloseModal() {
-		showLoginModal = false;
+		showAuthModal = false;
 	}
 
-	// LoginModal登录成功后的处理
-	function handleLoginSuccess(userData: any) {
-		isLoggedIn = true;
-		user = {
-			...user,
-			name: userData.name || 'ユーザー',
-			avatar: userData.avatar || '/logo.png'
-		};
-		showLoginModal = false;
-		console.log('登录成功:', userData);
+	// AuthModal登录成功后的处理
+	function handleLoginSuccess(event: CustomEvent) {
+		console.log('登录成功:', event.detail);
+		showAuthModal = false;
+		// 可选：显示登录成功提示
+		// toast.success('ログインしました！');
+	}
+
+	// AuthModal注册成功后的处理
+	function handleRegisterSuccess(event: CustomEvent) {
+		console.log('注册成功:', event.detail);
+		showAuthModal = false;
+		// 可选：显示注册成功提示
+		// toast.success('アカウントを作成しました！');
 	}
 
 	function handleLocaleChange(event: CustomEvent) {
@@ -157,7 +165,7 @@
 
 	// 处理Keyboard事件
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape' && showLoginModal) {
+		if (e.key === 'Escape' && showAuthModal) {
 			handleCloseModal();
 		}
 	}
@@ -173,7 +181,7 @@
 
 	function handleMarkAllRead() {
 		console.log('全部标记为已读');
-		user.messages = 0;
+		displayUser.messages = 0;
 	}
 
 	function handleDeleteMessage(event: CustomEvent) {
@@ -196,27 +204,23 @@
 
 	function handleRemoveItem(event: CustomEvent) {
 		console.log('删除商品:', event.detail);
-		// 更新购物车数量
-		if (user.cartItems > 0) {
-			user.cartItems--;
+		if (displayUser.cartItems > 0) {
+			displayUser.cartItems--;
 		}
 	}
-	import { categoryStore } from '$lib/stores/categoryStore';
 
-	// 确保只在客户端执行浏览器相关代码
 	let isBrowser = false;
-
 	let quickCategories: Category[] = [];
+
 	onMount(async () => {
 		// 先检查 store 中是否已有数据
 		if (!$categoryStore.isLoaded) {
 			quickCategories = await CategoryService.getAllCategories();
-			// 保存到全局 store
 			categoryStore.setCategories(quickCategories);
 		} else {
-			// 从 store 中获取
 			quickCategories = $categoryStore.categories;
 		}
+
 		isBrowser = typeof window !== 'undefined';
 		if (isBrowser) {
 			document.addEventListener('keydown', handleKeydown);
@@ -324,28 +328,31 @@
 
 				<!-- 地区切换下拉组件 -->
 				<LocaleDropdown on:change={handleLocaleChange} />
+
 				<!-- 购物车下拉组件 -->
 				<CartDropdown
 					{cartItems}
-					itemCount={user.cartItems}
+					itemCount={displayUser.cartItems}
 					on:open={handleCartOpen}
 					on:updateQuantity={handleUpdateQuantity}
 					on:removeItem={handleRemoveItem}
 				/>
+
 				<!-- 消息下拉组件 -->
 				<MessageDropdown
 					messages={messageItems}
-					unreadCount={user.messages}
+					unreadCount={displayUser.messages}
 					on:open={handleMessageOpen}
 					on:markRead={handleMarkRead}
 					on:markAllRead={handleMarkAllRead}
 					on:delete={handleDeleteMessage}
 					on:messageClick={handleMessageClick}
 				/>
+
 				<!-- 用户下拉组件 -->
 				<UserDropdown
-					{user}
-					{isLoggedIn}
+					user={displayUser}
+					isLoggedIn={loggedIn}
 					menuItems={userMenuItems}
 					on:login={handleUserLogin}
 					on:logout={handleUserLogout}
@@ -453,8 +460,8 @@
 	<!-- 移动端菜单组件 -->
 	<MobileMenu
 		show={showMobileMenu}
-		{user}
-		{isLoggedIn}
+		user={displayUser}
+		isLoggedIn={loggedIn}
 		{navMenuItems}
 		{userMenuItems}
 		on:close={() => (showMobileMenu = false)}
@@ -463,8 +470,13 @@
 	/>
 </header>
 
-<!-- 登录模态框组件 -->
-<LoginModal show={showLoginModal} onClose={handleCloseModal} on:loginSuccess={handleLoginSuccess} />
+<!-- 认证模态框组件（登录/注册） -->
+<AuthModal
+	show={showAuthModal}
+	onClose={handleCloseModal}
+	on:loginSuccess={handleLoginSuccess}
+	on:registerSuccess={handleRegisterSuccess}
+/>
 
 <style>
 	/* 动画效果 */

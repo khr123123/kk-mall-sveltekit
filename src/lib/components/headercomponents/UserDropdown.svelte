@@ -123,14 +123,9 @@
 		<div class="flex items-center gap-3">
 			<button
 				on:click={handleLogin}
-				class="login-button rounded-lg border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 lg:px-4 lg:py-2 lg:text-sm"
+				class="register-button hidden rounded-lg bg-gray-700 px-4 py-2 text-sm font-mono text-white transition-colors hover:bg-gray-600 lg:block"
 			>
-				ログイン
-			</button>
-			<button
-				class="register-button hidden rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-400 lg:block"
-			>
-				新規登録
+				ログイン / 新規登録
 			</button>
 		</div>
 	{/if}
