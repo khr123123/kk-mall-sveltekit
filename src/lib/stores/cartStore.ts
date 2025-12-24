@@ -1,242 +1,247 @@
-﻿import { writable, derived } from 'svelte/store';
-import { pb, cartAPI, currentUser, couponAPI } from '$lib/services/cartService';
+﻿import { writable, derived, get } from 'svelte/store';
+import { pb, cartAPI, couponAPI } from '$lib/services/cartService';
+import { currentUser } from '$lib/stores/userStore';
 
-// 购物车项类型
+/* =======================
+   类型定义
+======================= */
+
 export interface CartItem {
-    id: string;
-    quantity: number;
-    selected: boolean;
-    product: {
-        id: string;
-        name: string;
-        price: number;
-        original_price?: number;
-        image: string;
-        tags?: string;
-        in_stock: boolean;
-    };
+	id: string;
+	quantity: number;
+	selected: boolean;
+	product: {
+		id: string;
+		name: string;
+		price: number;
+		original_price?: number;
+		image: string;
+		tags?: string;
+		in_stock: boolean;
+	};
 }
 
-// 购物车 store
+interface CartState {
+	items: CartItem[];
+	loading: boolean;
+	error: string | null;
+}
+
+/* =======================
+   Cart Store
+======================= */
+
 function createCartStore() {
-    const { subscribe, set, update } = writable<{
-        items: CartItem[];
-        loading: boolean;
-        error: string | null;
-    }>({
-        items: [],
-        loading: false,
-        error: null
-    });
+	const { subscribe, set, update } = writable<CartState>({
+		items: [],
+		loading: false,
+		error: null
+	});
 
-    // 从数据库加载购物车
-    async function loadCart() {
-        const user = pb.authStore.model;
-        if (!user) {
-            set({ items: [], loading: false, error: null });
-            return;
-        }
+	/* ---------- 加载购物车 ---------- */
+	async function loadCart() {
+		const user = pb.authStore.model;
+		if (!user) {
+			set({ items: [], loading: false, error: null });
+			return;
+		}
 
-        update(state => ({ ...state, loading: true, error: null }));
+		update(s => ({ ...s, loading: true, error: null }));
 
-        try {
-            const records = await cartAPI.getCartItems(user.id);
-            const items: CartItem[] = records.map(record => ({
-                id: record.id,
-                quantity: record.quantity,
-                selected: record.selected,
-                product: {
-                    id: record.expand!.product.id,
-                    name: record.expand!.product.name,
-                    price: record.expand!.product.price,
-                    original_price: record.expand!.product.originalPrice,
-                    image: record.expand!.product.image,
-                    tags: record.expand!.product.tags,
-                    in_stock: record.expand!.product.inStock,
-                }
-            }));
+		try {
+			const records = await cartAPI.getCartItems(user.id);
 
-            set({ items, loading: false, error: null });
-        } catch (error) {
-            console.error('Failed to load cart:', error);
-            set({ items: [], loading: false, error: 'カートの読み込みに失敗しました' });
-        }
-    }
+			const items: CartItem[] = records
+				.filter(r => r.expand?.product)
+				.map(r => ({
+					id: r.id,
+					quantity: r.quantity,
+					selected: r.selected,
+					product: {
+						id: r.expand!.product.id,
+						name: r.expand!.product.name,
+						price: r.expand!.product.price,
+						original_price: r.expand!.product.originalPrice,
+						image: r.expand!.product.image,
+						tags: r.expand!.product.tags,
+						in_stock: r.expand!.product.inStock
+					}
+				}));
 
-    // 添加商品到购物车
-    async function addItem(productId: string, quantity: number = 1) {
-        const user = pb.authStore.model;
-        if (!user) {
-            throw new Error('ログインが必要です');
-        }
+			set({ items, loading: false, error: null });
+		} catch (e) {
+			console.error('Cart load failed:', e);
+			set({ items: [], loading: false, error: 'カートの読み込みに失敗しました' });
+		}
+	}
 
-        try {
-            await cartAPI.addToCart(user.id, productId, quantity);
-            await loadCart(); // 重新加载
-        } catch (error) {
-            console.error('Failed to add item:', error);
-            throw error;
-        }
-    }
+	/* ---------- 添加商品 ---------- */
+	async function addItem(productId: string, quantity = 1) {
+		const user = pb.authStore.model;
+		if (!user) throw new Error('ログインが必要です');
 
-    // 更新数量
-    async function updateQuantity(itemId: string, delta: number) {
-        update(state => {
-            const item = state.items.find(i => i.id === itemId);
-            if (!item) return state;
+		await cartAPI.addToCart(user.id, productId, quantity);
+		await loadCart();
+	}
 
-            const newQuantity = Math.max(1, item.quantity + delta);
+	/* ---------- 更新数量（本地优先） ---------- */
+	async function updateQuantity(itemId: string, delta: number) {
+		update(state => {
+			const item = state.items.find(i => i.id === itemId);
+			if (!item) return state;
 
-            // 立即更新 UI
-            const updatedItems = state.items.map(i =>
-                i.id === itemId ? { ...i, quantity: newQuantity } : i
-            );
+			const newQuantity = item.quantity + delta;
+			if (newQuantity <= 0) {
+				removeItem(itemId);
+				return state;
+			}
 
-            // 异步更新数据库
-            cartAPI.updateCartItem(itemId, newQuantity).catch(console.error);
+			cartAPI.updateCartItem(itemId, newQuantity).catch(console.error);
 
-            return { ...state, items: updatedItems };
-        });
-    }
+			return {
+				...state,
+				items: state.items.map(i =>
+					i.id === itemId ? { ...i, quantity: newQuantity } : i
+				)
+			};
+		});
+	}
 
-    // 切换选择状态
-    async function toggleSelect(itemId: string) {
-        update(state => {
-            const item = state.items.find(i => i.id === itemId);
-            if (!item) return state;
+	/* ---------- 删除商品 ---------- */
+	async function removeItem(itemId: string) {
+		await cartAPI.removeCartItem(itemId);
+		update(s => ({
+			...s,
+			items: s.items.filter(i => i.id !== itemId)
+		}));
+	}
 
-            const newSelected = !item.selected;
-            const updatedItems = state.items.map(i =>
-                i.id === itemId ? { ...i, selected: newSelected } : i
-            );
+	/* ---------- 切换选中 ---------- */
+	async function toggleSelect(itemId: string) {
+		update(state => {
+			const item = state.items.find(i => i.id === itemId);
+			if (!item) return state;
 
-            cartAPI.toggleSelectItem(itemId, newSelected).catch(console.error);
+			const selected = !item.selected;
+			cartAPI.toggleSelectItem(itemId, selected).catch(console.error);
 
-            return { ...state, items: updatedItems };
-        });
-    }
+			return {
+				...state,
+				items: state.items.map(i =>
+					i.id === itemId ? { ...i, selected } : i
+				)
+			};
+		});
+	}
 
-    // 删除商品
-    async function removeItem(itemId: string) {
-        try {
-            await cartAPI.removeCartItem(itemId);
-            update(state => ({
-                ...state,
-                items: state.items.filter(i => i.id !== itemId)
-            }));
-        } catch (error) {
-            console.error('Failed to remove item:', error);
-            throw error;
-        }
-    }
+	/* ---------- 全选 / 取消全选 ---------- */
+	async function toggleSelectAll(selected: boolean) {
+		const items = get({ subscribe }).items;
 
-    // 清空购物车
-    async function clearCart() {
-        const user = pb.authStore.model;
-        if (!user) return;
+		await Promise.all(
+			items.map(item =>
+				cartAPI.toggleSelectItem(item.id, selected)
+			)
+		);
 
-        try {
-            await cartAPI.clearCart(user.id);
-            set({ items: [], loading: false, error: null });
-        } catch (error) {
-            console.error('Failed to clear cart:', error);
-        }
-    }
+		update(s => ({
+			...s,
+			items: s.items.map(i => ({ ...i, selected }))
+		}));
+	}
 
-    // 监听用户变化
-    currentUser.subscribe(user => {
-        if (user) {
-            loadCart();
-        } else {
-            set({ items: [], loading: false, error: null });
-        }
-    });
+	/* ---------- 清空购物车 ---------- */
+	async function clearCart() {
+		const user = pb.authStore.model;
+		if (!user) return;
 
-    return {
-        subscribe,
-        addItem,
-        updateQuantity,
-        toggleSelect,
-        removeItem,
-        clearCart,
-        loadCart,
-        refresh: loadCart
-    };
+		await cartAPI.clearCart(user.id);
+		set({ items: [], loading: false, error: null });
+	}
+
+	/* ---------- 监听登录状态 ---------- */
+	currentUser.subscribe((user: any) => {
+		if (user) loadCart();
+		else set({ items: [], loading: false, error: null });
+	});
+
+	return {
+		subscribe,
+		loadCart,
+		refresh: loadCart,
+		addItem,
+		updateQuantity,
+		removeItem,
+		toggleSelect,
+		toggleSelectAll,
+		clearCart
+	};
 }
 
 export const cart = createCartStore();
 
-// 派生 store：计算购物车统计
+/* =======================
+   Cart 统计（derived）
+======================= */
+
 export const cartStats = derived(cart, $cart => {
-    const selectedItems = $cart.items.filter(item => item.selected && item.product.in_stock);
+	const selectedItems = $cart.items.filter(
+		i => i.selected && i.product.in_stock
+	);
 
-    const subtotal = selectedItems.reduce(
-        (sum, item) => sum + item.product.price * item.quantity, 0
-    );
-
-    const selectedCount = selectedItems.reduce(
-        (sum, item) => sum + item.quantity, 0
-    );
-
-    return {
-        subtotal,
-        selectedCount,
-        totalItems: $cart.items.reduce((sum, item) => sum + item.quantity, 0),
-        totalUniqueItems: $cart.items.length
-    };
+	return {
+		totalItems: $cart.items.reduce((s, i) => s + i.quantity, 0),
+		selectedCount: selectedItems.reduce((s, i) => s + i.quantity, 0),
+		subtotal: selectedItems.reduce(
+			(s, i) => s + i.product.price * i.quantity,
+			0
+		),
+		allSelected:
+			$cart.items.length > 0 &&
+			selectedItems.length === $cart.items.length
+	};
 });
 
-// 优惠券 store
+/* =======================
+   Coupon Store
+======================= */
+
 function createCouponStore() {
-    const { subscribe, set } = writable<{
-        code: string;
-        discount: number;
-        type: string;
-        applied: boolean;
-    }>({
-        code: '',
-        discount: 0,
-        type: '',
-        applied: false
-    });
+	const { subscribe, set } = writable({
+		code: '',
+		discount: 0,
+		type: '',
+		applied: false
+	});
 
-    return {
-        subscribe,
-        async applyCoupon(code: string, subtotal: number) {
-            const user = pb.authStore.model;
-            if (!user) throw new Error('ログインが必要です');
+	return {
+		subscribe,
+		async applyCoupon(code: string, subtotal: number) {
+			const user = pb.authStore.model;
+			if (!user) throw new Error('ログインが必要です');
 
-            const coupon = await couponAPI.validateCoupon(code, user.id, subtotal);
+			const coupon = await couponAPI.validateCoupon(code, user.id, subtotal);
 
-            let discount = 0;
+			let discount = 0;
+			if (coupon.discount_type === 'percentage') {
+				discount = Math.floor(subtotal * (coupon.discount_value / 100));
+			} else if (coupon.discount_type === 'fixed') {
+				discount = coupon.discount_value;
+			}
 
-            if (coupon.discount_type === 'percentage') {
-                discount = Math.floor(subtotal * (coupon.discount_value / 100));
-            } else if (coupon.discount_type === 'fixed') {
-                discount = coupon.discount_value;
-            } else if (coupon.discount_type === 'shipping') {
-                // 在购物车页面计算
-                discount = 0; // 实际在 total 计算时处理
-            }
+			set({
+				code: coupon.code,
+				discount,
+				type: coupon.discount_type,
+				applied: true
+			});
 
-            set({
-                code: coupon.code,
-                discount,
-                type: coupon.discount_type,
-                applied: true
-            });
-
-            return discount;
-        },
-        removeCoupon() {
-            set({
-                code: '',
-                discount: 0,
-                type: '',
-                applied: false
-            });
-        }
-    };
+			return discount;
+		},
+		removeCoupon() {
+			set({ code: '', discount: 0, type: '', applied: false });
+		}
+	};
 }
 
 export const coupon = createCouponStore();

@@ -1,5 +1,6 @@
 ﻿<script lang="ts">
 	import { goto } from '$app/navigation';
+	import { cart } from '$lib/stores/cartStore';
 	import { onMount } from 'svelte';
 
 	// SVG 图标
@@ -91,7 +92,7 @@
 	];
 
 	// 组件挂载时处理
-	onMount(() => {
+	onMount(async () => {
 		// 从 localStorage 获取订单数据
 		const savedOrder = localStorage.getItem('currentOrder');
 		if (savedOrder) {
@@ -106,6 +107,7 @@
 			showConfetti = false;
 		}, 5000);
 
+		await cart.clearCart();
 		// 清除购物车（实际应该调用API）
 		localStorage.removeItem('cart');
 	});

@@ -1,12 +1,13 @@
-﻿<script lang="ts">
+﻿<!-- src/components/CartDropdown.svelte -->
+<script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { cart, cartStats } from '$lib/stores/cartStore';
 	import { currentUser } from '$lib/stores/userStore';
 
-	let isOpen = false;
+	let isOpen = $state(false);
 	let dropdownElement: HTMLElement;
-	let isBrowser = false;
+	let isBrowser = $state(false);
 
 	function toggleDropdown() {
 		isOpen = !isOpen;
@@ -23,11 +24,19 @@
 	}
 
 	async function updateQuantity(itemId: string, delta: number) {
-		await cart.updateQuantity(itemId, delta);
+		try {
+			await cart.updateQuantity(itemId, delta);
+		} catch (error) {
+			console.error('数量更新エラー:', error);
+		}
 	}
 
 	async function removeItem(itemId: string) {
-		await cart.removeItem(itemId);
+		try {
+			await cart.removeItem(itemId);
+		} catch (error) {
+			console.error('削除エラー:', error);
+		}
 	}
 
 	function goToCart() {
@@ -44,13 +53,18 @@
 		if (price === null || price === undefined || isNaN(price)) {
 			return '¥0';
 		}
-		return price.toString();
+		return `¥${price.toLocaleString('ja-JP')}`;
 	}
 
 	onMount(() => {
 		isBrowser = typeof window !== 'undefined';
 		if (isBrowser) {
 			document.addEventListener('click', handleClickOutside);
+			
+			// 加载购物车数据
+			if ($currentUser) {
+				cart.loadCart();
+			}
 		}
 	});
 
@@ -59,20 +73,29 @@
 			document.removeEventListener('click', handleClickOutside);
 		}
 	});
+
+	// 监听用户登录状态变化
+	$effect(() => {
+		if ($currentUser) {
+			cart.loadCart();
+		} else {
+			cart.clearCart();
+		}
+	});
 </script>
 
 <div class="relative" bind:this={dropdownElement}>
 	<!-- 购物车按钮 -->
 	<button
 		class="relative flex cursor-pointer items-center rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none"
-		on:click={toggleDropdown}
+		onclick={toggleDropdown}
 		aria-label="ショッピングカート"
 		aria-expanded={isOpen}
 	>
 		<img src="/svgs/购物车.svg" alt="cart" class="h-6 w-6" />
 		{#if $cartStats.totalItems > 0}
 			<span
-				class="absolute -top-1 	-right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white"
+				class="absolute -top-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white"
 				aria-label="{$cartStats.totalItems} items in cart"
 			>
 				{$cartStats.totalItems > 99 ? '99+' : $cartStats.totalItems}
@@ -99,7 +122,7 @@
 					</div>
 					<button
 						class="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-						on:click={closeDropdown}
+						onclick={closeDropdown}
 						aria-label="閉じる"
 					>
 						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -116,7 +139,16 @@
 
 			<!-- 商品列表 -->
 			<div class="max-h-[28rem] overflow-y-auto">
-				{#if $cart.items.length === 0}
+				{#if $cart.loading}
+					<div class="flex items-center justify-center py-12">
+						<div class="text-gray-400">
+							<svg class="h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+						</div>
+					</div>
+				{:else if $cart.items.length === 0}
 					<div class="flex flex-col items-center justify-center py-12">
 						<div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
 							<svg
@@ -171,7 +203,7 @@
 											</div>
 											<button
 												class="ml-2 shrink-0 text-gray-400 transition-colors hover:text-red-500"
-												on:click={() => removeItem(item.id)}
+												onclick={() => removeItem(item.id)}
 												aria-label="商品を削除"
 											>
 												<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -192,7 +224,7 @@
 													<span class="text-base font-bold text-gray-900">
 														{formatPrice(item.product.price)}
 													</span>
-													{#if item.product.original_price}
+													{#if item.product.original_price && item.product.original_price > item.product.price}
 														<span class="text-sm text-gray-400 line-through">
 															{formatPrice(item.product.original_price)}
 														</span>
@@ -205,7 +237,7 @@
 											<div class="flex items-center gap-2">
 												<button
 													class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-all hover:border-gray-400 hover:bg-gray-50 active:scale-95 disabled:opacity-30"
-													on:click={() => updateQuantity(item.id, -1)}
+													onclick={() => updateQuantity(item.id, -1)}
 													disabled={item.quantity <= 1}
 													aria-label="数量を減らす"
 												>
@@ -228,7 +260,7 @@
 												</span>
 												<button
 													class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-all hover:border-gray-400 hover:bg-gray-50 active:scale-95 disabled:opacity-30"
-													on:click={() => updateQuantity(item.id, 1)}
+													onclick={() => updateQuantity(item.id, 1)}
 													disabled={!item.product.in_stock}
 													aria-label="数量を増やす"
 												>
@@ -283,13 +315,13 @@
 					<div class="grid grid-cols-2 gap-3">
 						<button
 							class="rounded-lg border-2 border-gray-300 bg-white py-3 text-sm font-semibold text-gray-700 transition-all hover:border-gray-400 hover:bg-gray-50 active:scale-[0.98]"
-							on:click={goToCart}
+							onclick={goToCart}
 						>
 							カートを見る
 						</button>
 						<button
 							class="rounded-lg bg-gray-900 py-3 text-sm font-semibold text-white transition-all hover:bg-gray-800 active:scale-[0.98]"
-							on:click={goToCheckout}
+							onclick={goToCheckout}
 						>
 							購入手続きへ
 						</button>
@@ -310,5 +342,15 @@
 			opacity: 1;
 			transform: scale(1) translateY(0);
 		}
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.animate-spin {
+		animation: spin 1s linear infinite;
 	}
 </style>

@@ -12,11 +12,8 @@ export interface User {
     name: string;
     avatar?: string;
     username?: string;
-
-    // ✅ 新增字段
     points: number;
     memberLevel: number;
-
     verified: boolean;
     created: string;
     updated: string;
