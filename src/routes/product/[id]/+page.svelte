@@ -4,6 +4,8 @@
 	import PocketBase from 'pocketbase';
 	import { categoryStore } from '$lib/stores/categoryStore';
 	import type { RecordModel } from 'pocketbase';
+	import { goto } from '$app/navigation';
+	import { cart } from '$lib/stores/cartStore';
 
 	// 商品数据结构
 	interface Product extends RecordModel {
@@ -108,16 +110,34 @@
 		}
 		return specs;
 	}
-
-	function addToCart() {
+	let selectedColor = '';
+	let selectedSize = '';
+	let addingToCart = false;
+	let message = '';
+	async function addToCart() {
 		if (!product) return;
 		isLoading = true;
-		setTimeout(() => {
-			isLoading = false;
-			alert(`${quantity}個の${product?.name_ja || product?.name}をカートに追加しました`);
-		}, 500);
-	}
+		if (!pb.authStore.model) {
+			goto('/login?redirect=/product/' + product.id);
+			return;
+		}
+		addingToCart = true;
+		message = '';
+		try {
+			await cart.addItem(product.id, quantity);
+			message = 'カートに追加しました！';
 
+			// 3秒后清除消息
+			setTimeout(() => {
+				message = '';
+			}, 3000);
+		} catch (error) {
+			message = 'エラーが発生しました';
+			console.error('Failed to add to cart:', error);
+		} finally {
+			addingToCart = false;
+		}
+	}
 	function buyNow() {
 		if (!product) return;
 		isLoading = true;

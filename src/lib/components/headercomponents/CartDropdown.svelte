@@ -1,62 +1,15 @@
-﻿<!-- CartDropdown.svelte -->
-<script lang="ts">
+﻿<script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { createEventDispatcher } from 'svelte';
 	import { goto } from '$app/navigation';
-
-	const dispatch = createEventDispatcher();
-
-	export let cartItems: Array<{
-		id: number;
-		name: string;
-		image: string;
-		price: number;
-		originalPrice?: number;
-		quantity: number;
-		color?: string;
-		inStock: boolean;
-	}> = [];
-
-	export let itemCount = 0;
+	import { cart, cartStats } from '$lib/stores/cartStore';
+	import { currentUser } from '$lib/stores/userStore';
 
 	let isOpen = false;
 	let dropdownElement: HTMLElement;
 	let isBrowser = false;
 
-	// 模拟购物车数据
-	const mockCartItems = [
-		{
-			id: 1,
-			name: 'ワイヤレスイヤホン Pro',
-			image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop',
-			price: 12800,
-			originalPrice: 15800,
-			quantity: 1,
-			color: 'ブラック',
-			inStock: true
-		},
-		{
-			id: 2,
-			name: 'スマートウォッチ Series 5',
-			image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop',
-			price: 28900,
-			quantity: 1,
-			color: 'シルバー',
-			inStock: true
-		}
-	];
-
-	// 使用模拟数据或传入的数据
-	$: displayItems = cartItems.length > 0 ? cartItems : mockCartItems;
-	$: totalItems = displayItems.reduce((sum, item) => sum + item.quantity, 0);
-	$: totalPrice = displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-	$: displayItemCount = itemCount > 0 ? itemCount : totalItems;
-
 	function toggleDropdown() {
 		isOpen = !isOpen;
-		if (isOpen) {
-			dispatch('open');
-		}
 	}
 
 	function closeDropdown() {
@@ -69,22 +22,12 @@
 		}
 	}
 
-	function updateQuantity(itemId: number, delta: number) {
-		const item = displayItems.find((i) => i.id === itemId);
-		if (item) {
-			const newQuantity = item.quantity + delta;
-			if (newQuantity > 0) {
-				displayItems = displayItems.map((i) =>
-					i.id === itemId ? { ...i, quantity: newQuantity } : i
-				);
-				dispatch('updateQuantity', { itemId, quantity: newQuantity });
-			}
-		}
+	async function updateQuantity(itemId: string, delta: number) {
+		await cart.updateQuantity(itemId, delta);
 	}
 
-	function removeItem(itemId: number) {
-		displayItems = displayItems.filter((item) => item.id !== itemId);
-		dispatch('removeItem', itemId);
+	async function removeItem(itemId: string) {
+		await cart.removeItem(itemId);
 	}
 
 	function goToCart() {
@@ -97,8 +40,11 @@
 		goto('/checkout');
 	}
 
-	function formatPrice(price: number): string {
-		return `¥${price.toLocaleString()}`;
+	function formatPrice(price: number | null | undefined): string {
+		if (price === null || price === undefined || isNaN(price)) {
+			return '¥0';
+		}
+		return price.toString();
 	}
 
 	onMount(() => {
@@ -124,18 +70,18 @@
 		aria-expanded={isOpen}
 	>
 		<img src="/svgs/购物车.svg" alt="cart" class="h-6 w-6" />
-		{#if displayItemCount > 0}
+		{#if $cartStats.totalItems > 0}
 			<span
-				class="absolute -top-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white"
-				aria-label="{displayItemCount} items in cart"
+				class="absolute -top-1 	-right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white"
+				aria-label="{$cartStats.totalItems} items in cart"
 			>
-				{displayItemCount > 99 ? '99+' : displayItemCount}
+				{$cartStats.totalItems > 99 ? '99+' : $cartStats.totalItems}
 			</span>
 		{/if}
 	</button>
 
 	<!-- 下拉面板 -->
-	{#if isOpen && isBrowser}
+	{#if isOpen && isBrowser && $currentUser}
 		<div
 			class="absolute top-full right-0 z-50 mt-2 w-96 origin-top-right overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl transition-all"
 			style="animation: scaleIn 0.2s ease-out;"
@@ -145,9 +91,9 @@
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-3">
 						<h3 class="text-lg font-semibold text-gray-900">ショッピングカート</h3>
-						{#if displayItemCount > 0}
+						{#if $cartStats.totalItems > 0}
 							<span class="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-medium text-white">
-								{displayItemCount}点
+								{$cartStats.totalItems}点
 							</span>
 						{/if}
 					</div>
@@ -170,7 +116,7 @@
 
 			<!-- 商品列表 -->
 			<div class="max-h-[28rem] overflow-y-auto">
-				{#if displayItems.length === 0}
+				{#if $cart.items.length === 0}
 					<div class="flex flex-col items-center justify-center py-12">
 						<div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
 							<svg
@@ -192,18 +138,18 @@
 					</div>
 				{:else}
 					<div class="divide-y divide-gray-100">
-						{#each displayItems as item (item.id)}
+						{#each $cart.items as item (item.id)}
 							<div class="group px-6 py-4 transition-colors hover:bg-gray-50">
 								<div class="flex gap-4">
 									<!-- 商品图片 -->
 									<div class="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
 										<img
-											src={item.image}
-											alt={item.name}
+											src={item.product.image}
+											alt={item.product.name}
 											class="h-full w-full object-cover transition-transform group-hover:scale-105"
 											loading="lazy"
 										/>
-										{#if !item.inStock}
+										{#if !item.product.in_stock}
 											<div class="absolute inset-0 flex items-center justify-center bg-black/70">
 												<span class="text-xs font-medium text-white">在庫切れ</span>
 											</div>
@@ -217,10 +163,10 @@
 												<h4
 													class="mb-1 truncate text-sm font-semibold text-gray-900 group-hover:text-gray-600"
 												>
-													{item.name}
+													{item.product.name}
 												</h4>
-												{#if item.color}
-													<p class="text-xs text-gray-500">{item.color}</p>
+												{#if item.product.tags}
+													<p class="text-xs text-gray-500">{item.product.tags}</p>
 												{/if}
 											</div>
 											<button
@@ -244,11 +190,11 @@
 											<div class="flex flex-col">
 												<div class="flex items-baseline gap-2">
 													<span class="text-base font-bold text-gray-900">
-														{formatPrice(item.price)}
+														{formatPrice(item.product.price)}
 													</span>
-													{#if item.originalPrice}
+													{#if item.product.original_price}
 														<span class="text-sm text-gray-400 line-through">
-															{formatPrice(item.originalPrice)}
+															{formatPrice(item.product.original_price)}
 														</span>
 													{/if}
 												</div>
@@ -283,7 +229,7 @@
 												<button
 													class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-all hover:border-gray-400 hover:bg-gray-50 active:scale-95 disabled:opacity-30"
 													on:click={() => updateQuantity(item.id, 1)}
-													disabled={!item.inStock}
+													disabled={!item.product.in_stock}
 													aria-label="数量を増やす"
 												>
 													<svg
@@ -311,13 +257,14 @@
 			</div>
 
 			<!-- 底部 -->
-			{#if displayItems.length > 0}
+			{#if $cart.items.length > 0}
 				<div class="border-t border-gray-100 bg-white px-6 py-5">
 					<!-- 总计 -->
 					<div class="mb-4 rounded-lg bg-gray-50 p-4">
 						<div class="mb-2 flex items-center justify-between">
-							<span class="text-sm text-gray-600">小計 ({totalItems}点)</span>
-							<span class="text-lg font-bold text-gray-900">{formatPrice(totalPrice)}</span>
+							<span class="text-sm text-gray-600">小計 ({$cartStats.totalItems}点)</span>
+							<span class="text-lg font-bold text-gray-900">{formatPrice($cartStats.subtotal)}</span
+							>
 						</div>
 						<div class="flex items-center gap-1 text-sm text-gray-500">
 							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,25 +310,5 @@
 			opacity: 1;
 			transform: scale(1) translateY(0);
 		}
-	}
-
-	/* 自定义滚动条 */
-	.max-h-\[28rem\]::-webkit-scrollbar {
-		width: 8px;
-	}
-
-	.max-h-\[28rem\]::-webkit-scrollbar-track {
-		background: #f8fafc;
-		border-radius: 4px;
-	}
-
-	.max-h-\[28rem\]::-webkit-scrollbar-thumb {
-		background: #cbd5e1;
-		border-radius: 4px;
-		border: 2px solid #f8fafc;
-	}
-
-	.max-h-\[28rem\]::-webkit-scrollbar-thumb:hover {
-		background: #94a3b8;
 	}
 </style>

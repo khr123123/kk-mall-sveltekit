@@ -1,162 +1,85 @@
 ﻿<script lang="ts">
 	import { goto } from '$app/navigation';
+	import { cart, cartStats, coupon } from '$lib/stores/cartStore';
+	import { onMount } from 'svelte';
 
-	// 模拟购物车数据
-	let cartItems = [
-		{
-			id: 1,
-			name: 'ワイヤレスイヤホン Pro',
-			image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop',
-			price: 12800,
-			originalPrice: 15800,
-			quantity: 1,
-			color: 'ブラック',
-			size: null,
-			inStock: true,
-			seller: 'テックストア',
-			shippingFee: 0
-		},
-		{
-			id: 2,
-			name: 'スマートウォッチ Series 5',
-			image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-			price: 28900,
-			originalPrice: null,
-			quantity: 1,
-			color: 'シルバー',
-			size: '42mm',
-			inStock: true,
-			seller: 'ガジェット専門店',
-			shippingFee: 500
-		},
-		{
-			id: 3,
-			name: 'USB-C ケーブル 2m',
-			image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop',
-			price: 1980,
-			originalPrice: 2480,
-			quantity: 2,
-			color: 'ホワイト',
-			size: null,
-			inStock: true,
-			seller: 'テックストア',
-			shippingFee: 0
-		},
-		{
-			id: 4,
-			name: 'ワイヤレス充電器',
-			image: 'https://images.unsplash.com/photo-1578319439584-104c94d37305?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-			price: 3480,
-			originalPrice: null,
-			quantity: 1,
-			color: 'ブラック',
-			size: null,
-			inStock: false,
-			seller: 'アクセサリーハウス',
-			shippingFee: 300
-		}
-	];
-
-	let selectedItems = new Set(cartItems.filter((item) => item.inStock).map((item) => item.id));
 	let couponCode = '';
-	let appliedCoupon: { code: string; discount: number } | null = null;
+	let loading = true;
+	let error: string | null = null;
 
-	// 计算相关
-	$: subtotal = Array.from(selectedItems).reduce((sum, id) => {
-		const item = cartItems.find((i) => i.id === id);
-		return item ? sum + item.price * item.quantity : sum;
-	}, 0);
+	onMount(() => {
+		// 订阅购物车变化
+		const unsubscribe = cart.subscribe(({ items, loading: cartLoading, error: cartError }) => {
+			loading = cartLoading;
+			error = cartError;
+		});
 
-	$: shippingFee = Array.from(selectedItems).reduce((sum, id) => {
-		const item = cartItems.find((i) => i.id === id);
-		return item ? sum + item.shippingFee : sum;
-	}, 0);
+		return unsubscribe;
+	});
 
-	$: discount = appliedCoupon ? appliedCoupon.discount : 0;
-	$: total = subtotal + shippingFee - discount;
-	$: selectedCount = selectedItems.size;
+	// 计算总价（包含优惠券）
+	$: total = $cartStats.subtotal - $coupon.discount;
 
+	// 格式价格
 	function formatPrice(price: number): string {
 		return `¥${price.toLocaleString()}`;
 	}
 
-	function toggleSelectAll() {
-		if (selectedItems.size === cartItems.filter((item) => item.inStock).length) {
-			selectedItems.clear();
-		} else {
-			cartItems.forEach((item) => {
-				if (item.inStock) {
-					selectedItems.add(item.id);
-				}
-			});
-		}
-		selectedItems = selectedItems;
+	// 全选/全不选
+	async function toggleSelectAll() {
+		const allInStockSelected = $cart.items
+			.filter((item) => item.product.in_stock)
+			.every((item) => item.selected);
+
+		const updates = $cart.items
+			.filter((item) => item.product.in_stock)
+			.map((item) => cart.toggleSelect(item.id));
+
+		await Promise.all(updates);
 	}
 
-	function toggleSelectItem(itemId: number) {
-		if (selectedItems.has(itemId)) {
-			selectedItems.delete(itemId);
-		} else {
-			selectedItems.add(itemId);
-		}
-		selectedItems = selectedItems;
-	}
-
-	function updateQuantity(itemId: number, delta: number) {
-		cartItems = cartItems.map((item) => {
-			if (item.id === itemId) {
-				const newQuantity = Math.max(1, item.quantity + delta);
-				return { ...item, quantity: newQuantity };
-			}
-			return item;
-		});
-	}
-
-	function removeItem(itemId: number) {
+	// 删除商品
+	async function removeItem(itemId: string) {
 		if (confirm('この商品をカートから削除しますか？')) {
-			cartItems = cartItems.filter((item) => item.id !== itemId);
-			selectedItems.delete(itemId);
-			selectedItems = selectedItems;
+			try {
+				await cart.removeItem(itemId);
+			} catch (err) {
+				alert('削除に失敗しました');
+			}
 		}
 	}
 
-	function applyCoupon() {
-		if (couponCode.trim() === '') {
+	// 应用优惠券
+	async function applyCoupon() {
+		if (!couponCode.trim()) {
 			alert('クーポンコードを入力してください');
 			return;
 		}
 
-		// 模拟优惠券验证
-		if (couponCode === 'SAVE10') {
-			appliedCoupon = {
-				code: 'SAVE10',
-				discount: Math.floor(subtotal * 0.1)
-			};
+		try {
+			await coupon.applyCoupon(couponCode, $cartStats.subtotal);
 			alert('クーポンが適用されました！');
-		} else if (couponCode === 'FREESHIP') {
-			appliedCoupon = {
-				code: 'FREESHIP',
-				discount: shippingFee
-			};
-			alert('送料無料クーポンが適用されました！');
-		} else {
-			alert('無効なクーポンコードです');
+		} catch (err: any) {
+			alert(err.message);
 		}
 	}
 
+	// 移除优惠券
 	function removeCoupon() {
-		appliedCoupon = null;
+		coupon.removeCoupon();
 		couponCode = '';
 	}
 
+	// 结算
 	function goToCheckout() {
-		if (selectedItems.size === 0) {
+		if ($cartStats.selectedCount === 0) {
 			alert('商品を選択してください');
 			return;
 		}
 		goto('/checkout');
 	}
 
+	// 继续购物
 	function continueShopping() {
 		goto('/');
 	}
@@ -168,12 +91,30 @@
 		<div class="mb-6">
 			<h1 class="text-2xl font-bold text-gray-900">ショッピングカート</h1>
 			<p class="mt-1 text-sm text-gray-500">
-				{cartItems.length}件の商品
+				{$cart.items.length}件の商品
 			</p>
 		</div>
 
-		{#if cartItems.length === 0}
-			<!-- 空购物车状态 -->
+		{#if loading}
+			<!-- 加载中 -->
+			<div class="flex justify-center py-12">
+				<div
+					class="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-gray-900"
+				></div>
+			</div>
+		{:else if error}
+			<!-- 错误状态 -->
+			<div class="rounded-lg bg-red-50 p-6 text-center">
+				<p class="text-red-700">{error}</p>
+				<button
+					on:click={() => cart.refresh()}
+					class="mt-4 rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
+				>
+					再試行
+				</button>
+			</div>
+		{:else if $cart.items.length === 0}
+			<!-- 空购物车 -->
 			<div class="rounded-lg bg-white px-6 py-16 text-center shadow-sm">
 				<svg
 					class="mx-auto mb-4 h-24 w-24 text-gray-300"
@@ -209,22 +150,26 @@
 							<input
 								type="checkbox"
 								class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900"
-								checked={selectedItems.size === cartItems.filter((item) => item.inStock).length &&
-									cartItems.filter((item) => item.inStock).length > 0}
+								checked={$cart.items
+									.filter((item) => item.product.in_stock)
+									.every((item) => item.selected) &&
+									$cart.items.filter((item) => item.product.in_stock).length > 0}
 								on:change={toggleSelectAll}
 							/>
 							<span class="text-sm font-medium text-gray-700">すべて選択</span>
 						</label>
 						<span class="text-sm text-gray-500">
-							({selectedCount}/{cartItems.filter((item) => item.inStock).length}件選択中)
+							({$cartStats.selectedCount}/{$cart.items.filter((item) => item.product.in_stock)
+								.length}件選択中)
 						</span>
 					</div>
 
 					<!-- 商品列表 -->
 					<div class="space-y-4">
-						{#each cartItems as item (item.id)}
+						{#each $cart.items as item (item.id)}
 							<div
-								class="rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md {!item.inStock
+								class="rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md {!item
+									.product.in_stock
 									? 'opacity-75'
 									: ''}"
 							>
@@ -234,16 +179,20 @@
 										<input
 											type="checkbox"
 											class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
-											checked={selectedItems.has(item.id)}
-											disabled={!item.inStock}
-											on:change={() => toggleSelectItem(item.id)}
+											checked={item.selected}
+											disabled={!item.product.in_stock}
+											on:change={() => cart.toggleSelect(item.id)}
 										/>
 									</div>
 
 									<!-- 商品图片 -->
 									<div class="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-										<img src={item.image} alt={item.name} class="h-full w-full object-cover" />
-										{#if !item.inStock}
+										<img
+											src={item.product.image}
+											alt={item.product.name}
+											class="h-full w-full object-cover"
+										/>
+										{#if !item.product.in_stock}
 											<div
 												class="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-medium text-white"
 											>
@@ -256,16 +205,11 @@
 									<div class="min-w-0 flex-1">
 										<div class="mb-2 flex items-start justify-between gap-4">
 											<div class="flex-1">
-												<h3 class="mb-1 font-medium text-gray-900">{item.name}</h3>
+												<h3 class="mb-1 font-medium text-gray-900">{item.product.name}</h3>
 												<div class="flex flex-wrap gap-2 text-xs text-gray-500">
-													{#if item.color}
-														<span>カラー: {item.color}</span>
-													{/if}
-													{#if item.size}
-														<span>サイズ: {item.size}</span>
-													{/if}
+													<span>サイズ: {item.product.tags}</span>
 												</div>
-												<p class="mt-1 text-xs text-gray-400">販売元: {item.seller}</p>
+											
 											</div>
 											<button
 												class="shrink-0 text-gray-400 transition-colors hover:text-red-500"
@@ -287,11 +231,11 @@
 											<!-- 价格 -->
 											<div class="flex items-baseline gap-2">
 												<span class="text-lg font-bold text-gray-900">
-													{formatPrice(item.price)}
+													{formatPrice(item.product.price)}
 												</span>
-												{#if item.originalPrice}
+												{#if item.product.original_price}
 													<span class="text-sm text-gray-400 line-through">
-														{formatPrice(item.originalPrice)}
+														{formatPrice(item.product.original_price)}
 													</span>
 												{/if}
 											</div>
@@ -300,10 +244,15 @@
 											<div class="flex items-center gap-3">
 												<button
 													class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-													on:click={() => updateQuantity(item.id, -1)}
-													disabled={item.quantity <= 1 || !item.inStock}
+													on:click={() => cart.updateQuantity(item.id, -1)}
+													disabled={item.quantity <= 1 || !item.product.in_stock}
 												>
-													<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<svg
+														class="h-4 w-4"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
 														<path
 															stroke-linecap="round"
 															stroke-linejoin="round"
@@ -317,10 +266,15 @@
 												</span>
 												<button
 													class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-													on:click={() => updateQuantity(item.id, 1)}
-													disabled={!item.inStock}
+													on:click={() => cart.updateQuantity(item.id, 1)}
+													disabled={!item.product.in_stock}
 												>
-													<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<svg
+														class="h-4 w-4"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
 														<path
 															stroke-linecap="round"
 															stroke-linejoin="round"
@@ -344,11 +298,11 @@
 						<!-- 优惠券 -->
 						<div class="rounded-lg border border-gray-200 bg-white p-4">
 							<h3 class="mb-3 text-sm font-semibold text-gray-900">クーポンコード</h3>
-							{#if appliedCoupon}
+							{#if $coupon.applied}
 								<div class="flex items-center justify-between rounded-lg bg-green-50 p-3">
 									<div>
-										<p class="text-sm font-medium text-green-900">{appliedCoupon.code}</p>
-										<p class="text-xs text-green-700">-{formatPrice(appliedCoupon.discount)}</p>
+										<p class="text-sm font-medium text-green-900">{$coupon.code}</p>
+										<p class="text-xs text-green-700">-{formatPrice($coupon.discount)}</p>
 									</div>
 									<button class="text-green-700 hover:text-green-800" on:click={removeCoupon}>
 										<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -367,7 +321,7 @@
 										type="text"
 										bind:value={couponCode}
 										placeholder="コードを入力"
-										class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+										class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none"
 									/>
 									<button
 										class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
@@ -385,17 +339,16 @@
 							<h3 class="mb-4 text-sm font-semibold text-gray-900">注文概要</h3>
 							<div class="space-y-3 text-sm">
 								<div class="flex justify-between text-gray-600">
-									<span>小計 ({selectedCount}件)</span>
-									<span>{formatPrice(subtotal)}</span>
+									<span>小計 ({$cartStats.selectedCount}件)</span>
+									<span>{formatPrice($cartStats.subtotal)}</span>
 								</div>
 								<div class="flex justify-between text-gray-600">
-									<span>送料</span>
-									<span>{shippingFee === 0 ? '無料' : formatPrice(shippingFee)}</span>
+									<span>送料無料</span>
 								</div>
-								{#if discount > 0}
+								{#if $coupon.discount > 0}
 									<div class="flex justify-between text-green-600">
 										<span>割引</span>
-										<span>-{formatPrice(discount)}</span>
+										<span>-{formatPrice($coupon.discount)}</span>
 									</div>
 								{/if}
 								<div class="border-t border-gray-200 pt-3">
@@ -409,9 +362,9 @@
 							<button
 								class="mt-4 w-full rounded-lg bg-gray-900 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
 								on:click={goToCheckout}
-								disabled={selectedCount === 0}
+								disabled={$cartStats.selectedCount === 0}
 							>
-								購入手続きへ ({selectedCount}件)
+								購入手続きへ ({$cartStats.selectedCount}件)
 							</button>
 
 							<button
@@ -421,38 +374,9 @@
 								ショッピングを続ける
 							</button>
 						</div>
-
-						<!-- 安全提示 -->
-						<div class="rounded-lg bg-gray-100 p-4 text-xs text-gray-600">
-							<div class="mb-2 flex items-center gap-2">
-								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-									/>
-								</svg>
-								<span class="font-medium">安全な決済</span>
-							</div>
-							<p>SSL暗号化により、お客様の情報は安全に保護されています。</p>
-						</div>
 					</div>
 				</div>
 			</div>
 		{/if}
 	</div>
 </div>
-
-<style>
-	/* 自定义复选框样式 */
-	input[type='checkbox']:checked {
-		background-color: #111827;
-		border-color: #111827;
-	}
-
-	/* 过渡动画 */
-	.space-y-4 > * {
-		transition: all 0.2s ease;
-	}
-</style>
