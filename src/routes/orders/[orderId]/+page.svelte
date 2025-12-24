@@ -24,18 +24,48 @@
 	};
 
 	// 状态管理
-	let orderData = $state<any>(null);
-	let trackingHistory = $state<any[]>([]);
-	let orderId = $state<string>('');
+	let orderData: any = null;
+	let trackingHistory: any[] = [];
+	let orderId = '';
 
 	// 订单状态映射
 	const statusMap = {
-		pending: { text: '注文確認中', color: 'yellow', icon: icons.clock },
-		processing: { text: '発送準備中', color: 'blue', icon: icons.package },
-		shipped: { text: '配送中', color: 'purple', icon: icons.truck },
-		delivered: { text: '配達完了', color: 'green', icon: icons.check },
-		cancelled: { text: 'キャンセル', color: 'red', icon: icons.cancel }
+		pending: {
+			text: '注文確認中',
+			color: 'text-yellow-600',
+			bgColor: 'bg-yellow-100',
+			icon: icons.clock
+		},
+		processing: {
+			text: '発送準備中',
+			color: 'text-blue-600',
+			bgColor: 'bg-blue-100',
+			icon: icons.package
+		},
+		shipped: {
+			text: '配送中',
+			color: 'text-purple-600',
+			bgColor: 'bg-purple-100',
+			icon: icons.truck
+		},
+		delivered: {
+			text: '配達完了',
+			color: 'text-green-600',
+			bgColor: 'bg-green-100',
+			icon: icons.check
+		},
+		cancelled: {
+			text: 'キャンセル',
+			color: 'text-red-600',
+			bgColor: 'bg-red-100',
+			icon: icons.cancel
+		}
 	};
+
+	// 获取订单状态信息
+	function getOrderStatus(status: keyof typeof statusMap) {
+		return statusMap[status] || statusMap.pending;
+	}
 
 	// 格式化价格
 	function formatPrice(price: number): string {
@@ -109,7 +139,8 @@
 					{
 						id: 1,
 						name: 'ワイヤレスイヤホン Pro',
-						image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop',
+						image:
+							'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop',
 						price: 12800,
 						quantity: 1,
 						color: 'ブラック',
@@ -176,7 +207,7 @@
 	<div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 		<!-- 返回按钮 -->
 		<button
-			onclick={backToOrders}
+			on:click={backToOrders}
 			class="mb-6 flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
 		>
 			{@html icons.arrowLeft}
@@ -184,6 +215,9 @@
 		</button>
 
 		{#if orderData}
+			<!-- 获取订单状态 -->
+			{@const status = getOrderStatus(orderData.status)}
+
 			<!-- 订单标题 -->
 			<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 				<div>
@@ -192,21 +226,21 @@
 				</div>
 				<div class="flex gap-2">
 					<button
-						onclick={downloadInvoice}
+						on:click={downloadInvoice}
 						class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						{@html icons.download}
 						<span class="hidden sm:inline">領収書</span>
 					</button>
 					<button
-						onclick={printOrder}
+						on:click={printOrder}
 						class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						{@html icons.print}
 						<span class="hidden sm:inline">印刷</span>
 					</button>
 					<button
-						onclick={contactSupport}
+						on:click={contactSupport}
 						class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						{@html icons.support}
@@ -218,32 +252,30 @@
 			<!-- 订单状态 -->
 			<div class="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
 				<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          {#if orderData.status === 'pending'}
-						<div class="mb-2 flex items-center gap-2">
-							{@const status = statusMap[orderData.status as keyof typeof statusMap] || statusMap.pending}
-							<div class="text-{status.color}-600">
-								{@html status.icon}
-							</div>
-							<span class="text-lg font-semibold text-gray-900">{status.text}</span>
+					<div class="flex items-center gap-4">
+						<div
+							class={`flex h-12 w-12 items-center justify-center rounded-full ${status.bgColor} ${status.color}`}
+						>
+							{@html status.icon}
 						</div>
-						<p class="text-sm text-gray-600">
-							注文日時: {formatDateTime(orderData.orderDate)}
-						</p>
-						<p class="text-sm text-gray-600">
-							注文日時: {formatDateTime(orderData.orderDate)}
-						</p>
-					{/if}
+						<div>
+							<h2 class="text-lg font-semibold text-gray-900">{status.text}</h2>
+							<p class="text-sm text-gray-600">
+								注文日時: {formatDateTime(orderData.orderDate)}
+							</p>
+						</div>
 					</div>
+
 					{#if orderData.status === 'processing' || orderData.status === 'pending'}
 						<button
-							onclick={cancelOrder}
+							on:click={cancelOrder}
 							class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
 						>
 							注文をキャンセル
 						</button>
 					{:else if orderData.status === 'delivered'}
 						<button
-							onclick={reorder}
+							on:click={reorder}
 							class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
 						>
 							再注文する
@@ -263,13 +295,16 @@
 								<span>配送状況</span>
 							</h2>
 							<div class="space-y-4">
-								{#each trackingHistory as track, index}
+								{#each trackingHistory as track, index (track.timestamp)}
+									{@const isFirst = index === 0}
 									<div class="flex gap-4">
 										<div class="flex flex-col items-center">
-											<div class={`flex h-8 w-8 items-center justify-center rounded-full ${
-												index === 0 ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-											}`}>
-												{#if index === 0}
+											<div
+												class={`flex h-8 w-8 items-center justify-center rounded-full ${
+													isFirst ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+												}`}
+											>
+												{#if isFirst}
 													{@html icons.check}
 												{:else}
 													<div class="h-2 w-2 rounded-full bg-current"></div>
@@ -300,13 +335,9 @@
 							<span>注文商品</span>
 						</h2>
 						<div class="space-y-4">
-							{#each orderData.items as item}
+							{#each orderData.items as item (item.id)}
 								<div class="flex gap-4 rounded-lg border border-gray-200 p-4">
-									<img
-										src={item.image}
-										alt={item.name}
-										class="h-24 w-24 rounded-lg object-cover"
-									/>
+									<img src={item.image} alt={item.name} class="h-24 w-24 rounded-lg object-cover" />
 									<div class="flex-1">
 										<h3 class="font-medium text-gray-900">{item.name}</h3>
 										<div class="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-gray-600">
@@ -321,7 +352,7 @@
 										<p class="mt-2 text-sm text-gray-500">販売元: {item.seller}</p>
 										{#if orderData.status === 'delivered'}
 											<button
-												onclick={() => rateProduct(item.id)}
+												on:click={() => rateProduct(item.id)}
 												class="mt-2 flex items-center gap-1 text-sm text-blue-600 hover:underline"
 											>
 												{@html icons.star}
@@ -402,24 +433,17 @@
 				</div>
 			</div>
 		{:else}
-
 			<!-- 加载状态 -->
 			<div class="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
 				<div class="mb-4 flex justify-center">
 					<svg class="h-8 w-8 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-					</svg>
-				</div>
-				<p class="text-gray-600">注文情報を読み込んでいます...</p>
-			</div>
-		{/if}
-			<!-- 加载状态 -->
-			<div class="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
-				<div class="mb-4 flex justify-center">
-					<svg class="h-8 w-8 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
 					</svg>
 				</div>
 				<p class="text-gray-600">注文情報を読み込んでいます...</p>
@@ -441,7 +465,7 @@
 
 	@media print {
 		button {
-			display: none;
+			display: none !important;
 		}
 	}
 </style>
