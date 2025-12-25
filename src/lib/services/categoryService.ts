@@ -1,10 +1,5 @@
-﻿// src/lib/services/categoryService.ts
-import PocketBase, { type RecordService, type RecordModel } from 'pocketbase';
-
-// 创建 PocketBase 实例
-const pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL);
-
-// 类型定义
+﻿import { type RecordService, type RecordModel } from 'pocketbase';
+import { pb } from "./PBConfig";
 export interface Category extends RecordModel {
     id: string;
     name: string;

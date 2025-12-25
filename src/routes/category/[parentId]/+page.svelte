@@ -13,7 +13,7 @@
 	let products = $state<RecordModel[]>([]);
 	let isLoading = $state(false);
 	let sortBy = $state('newest');
-	
+
 	// 分页
 	let currentPage = $state(1);
 	let totalPages = $state(1);
@@ -41,11 +41,11 @@
 	async function loadData() {
 		try {
 			isLoading = true;
-			
+
 			// 等待store数据加载
 			if (!$categoryStore.isLoaded) {
-				await new Promise(resolve => {
-					const unsubscribe = categoryStore.subscribe(store => {
+				await new Promise((resolve) => {
+					const unsubscribe = categoryStore.subscribe((store) => {
 						if (store.isLoaded) {
 							resolve(true);
 							unsubscribe();
@@ -58,11 +58,11 @@
 			if (!mainIdParam) return;
 
 			mainId = mainIdParam;
-			
+
 			// 从 store 获取分类信息
 			const categories = $categoryStore.categories;
 			currentCategory = categories.find((cat: any) => cat.id === mainIdParam) || null;
-			
+
 			if (!currentCategory) {
 				console.error('分类未找到:', mainIdParam);
 				return;
@@ -70,10 +70,10 @@
 
 			// 获取子分类
 			subcategories = currentCategory.expand?.children || [];
-			
+
 			// 获取该分类下的品牌
 			await loadBrands();
-			
+
 			// 加载商品
 			await loadProducts();
 		} catch (error) {
@@ -89,7 +89,7 @@
 	async function loadBrands() {
 		try {
 			// 获取所有子分类ID
-			const subcategoryIds = subcategories.map(sub => sub.id);
+			const subcategoryIds = subcategories.map((sub) => sub.id);
 			if (subcategoryIds.length === 0) {
 				availableBrands = [];
 				return;
@@ -97,13 +97,13 @@
 
 			// 查询所有子分类下的商品中的品牌
 			let allBrands: string[] = [];
-			
+
 			// 使用分页查询所有商品
 			let page = 1;
 			let hasMore = true;
-			
+
 			while (hasMore) {
-				const filter = subcategoryIds.map(id => `category_id = "${id}"`).join(' || ');
+				const filter = subcategoryIds.map((id) => `category_id = "${id}"`).join(' || ');
 				const result = await pb.collection('products').getList(page, 200, {
 					filter,
 					fields: 'brand'
@@ -111,11 +111,11 @@
 
 				// 收集品牌
 				const brands = result.items
-					.map(item => item.brand)
-					.filter(brand => brand && brand.trim() !== '');
-				
+					.map((item) => item.brand)
+					.filter((brand) => brand && brand.trim() !== '');
+
 				allBrands = [...allBrands, ...brands];
-				
+
 				hasMore = result.page < result.totalPages;
 				page++;
 			}
@@ -131,7 +131,7 @@
 	async function loadProducts() {
 		try {
 			// 获取所有子分类ID
-			const subcategoryIds = subcategories.map(sub => sub.id);
+			const subcategoryIds = subcategories.map((sub) => sub.id);
 			if (subcategoryIds.length === 0) {
 				products = [];
 				totalItems = 0;
@@ -140,7 +140,7 @@
 			}
 
 			// 构建筛选条件
-			const subcategoryFilter = subcategoryIds.map(id => `category_id = "${id}"`).join(' || ');
+			const subcategoryFilter = subcategoryIds.map((id) => `category_id = "${id}"`).join(' || ');
 			let filter = `(${subcategoryFilter})`;
 
 			// 价格筛选
@@ -157,7 +157,7 @@
 
 			// 品牌筛选
 			if (selectedBrands.length > 0) {
-				const brandFilters = selectedBrands.map(brand => `brand = "${brand}"`).join(' || ');
+				const brandFilters = selectedBrands.map((brand) => `brand = "${brand}"`).join(' || ');
 				filter += ` && (${brandFilters})`;
 			}
 
@@ -283,8 +283,18 @@
 			<nav class="py-3">
 				<div class="flex items-center text-sm">
 					<a href="/" class="text-gray-600 hover:text-gray-900">ホーム</a>
-					<svg class="mx-2 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+					<svg
+						class="mx-2 h-3 w-3 text-gray-400"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 5l7 7-7 7"
+						/>
 					</svg>
 					<span class="font-medium text-gray-900">{currentCategory?.name || 'カテゴリー'}</span>
 				</div>
@@ -298,15 +308,20 @@
 			<div class="mb-6 flex items-center gap-4">
 				<div class="rounded-xl bg-gray-100 p-3">
 					{#if currentCategory?.icon}
-						<img 
-							src={getCategoryImageUrl(currentCategory)} 
-							alt={currentCategory.name} 
-							class="h-10 w-10 object-contain" 
+						<img
+							src={getCategoryImageUrl(currentCategory)}
+							alt={currentCategory.name}
+							class="h-10 w-10 object-contain"
 						/>
 					{:else}
-						<div class="h-10 w-10 flex items-center justify-center text-gray-400">
+						<div class="flex h-10 w-10 items-center justify-center text-gray-400">
 							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+								/>
 							</svg>
 						</div>
 					{/if}
@@ -326,7 +341,8 @@
 				<div class="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
 					<a
 						href="/category/{mainId}"
-						class="rounded-lg border px-4 py-2 whitespace-nowrap transition-colors {!page.params.childId
+						class="rounded-lg border px-4 py-2 whitespace-nowrap transition-colors {!page.params
+							.childId
 							? 'border-gray-900 bg-gray-900 text-white'
 							: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
 					>
@@ -335,7 +351,8 @@
 					{#each subcategories as subcategory}
 						<a
 							href="/category/{mainId}/{subcategory.id}"
-							class="rounded-lg border px-4 py-2 whitespace-nowrap transition-colors {page.params.childId === subcategory.id
+							class="rounded-lg border px-4 py-2 whitespace-nowrap transition-colors {page.params
+								.childId === subcategory.id
 								? 'border-gray-900 bg-gray-900 text-white'
 								: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
 						>
@@ -356,58 +373,58 @@
 							<h3 class="font-semibold text-gray-900">価格帯</h3>
 						</div>
 						<div class="space-y-3 p-4">
-							<label class="flex items-center cursor-pointer">
-								<input 
-									type="radio" 
-									name="price" 
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
 									value="all"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
-									class="h-4 w-4 text-gray-900" 
+									class="h-4 w-4 text-gray-900"
 								/>
 								<span class="ml-2 text-gray-700">すべて</span>
 							</label>
-							<label class="flex items-center cursor-pointer">
-								<input 
-									type="radio" 
-									name="price" 
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
 									value="0-50000"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
-									class="h-4 w-4 text-gray-900" 
+									class="h-4 w-4 text-gray-900"
 								/>
 								<span class="ml-2 text-gray-700">¥0 - ¥50,000</span>
 							</label>
-							<label class="flex items-center cursor-pointer">
-								<input 
-									type="radio" 
-									name="price" 
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
 									value="50000-100000"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
-									class="h-4 w-4 text-gray-900" 
+									class="h-4 w-4 text-gray-900"
 								/>
 								<span class="ml-2 text-gray-700">¥50,000 - ¥100,000</span>
 							</label>
-							<label class="flex items-center cursor-pointer">
-								<input 
-									type="radio" 
-									name="price" 
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
 									value="100000-200000"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
-									class="h-4 w-4 text-gray-900" 
+									class="h-4 w-4 text-gray-900"
 								/>
 								<span class="ml-2 text-gray-700">¥100,000 - ¥200,000</span>
 							</label>
-							<label class="flex items-center cursor-pointer">
-								<input 
-									type="radio" 
-									name="price" 
+							<label class="flex cursor-pointer items-center">
+								<input
+									type="radio"
+									name="price"
 									value="200000+"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
-									class="h-4 w-4 text-gray-900" 
+									class="h-4 w-4 text-gray-900"
 								/>
 								<span class="ml-2 text-gray-700">¥200,000以上</span>
 							</label>
@@ -422,7 +439,7 @@
 							</div>
 							<div class="max-h-80 space-y-3 overflow-y-auto p-4">
 								{#each availableBrands as brand}
-									<label class="flex items-center cursor-pointer">
+									<label class="flex cursor-pointer items-center">
 										<input
 											type="checkbox"
 											value={brand}
@@ -439,7 +456,7 @@
 
 					<!-- 库存筛选 -->
 					<div class="rounded-lg border border-gray-200 bg-white p-4">
-						<label class="flex items-center cursor-pointer">
+						<label class="flex cursor-pointer items-center">
 							<input
 								type="checkbox"
 								bind:checked={showOnlyInStock}
@@ -490,8 +507,18 @@
 					</div>
 				{:else if products.length === 0}
 					<div class="flex flex-col items-center justify-center py-20">
-						<svg class="mb-4 h-24 w-24 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+						<svg
+							class="mb-4 h-24 w-24 text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1"
+								d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+							/>
 						</svg>
 						<h3 class="mb-2 text-lg font-medium text-gray-900">商品が見つかりませんでした</h3>
 						<p class="text-gray-600">フィルター条件を変更してみてください</p>
@@ -506,8 +533,8 @@
 							>
 								<!-- 商品图片 -->
 								<div class="relative overflow-hidden bg-gray-100">
-									<img 
-										src={getProductImageUrl(product)} 
+									<img
+										src={getProductImageUrl(product)}
 										alt={product.name_ja || product.name}
 										class="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
 										loading="lazy"
@@ -565,7 +592,7 @@
 								<div class="p-4">
 									<!-- 品牌 -->
 									{#if product.brand}
-										<div class="mb-1 text-xs font-medium text-gray-500 uppercase tracking-wide">
+										<div class="mb-1 text-xs font-medium tracking-wide text-gray-500 uppercase">
 											{product.brand}
 										</div>
 									{/if}
@@ -586,7 +613,9 @@
 												</svg>
 											{/each}
 										</div>
-										<span class="ml-1 text-sm text-gray-600">{(product.rating || 0).toFixed(1)}</span>
+										<span class="ml-1 text-sm text-gray-600"
+											>{(product.rating || 0).toFixed(1)}</span
+										>
 										<span class="text-sm text-gray-400">({product.reviews || 0})</span>
 									</div>
 
@@ -647,7 +676,12 @@
 									class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 19l-7-7 7-7"
+										/>
 									</svg>
 								</button>
 
@@ -659,7 +693,8 @@
 								}) as pageNum}
 									<button
 										onclick={() => goToPage(pageNum)}
-										class="flex h-10 w-10 items-center justify-center rounded-lg font-medium transition-colors {currentPage === pageNum
+										class="flex h-10 w-10 items-center justify-center rounded-lg font-medium transition-colors {currentPage ===
+										pageNum
 											? 'bg-gray-900 text-white'
 											: 'border border-gray-300 text-gray-700 hover:bg-gray-50'}"
 									>
@@ -673,7 +708,12 @@
 									class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 5l7 7-7 7"
+										/>
 									</svg>
 								</button>
 							</nav>

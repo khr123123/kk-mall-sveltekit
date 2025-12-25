@@ -209,7 +209,6 @@
 												<div class="flex flex-wrap gap-2 text-xs text-gray-500">
 													<span>サイズ: {item.product.tags}</span>
 												</div>
-											
 											</div>
 											<button
 												class="shrink-0 text-gray-400 transition-colors hover:text-red-500"

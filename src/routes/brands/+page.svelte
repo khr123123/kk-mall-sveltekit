@@ -1,17 +1,15 @@
 ﻿<script lang="ts">
 	import { onMount } from 'svelte';
-	import PocketBase from 'pocketbase';
-
-	const pb = new PocketBase('http://127.0.0.1:8090');
+	import { pb } from '$lib/services/PBConfig';
+	import { empty, fourSquer, hitobito, hoshi, hot, more } from '$lib/icons/svgs';
 
 	let brands: any[] = [];
 	let selectedCategory = 'all';
 	let searchQuery = '';
-	let viewMode = 'grid'; // grid, list
-	let sortBy = 'popular'; // popular, name, rating
+	let viewMode = 'grid';
+	let sortBy = 'popular';
 	let loading = true;
 
-	// 从 PocketBase 加载品牌数据
 	async function loadBrands() {
 		try {
 			loading = true;
@@ -71,20 +69,7 @@
 	<section class="bg-linear-to-r from-gray-600 to-gray-800 text-white">
 		<div class=" mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<div class="flex items-center gap-3">
-				<svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"
-					/>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"
-					/>
-				</svg>
+				{@html hot}
 				<div>
 					<h1 class="mb-2 text-3xl font-bold">人気ブランド</h1>
 					<p class="text-white/90">あなたのお気に入りブランドを見つけましょう</p>
@@ -109,14 +94,7 @@
 							: 'text-neutral-600 hover:bg-neutral-100'}"
 						aria-label="グリッド表示"
 					>
-						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-							/>
-						</svg>
+						{@html fourSquer}
 					</button>
 					<button
 						on:click={() => (viewMode = 'list')}
@@ -125,14 +103,7 @@
 							: 'text-neutral-600 hover:bg-neutral-100'}"
 						aria-label="リスト表示"
 					>
-						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 6h16M4 12h16M4 18h16"
-							/>
-						</svg>
+						{@html more}
 					</button>
 				</div>
 
@@ -158,19 +129,7 @@
 		{:else if displayedBrands.length === 0}
 			<!-- 空状态 -->
 			<div class="rounded-lg border border-neutral-200 bg-white py-16 text-center">
-				<svg
-					class="mx-auto mb-4 h-16 w-16 text-neutral-300"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
+				{@html empty}
 				<h3 class="mb-2 text-lg font-medium text-neutral-900">ブランドが見つかりません</h3>
 				<p class="text-neutral-600">検索条件に一致するブランドがありませんでした</p>
 			</div>
@@ -217,45 +176,21 @@
 										</span>
 									{/if}
 								</div>
-
 								<p class="mb-4 line-clamp-2 text-sm text-neutral-600">{brand.description}</p>
-
 								<!-- 评价 -->
 								<div class="mb-4 flex items-center gap-2">
 									<div class="flex">
 										{#each Array(5) as _, i}
-											<svg
-												class="h-4 w-4 {i < Math.floor(brand.rating)
-													? 'fill-current text-neutral-900'
-													: 'text-neutral-300'}"
-												viewBox="0 0 20 20"
-											>
-												<path
-													d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-												/>
-											</svg>
+											{@html hoshi}
 										{/each}
 									</div>
 									<span class="text-sm font-medium text-neutral-900">{brand.rating.toFixed(1)}</span
 									>
 								</div>
-
 								<!-- 统计信息 -->
 								<div class="flex items-center gap-6 text-sm text-neutral-600">
 									<div class="flex items-center gap-1">
-										<svg
-											class="h-5 w-5 text-neutral-400"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="1.5"
-												d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-											/>
-										</svg>
+										{@html hitobito}
 										<span class="font-medium text-neutral-900"
 											>{(brand.followers / 1000).toFixed(0)}K</span
 										>
@@ -335,16 +270,7 @@
 									<div class="flex items-center gap-2">
 										<div class="flex">
 											{#each Array(5) as _, i}
-												<svg
-													class="h-4 w-4 {i < Math.floor(brand.rating)
-														? 'fill-current text-neutral-900'
-														: 'text-neutral-300'}"
-													viewBox="0 0 20 20"
-												>
-													<path
-														d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-													/>
-												</svg>
+												{@html hoshi}
 											{/each}
 										</div>
 										<span class="text-sm font-medium text-neutral-900"
@@ -352,10 +278,8 @@
 										>
 									</div>
 								</div>
-
 								<!-- 描述 -->
 								<p class="mb-6 line-clamp-2 text-sm text-neutral-600">{brand.description}</p>
-
 								<!-- 统计信息 -->
 								<div class="mb-6 flex items-center justify-between text-sm text-neutral-600">
 									<span class="text-neutral-500">フォロワー</span>
@@ -394,6 +318,7 @@
 	.line-clamp-2 {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}

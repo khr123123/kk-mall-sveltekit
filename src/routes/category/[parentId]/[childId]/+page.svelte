@@ -534,7 +534,6 @@
 										class="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
 										loading="lazy"
 									/>
-
 									<!-- 标签 -->
 									<div class="absolute top-3 left-3 flex flex-col gap-2">
 										{#if product.discount > 0}

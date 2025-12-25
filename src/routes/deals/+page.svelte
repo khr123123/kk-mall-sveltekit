@@ -70,28 +70,27 @@
 	async function loadFlashSaleProducts() {
 		try {
 			isLoading = true;
-			
+
 			const result = await pb.collection('flash_sale_products').getList(1, 50, {
 				filter: 'isActive = true',
 				expand: 'product_id,flash_sale_id',
 				sort: '-created'
 			});
-			
+
 			console.log('获取到的闪购数据:', result.items);
-			
+
 			const now = getNow();
 			flashSaleProducts = result.items.filter((item: any) => {
 				const flashSale = item.expand?.flash_sale_id;
 				if (!flashSale || !flashSale.isActive) return false;
-				
+
 				const startTime = parsePocketBaseTime(flashSale.startTime);
 				const endTime = parsePocketBaseTime(flashSale.endTime);
-				
+
 				return now >= startTime && now <= endTime;
 			}) as FlashSaleProduct[];
-			
+
 			console.log('过滤后的闪购商品:', flashSaleProducts);
-			
 		} catch (error) {
 			console.error('セール商品読み込みエラー:', error);
 		} finally {
@@ -107,7 +106,7 @@
 	function updateCountdown() {
 		const now = getNow();
 		const newTimeRemaining: { [key: string]: string } = {};
-		
+
 		flashSaleProducts.forEach((item) => {
 			const flashSale = item.expand?.flash_sale_id;
 			if (!flashSale) {
@@ -130,7 +129,7 @@
 			newTimeRemaining[item.id] =
 				`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 		});
-		
+
 		timeRemaining = newTimeRemaining;
 	}
 
@@ -139,13 +138,13 @@
 		const remaining = item.stockLimit - item.soldCount;
 		return Math.min(100, Math.max(0, (remaining / item.stockLimit) * 100));
 	}
-	
+
 	// 计算折扣百分比
 	function getDiscountPercentage(item: FlashSaleProduct, productPrice: number): number {
 		if (!productPrice || productPrice <= 0) return 0;
 		return Math.round(((productPrice - item.salePrice) / productPrice) * 100);
 	}
-	
+
 	// 购买按钮点击处理
 	async function handlePurchase(item: FlashSaleProduct, productId: string) {
 		try {
@@ -163,7 +162,12 @@
 		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<div class="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
 				<div class="relative">
-					<svg class="h-10 w-10 sm:h-12 sm:w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<svg
+						class="h-10 w-10 sm:h-12 sm:w-12"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -171,7 +175,9 @@
 							d="M13 10V3L4 14h7v7l9-11h-7z"
 						/>
 					</svg>
-					<div class="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-yellow-400"></div>
+					<div
+						class="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-yellow-400"
+					></div>
 				</div>
 				<div class="text-center sm:text-left">
 					<h1 class="text-2xl font-bold sm:text-3xl">タイムセール</h1>
@@ -181,9 +187,10 @@
 					<div class="rounded-lg bg-white/20 px-3 py-1 backdrop-blur-sm">
 						<div class="text-center text-sm">開催中</div>
 						<div class="text-center text-xl font-bold">
-							{flashSaleProducts.reduce((total, item) => 
-								total + (item.expand?.product_id?.length || 0), 0)
-							}
+							{flashSaleProducts.reduce(
+								(total, item) => total + (item.expand?.product_id?.length || 0),
+								0
+							)}
 						</div>
 						<div class="text-center text-xs">商品</div>
 					</div>
@@ -210,13 +217,15 @@
 			{#each flashSaleProducts as flashSaleItem}
 				{@const flashSale = flashSaleItem.expand?.flash_sale_id}
 				{@const products = flashSaleItem.expand?.product_id}
-				
+
 				{#if flashSale && products && products.length > 0}
 					<div class="mb-6 rounded-lg bg-gradient-to-r from-red-100 to-orange-100 p-4">
 						<div class="flex flex-col items-start justify-between sm:flex-row sm:items-center">
 							<div>
 								<h2 class="mb-1 text-lg font-bold text-gray-900">{flashSale.title}</h2>
-								<p class="text-sm text-gray-600">残り時間: {timeRemaining[flashSaleItem.id] || '00:00:00'}</p>
+								<p class="text-sm text-gray-600">
+									残り時間: {timeRemaining[flashSaleItem.id] || '00:00:00'}
+								</p>
 							</div>
 							<div class="mt-2 sm:mt-0">
 								<div class="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">
@@ -232,21 +241,22 @@
 								class="group relative overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 hover:-translate-y-1 hover:border-red-300 hover:shadow-lg"
 							>
 								<!-- 折扣标签 -->
-								<div class="absolute left-2 top-2 z-10">
+								<div class="absolute top-2 left-2 z-10">
 									<div class="bg-red-600 px-2 py-1 text-xs font-bold text-white">
-										{getDiscountPercentage(flashSaleItem, product.originalPrice || product.price)}% OFF
+										{getDiscountPercentage(flashSaleItem, product.originalPrice || product.price)}%
+										OFF
 									</div>
 								</div>
-								
+
 								<!-- 缺货标签 -->
 								{#if product.inStock === false}
-									<div class="absolute right-2 top-2 z-10">
+									<div class="absolute top-2 right-2 z-10">
 										<div class="rounded bg-gray-800 px-2 py-1 text-xs font-bold text-white">
 											売り切れ
 										</div>
 									</div>
 								{/if}
-								
+
 								<a href="/product/{product.id}" class="block">
 									<!-- 商品画像 -->
 									<div class="relative aspect-square overflow-hidden bg-gray-100">
@@ -259,7 +269,12 @@
 											/>
 										{:else}
 											<div class="flex h-full items-center justify-center text-gray-400">
-												<svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<svg
+													class="h-12 w-12"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+												>
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
@@ -273,7 +288,9 @@
 
 									<!-- 商品情報 -->
 									<div class="p-3">
-										<h3 class="mb-2 line-clamp-2 text-sm font-medium text-gray-900 hover:text-red-600">
+										<h3
+											class="mb-2 line-clamp-2 text-sm font-medium text-gray-900 hover:text-red-600"
+										>
 											{product.name_ja || product.name}
 										</h3>
 
@@ -336,7 +353,8 @@
 								<div class="border-t border-gray-100 p-3">
 									<button
 										on:click={() => handlePurchase(flashSaleItem, product.id)}
-										class="w-full rounded-md py-2 text-sm font-medium text-white transition-colors {product.inStock === false
+										class="w-full rounded-md py-2 text-sm font-medium text-white transition-colors {product.inStock ===
+										false
 											? 'cursor-not-allowed bg-gray-400'
 											: 'bg-red-600 hover:bg-red-700'}"
 										disabled={product.inStock === false}
@@ -353,12 +371,17 @@
 					</div>
 				{/if}
 			{/each}
-			
+
 			<!-- 促销提醒 -->
 			<div class="mt-6 rounded-lg bg-gradient-to-r from-red-50 to-orange-50 p-4 text-center">
 				<div class="flex items-center justify-center gap-2">
 					<svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+						/>
 					</svg>
 					<p class="text-sm text-gray-700">セール終了間近！在庫が少ない商品もあります</p>
 				</div>
@@ -379,11 +402,19 @@
 					/>
 				</svg>
 				<h3 class="mb-2 text-lg font-bold text-gray-700">現在開催中のタイムセールはありません</h3>
-				<p class="text-gray-600 mb-4">次のタイムセールをお楽しみに！</p>
-				<a href="/products" class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+				<p class="mb-4 text-gray-600">次のタイムセールをお楽しみに！</p>
+				<a
+					href="/products"
+					class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+				>
 					<span>全ての商品を見る</span>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M14 5l7 7m0 0l-7 7m7-7H3"
+						/>
 					</svg>
 				</a>
 			</div>

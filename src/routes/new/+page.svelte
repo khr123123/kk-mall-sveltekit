@@ -175,7 +175,9 @@
 
 							<!-- バッジ -->
 							<div class="absolute top-2 left-2 flex flex-col gap-1">
-								<span class="rounded bg-blue-600 px-2 py-1 text-xs font-bold text-white"> NEW </span>
+								<span class="rounded bg-blue-600 px-2 py-1 text-xs font-bold text-white">
+									NEW
+								</span>
 								{#if product.discount && product.discount > 0}
 									<span class="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
 										-{product.discount}%
@@ -184,7 +186,7 @@
 							</div>
 
 							<!-- 入荷日 -->
-							<div class="absolute bottom-2 right-2">
+							<div class="absolute right-2 bottom-2">
 								<div class="rounded bg-black/70 px-2 py-1 text-xs text-white backdrop-blur-sm">
 									{getDaysAgo(product.created)}
 								</div>

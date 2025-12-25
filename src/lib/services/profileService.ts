@@ -1,6 +1,4 @@
-﻿import PocketBase from 'pocketbase';
-const PB_URL = import.meta.env.VITE_POCKETBASE_URL || 'http://127.0.0.1:8090';
-const pb = new PocketBase(PB_URL);
+﻿import { pb } from "./PBConfig";
 
 export interface Order {
     id: string;
@@ -261,7 +259,7 @@ class ProfileService {
         try {
             const records = await pb.collection('favorites').getFullList({
                 filter: `user = "${userId}"`,
-                expand:"product_id",
+                expand: "product_id",
                 sort: '-created'
             });
 

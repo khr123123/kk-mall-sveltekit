@@ -1,9 +1,5 @@
-﻿import PocketBase from 'pocketbase';
-import { writable } from 'svelte/store';
-
-// PocketBase 客户端实例
-export const pb = new PocketBase('http://127.0.0.1:8090'); // 根据你的实际地址修改
-
+﻿import { writable } from 'svelte/store';
+import { pb } from "./PBConfig";
 // 用户认证状态 store
 export const currentUser = writable(pb.authStore.model);
 
@@ -67,7 +63,7 @@ export const cartAPI = {
         const items = await pb.collection('cart_items').getFullList({
             filter: `user = "${userId}"`
         });
-        
+
         for (const item of items) {
             await pb.collection('cart_items').delete(item.id);
         }
@@ -78,7 +74,7 @@ export const couponAPI = {
     // 验证优惠券
     async validateCoupon(code: string, userId: string, subtotal: number) {
         const now = new Date().toISOString();
-        
+
         const coupon = await pb.collection('coupons').getFirstListItem(
             `code = "${code}" && is_active = true && valid_from <= "${now}" && valid_until >= "${now}"`
         ).catch(() => null);

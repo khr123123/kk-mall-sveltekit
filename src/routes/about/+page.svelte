@@ -1,54 +1,5 @@
-<script lang="ts">
-	// import { onMount, onDestroy } from 'svelte';
-
-	// let error: string | null = null;
-	// let status = 'CREATED';
-	// let qrCode: string | null = null;
-
-	// const merchantPaymentId = crypto.randomUUID();
-	// let timer: any;
-
-	// async function checkStatus() {
-	// 	const res = await fetch(`/api/paypay/status/${merchantPaymentId}`);
-	// 	const data = await res.json();
-	// 	console.log(data);
-	// 	status = data?.data?.BODY?.data?.status;
-	// 	if (status === 'COMPLETED') {
-	// 		alert('🎉 支付成功！');
-	// 	}
-	// 	if (status === 'CREATED') {
-	// 		alert(' 待支付');
-	// 	}
-		
-	// }
-
-	// onMount(async () => {
-	// 	try {
-	// 		const res = await fetch('/api/paypay/create', {
-	// 			method: 'POST',
-	// 			headers: { 'Content-Type': 'application/json' },
-	// 			body: JSON.stringify({
-	// 				merchantPaymentId,
-	// 				codeType: 'ORDER_QR',
-	// 				orderDescription: 'Example - Mune Cake shop',
-	// 				amount: {
-	// 					amount: 1,
-	// 					currency: 'JPY'
-	// 				}
-	// 			})
-	// 		});
-
-	// 		const result = await res.json();
-
-	// 		qrCode = result?.data?.BODY?.data?.url;
-	// 		window.open(qrCode);
-
-	// 		timer = setInterval(checkStatus, 3000);
-	// 	} catch (e) {
-	// 		error = e instanceof Error ? e.message : 'unknown error';
-	// 		console.error(e);
-	// 	}
-	// });
+<script>
+	import { bag, goBack, lock, safety, search } from '$lib/icons/svgs';
 </script>
 
 <main class="min-h-screen bg-white">
@@ -59,7 +10,6 @@
 			<div class="mx-auto mb-6 h-px w-24 bg-gray-300"></div>
 			<p class="text-lg font-light text-gray-500">サービスについて</p>
 		</div>
-
 		<!-- 主要内容区域 -->
 		<div class="space-y-10">
 			<!-- 概要 -->
@@ -74,7 +24,6 @@
 					便利な機能を取り揃えています。
 				</p>
 			</section>
-
 			<!-- 主な機能 -->
 			<section>
 				<div class="mb-8">
@@ -84,14 +33,7 @@
 				<div class="grid gap-6 md:grid-cols-2">
 					<div class="group">
 						<div class="mb-3 text-gray-400 transition-colors group-hover:text-gray-600">
-							<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-								/>
-							</svg>
+							{@html bag}
 						</div>
 						<h3 class="mb-2 text-lg font-normal text-gray-900">豊富な商品</h3>
 						<p class="font-light text-gray-500">スマホ、家電、ファッションなど10以上のカテゴリー</p>
@@ -99,14 +41,7 @@
 
 					<div class="group">
 						<div class="mb-3 text-gray-400 transition-colors group-hover:text-gray-600">
-							<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-								/>
-							</svg>
+							{@html search}
 						</div>
 						<h3 class="mb-2 text-lg font-normal text-gray-900">簡単検索</h3>
 						<p class="font-light text-gray-500">直感的な検索とフィルタリング機能</p>
@@ -114,14 +49,7 @@
 
 					<div class="group">
 						<div class="mb-3 text-gray-400 transition-colors group-hover:text-gray-600">
-							<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-								/>
-							</svg>
+							{@html lock}
 						</div>
 						<h3 class="mb-2 text-lg font-normal text-gray-900">安全決済</h3>
 						<p class="font-light text-gray-500">セキュアな決済システムで安心</p>
@@ -129,21 +57,13 @@
 
 					<div class="group">
 						<div class="mb-3 text-gray-400 transition-colors group-hover:text-gray-600">
-							<svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-								/>
-							</svg>
+							{@html safety}
 						</div>
 						<h3 class="mb-2 text-lg font-normal text-gray-900">迅速配送</h3>
 						<p class="font-light text-gray-500">全国各地へスピーディーにお届け</p>
 					</div>
 				</div>
 			</section>
-
 			<!-- 会社情報 -->
 			<section>
 				<div class="mb-8">
@@ -204,19 +124,7 @@
 				href="/"
 				class="group inline-flex items-center gap-3 border border-gray-300 px-8 py-4 text-gray-700 transition-all hover:border-gray-400"
 			>
-				<svg
-					class="h-5 w-5 transform transition-transform group-hover:-translate-x-1"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M10 19l-7-7m0 0l7-7m-7 7h18"
-					/>
-				</svg>
+				{@html goBack}
 				<span class="text-sm tracking-wider">BACK TO HOME</span>
 			</a>
 		</div>

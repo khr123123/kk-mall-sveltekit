@@ -1,9 +1,7 @@
 ﻿<script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import PocketBase from 'pocketbase';
-
-	const pb = new PocketBase('http://127.0.0.1:8090');
+	import { page } from '$app/state';
+	import { pb } from '$lib/services/PBConfig';
 
 	let brand: any = null;
 	let products: any[] = [];
@@ -82,7 +80,7 @@
 	}
 
 	onMount(() => {
-		const brandId = $page.params.id;
+		const brandId = page.params.id;
 		if (brandId) {
 			loadBrandData(brandId);
 		}
@@ -97,7 +95,9 @@
 	{#if loading}
 		<!-- 加载状态 -->
 		<div class="flex min-h-screen items-center justify-center">
-			<div class="h-12 w-12 animate-spin rounded-full border-4 border-neutral-200 border-t-neutral-900"></div>
+			<div
+				class="h-12 w-12 animate-spin rounded-full border-4 border-neutral-200 border-t-neutral-900"
+			></div>
 		</div>
 	{:else if !brand}
 		<!-- 错误状态 -->
@@ -123,7 +123,12 @@
 					class="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-6 py-3 text-sm font-medium text-white no-underline hover:bg-neutral-800"
 				>
 					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 19l-7-7 7-7"
+						/>
 					</svg>
 					ブランド一覧に戻る
 				</a>
@@ -139,7 +144,12 @@
 					class="mb-6 inline-flex items-center gap-2 text-sm font-medium text-neutral-600 no-underline hover:text-neutral-900"
 				>
 					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 19l-7-7 7-7"
+						/>
 					</svg>
 					ブランド一覧に戻る
 				</a>
@@ -192,7 +202,8 @@
 											</svg>
 										{/each}
 									</div>
-									<span class="text-sm font-medium text-neutral-900">{brand.rating.toFixed(1)}</span>
+									<span class="text-sm font-medium text-neutral-900">{brand.rating.toFixed(1)}</span
+									>
 									<span class="text-sm text-neutral-600">
 										• {(brand.followers / 1000).toFixed(0)}K フォロワー
 									</span>
@@ -234,7 +245,9 @@
 								<div class="text-sm text-neutral-600">フォロワー</div>
 							</div>
 							<div class="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-								<div class="mb-1 text-2xl font-bold text-neutral-900">{brand.rating.toFixed(1)}</div>
+								<div class="mb-1 text-2xl font-bold text-neutral-900">
+									{brand.rating.toFixed(1)}
+								</div>
 								<div class="text-sm text-neutral-600">評価</div>
 							</div>
 						</div>
@@ -267,7 +280,7 @@
 				<div>
 					<select
 						bind:value={sortBy}
-						class="rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm text-neutral-700 focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+						class="rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm text-neutral-700 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 focus:outline-none"
 					>
 						<option value="featured">おすすめ順</option>
 						<option value="new">新着順</option>
@@ -301,7 +314,7 @@
 				<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					{#each displayedProducts as product}
 						<div
-							class="group relative overflow-hidden rounded-lg border border-neutral-200 bg-white transition-all hover:border-neutral-300 hover:shadow-md cursor-pointer"
+							class="group relative cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white transition-all hover:border-neutral-300 hover:shadow-md"
 							on:click={() => navigateToProduct(product.id)}
 						>
 							<!-- 商品图片 -->
@@ -364,12 +377,14 @@
 									{/if}
 								</div>
 
-								<h3 class="mb-2 text-lg font-semibold text-neutral-900 line-clamp-2 hover:text-neutral-700">
+								<h3
+									class="mb-2 line-clamp-2 text-lg font-semibold text-neutral-900 hover:text-neutral-700"
+								>
 									{product.name}
 								</h3>
 
 								{#if product.description}
-									<p class="mb-4 text-sm text-neutral-600 line-clamp-2 hover:text-neutral-500">
+									<p class="mb-4 line-clamp-2 text-sm text-neutral-600 hover:text-neutral-500">
 										{product.description}
 									</p>
 								{/if}
@@ -391,7 +406,9 @@
 												</svg>
 											{/each}
 										</div>
-										<span class="text-sm font-medium text-neutral-900">{product.rating.toFixed(1)}</span>
+										<span class="text-sm font-medium text-neutral-900"
+											>{product.rating.toFixed(1)}</span
+										>
 										{#if product.reviewCount}
 											<span class="text-sm text-neutral-500">({product.reviewCount})</span>
 										{/if}

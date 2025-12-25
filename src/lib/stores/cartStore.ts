@@ -1,5 +1,6 @@
 ﻿import { writable, derived, get } from 'svelte/store';
-import { pb, cartAPI, couponAPI } from '$lib/services/cartService';
+import { cartAPI, couponAPI } from '$lib/services/cartService';
+import { pb } from '$lib/services/PBConfig';
 import { currentUser } from '$lib/stores/userStore';
 
 /* =======================
