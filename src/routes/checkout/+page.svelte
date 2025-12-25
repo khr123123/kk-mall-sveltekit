@@ -132,16 +132,13 @@
 			// 创建订单记录
 			const orderRecord = await pb.collection('orders').create({
 				user: $currentUser.id,
-				order_id: orderId,
+				order_number: orderId,
 				items: JSON.stringify(orderItems),
-				address: JSON.stringify(selectedAddress),
-				payment_method: selectedPayment,
-				subtotal: $cartStats.subtotal,
-				shipping_fee: shippingFee,
-				payment_fee: paymentFee,
-				total: total,
+				address: selectedAddress.id,
+				total_amount: total,
 				status: 'pending',
-				payment_status: 'pending'
+				item_count: orderItems.length,
+				order_date: new Date().toISOString()
 			});
 
 			// 保存订单数据到 localStorage（用于支付页面）
@@ -525,7 +522,7 @@
 									<div class="text-sm">
 										{#if selectedPaymentData.fee > 0}
 											<span class="text-gray-500"
-												>手数料: {formatPrice(selectedPaymentData.fee)}</span
+											>手数料: {formatPrice(selectedPaymentData.fee)}</span
 											>
 										{:else}
 											<span class="font-medium text-green-600">手数料無料</span>
@@ -621,7 +618,7 @@
 							<div class="flex justify-between text-gray-600">
 								<span>送料</span>
 								<span class="font-medium"
-									>{shippingFee === 0 ? '無料' : formatPrice(shippingFee)}</span
+								>{shippingFee === 0 ? '無料' : formatPrice(shippingFee)}</span
 								>
 							</div>
 							{#if paymentFee > 0}
@@ -686,21 +683,21 @@
 </div>
 
 <style>
-	input[type='radio'] {
-		accent-color: #111827;
-	}
+    input[type='radio'] {
+        accent-color: #111827;
+    }
 
-	.sticky {
-		position: sticky;
-	}
+    .sticky {
+        position: sticky;
+    }
 
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
 
-	.animate-spin {
-		animation: spin 1s linear infinite;
-	}
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
 </style>

@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
+	import { pb } from '$lib/services/PBConfig';
 
 	// SVG 图标
 	const icons = {
@@ -548,13 +549,13 @@
 </div>
 
 <style>
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
 
-	.animate-spin {
-		animation: spin 1s linear infinite;
-	}
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
 </style>
