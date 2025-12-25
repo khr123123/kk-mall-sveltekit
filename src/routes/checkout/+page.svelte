@@ -6,7 +6,6 @@
 	import { addressStore } from '$lib/stores/addressStore';
 	import { currentUser } from '$lib/stores/userStore';
 	import { pb } from '$lib/services/categoryService';
-	import type { Address } from '$lib/types/type';
 
 	// SVG 图标
 	const icons = {
