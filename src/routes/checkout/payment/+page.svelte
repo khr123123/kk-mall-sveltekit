@@ -65,13 +65,17 @@
 
 			const status = data?.data?.BODY?.data?.status;
 			console.log('当前支付状态:', status);
-
+			const paymentId = data?.data?.BODY?.data?.paymentId;
 			if (status === 'COMPLETED') {
 				// 支付成功
 				cleanupTimers();
 				progress = 100;
 				paymentStatus = 'success';
 				startCountdown();
+				// 更新订单状态和 payment_id
+				await pb.collection('orders').update(orderData.id, {
+					payment_id: paymentId
+				});
 			} else if (status === 'FAILED' || status === 'CANCELED') {
 				// 支付失败
 				cleanupTimers();

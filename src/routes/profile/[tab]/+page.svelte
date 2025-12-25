@@ -333,16 +333,16 @@
 	}
 
 	// 提交退款申请
+	// 在你的 profile 页面中修复 submitRefund 函数
 	async function submitRefund() {
 		if (!refundingOrder || !user?.id) return;
 
-		// 验证退款理由
+		// 验证表单
 		if (!refundForm.refundReason) {
 			alert('返金理由を選択してください');
 			return;
 		}
 
-		// 验证退款金额
 		if (refundForm.refundType === 'partial' && refundForm.refundAmount <= 0) {
 			alert('返金金額を入力してください');
 			return;
@@ -353,13 +353,11 @@
 			return;
 		}
 
-		// 如果需要退货单号，验证是否填写
 		if (needsTrackingNumber(refundingOrder) && refundForm.returnGoods && !refundForm.trackingNumber.trim()) {
 			alert('返品追跡番号を入力してください');
 			return;
 		}
 
-		// 确认退款
 		const confirmMessage = needsTrackingNumber(refundingOrder)
 			? `返品返金を申請しますか？\n金額: ¥${refundForm.refundAmount.toLocaleString('ja-JP')}\n追跡番号: ${refundForm.trackingNumber}`
 			: `¥${refundForm.refundAmount.toLocaleString('ja-JP')} の返金を申請しますか？`;
@@ -371,24 +369,19 @@
 		isRefunding = true;
 
 		try {
-			// 生成唯一的退款ID
-			const merchantRefundId = `REFUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-			let payload = {
-				merchantRefundId: 'merchant_refund_id',
-				paymentId: 'paypay_payment_id',
-				amount: {
-					amount: 1,
-					currency: 'JPY',
-				},
-				reason: 'reason for refund',
-			};
-			// 调用退款 API（如果订单有 payment_id）
-			if (refundingOrder.payment_id) {
+			// ✅ 关键修复：只有已支付的订单才调用 PayPay 退款 API
+			const needPayPalRefund = refundingOrder.payment_id &&
+				refundingOrder.status !== 'pending' &&
+				refundingOrder.payment_method === 'paypay';
+
+			if (needPayPalRefund) {
+				// 生成唯一的退款ID
+				const merchantRefundId = `REFUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+				// 调用 PayPay 退款 API
 				const refundResponse = await fetch('/api/paypay/refund', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
+					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						merchantRefundId: merchantRefundId,
 						paymentId: refundingOrder.payment_id,
@@ -414,15 +407,12 @@
 				}
 			}
 
-			// 更新订单状态
-			const newStatus = 'cancelled'; // 所有退款都设置为 cancelled 状态
+			// 更新订单状态为已取消
 			const statusResponse = await fetch(`/api/orders/${refundingOrder.id}/status`, {
 				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					status: newStatus,
+					status: 'cancelled',
 					trackingNumber: refundForm.trackingNumber || undefined
 				})
 			});
@@ -430,9 +420,11 @@
 			const statusResult = await statusResponse.json();
 
 			if (statusResult.success) {
-				alert('返金申請が正常に送信されました');
+				alert(needPayPalRefund
+					? '返金申請が正常に送信されました'
+					: '注文をキャンセルしました');
 				closeRefundModal();
-				await loadOrders(); // 刷新订单列表
+				await loadOrders();
 			} else {
 				alert(`注文状態の更新に失敗しました: ${statusResult.error}`);
 			}
@@ -443,6 +435,7 @@
 			isRefunding = false;
 		}
 	}
+
 
 	// ============ 订单状态映射 ============
 	function getStatusLabel(status: string): string {

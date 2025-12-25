@@ -129,7 +129,7 @@
 			// 生成订单号
 			const orderId = `ORD-${Date.now()}`;
 
-			// 创建订单记录
+			// ✅ 创建订单记录 - 添加 payment_method 字段
 			const orderRecord = await pb.collection('orders').create({
 				user: $currentUser.id,
 				order_number: orderId,
@@ -138,12 +138,15 @@
 				total_amount: total,
 				status: 'pending',
 				item_count: orderItems.length,
-				order_date: new Date().toISOString()
+				order_date: new Date().toISOString(),
+				payment_method: selectedPayment,  // 🆕 保存支付方式
+				payment_id: null  // 🆕 初始为空，支付成功后更新
 			});
 
-			// 保存订单数据到 localStorage（用于支付页面）
+			// 保存订单数据到 localStorage
 			const orderData = {
 				orderId: orderId,
+				recordId: orderRecord.id,  // 🆕 添加记录ID
 				items: orderItems,
 				address: selectedAddress,
 				payment: selectedPaymentData,
@@ -151,9 +154,9 @@
 				shippingFee,
 				paymentFee,
 				total,
-				orderDate: new Date().toISOString(),
-				recordId: orderRecord.id
+				orderDate: new Date().toISOString()
 			};
+
 
 			localStorage.setItem('currentOrder', JSON.stringify(orderData));
 
