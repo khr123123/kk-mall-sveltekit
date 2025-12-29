@@ -9,16 +9,59 @@
 		type Address,
 		type Favorite
 	} from '$lib/services/profileService';
-	import { onMount } from 'svelte';
-	import { spinnerSm, infoIcon, warningIcon } from '$lib/icons/svgs';
+	import { onMount, untrack } from 'svelte';
+	import {
+		spinnerSm,
+		infoIcon,
+		warningIcon,
+		camera,
+		profile,
+		orders as aordersIcon,
+		addresses as addressesIcon,
+		favorites as favoritesIcon,
+		settings,
+		support,
+		logout,
+		editProfile,
+		addrPofile,
+		deleteProfile,
+		cart,
+		arrow,
+		close,
+		refund,
+		emptyBox,
+		emptyLocation,
+		emptyHeart,
+		checkCircle,
+		cancelIcon
+	} from '$lib/icons/svgs';
+	import { pb } from '$lib/services/PBConfig';
 
 	// 响应式监听路由变化
 	let currentTab = $state('profile');
 	let isLoading = $state(true);
 
+	// ============ 数据缓存和加载状态 ============
+	let dataCache = $state<Record<string, any>>({
+		profile: null,
+		orders: null,
+		addresses: null,
+		favorites: null
+	});
+	let loadingTabs = $state<Record<string, boolean>>({});
+
+	// 优化的 effect，避免多次触发
 	$effect(() => {
-		currentTab = $page.params.tab ?? 'profile';
-		loadTabData();
+		const newTab = $page.params.tab ?? 'profile';
+
+		// 只有当 tab 真正改变时才更新
+		if (currentTab !== newTab) {
+			currentTab = newTab;
+			// 使用 untrack 避免触发其他 effect
+			untrack(() => {
+				loadTabData();
+			});
+		}
 	});
 
 	// 订阅用户状态
@@ -63,15 +106,14 @@
 	// ============ 退款相关状态 ============
 	let refundingOrder: Order | null = $state(null);
 	let refundForm = $state({
-		refundType: 'full', // 'full' 全额退款, 'partial' 部分退款
+		refundType: 'full',
 		refundReason: '',
 		refundAmount: 0,
-		returnGoods: false, // 是否退货
-		trackingNumber: '' // 退货单号（已发货/已送达时需要）
+		returnGoods: false,
+		trackingNumber: ''
 	});
 	let isRefunding = $state(false);
 
-	// 退款理由选项
 	const refundReasons = [
 		'商品不符合描述',
 		'商品質量問題',
@@ -81,13 +123,94 @@
 		'その他'
 	];
 
-	// 加载标签页数据
+	// ============ 自定义确认对话框状态 ============
+	let showConfirmDialog = $state(false);
+	let confirmDialogData = $state({
+		title: '',
+		message: '',
+		type: 'warning' as 'warning' | 'danger' | 'info',
+		confirmText: '確認',
+		cancelText: 'キャンセル',
+		onConfirm: () => {},
+		onCancel: () => {}
+	});
+
+	// ============ 自定义提示对话框状态 ============
+	let showAlertDialog = $state(false);
+	let alertDialogData = $state({
+		title: '',
+		message: '',
+		type: 'error' as 'error' | 'success' | 'info'
+	});
+
+	// ============ 自定义对话框函数 ============
+	function showConfirm(options: {
+		title: string;
+		message: string;
+		type?: 'warning' | 'danger' | 'info';
+		confirmText?: string;
+		cancelText?: string;
+	}): Promise<boolean> {
+		return new Promise((resolve) => {
+			confirmDialogData = {
+				title: options.title,
+				message: options.message,
+				type: options.type || 'warning',
+				confirmText: options.confirmText || '確認',
+				cancelText: options.cancelText || 'キャンセル',
+				onConfirm: () => {
+					showConfirmDialog = false;
+					resolve(true);
+				},
+				onCancel: () => {
+					showConfirmDialog = false;
+					resolve(false);
+				}
+			};
+			showConfirmDialog = true;
+		});
+	}
+
+	function showAlert(options: {
+		title: string;
+		message: string;
+		type?: 'error' | 'success' | 'info';
+	}) {
+		alertDialogData = {
+			title: options.title,
+			message: options.message,
+			type: options.type || 'error'
+		};
+		showAlertDialog = true;
+	}
+
+	function closeAlertDialog() {
+		showAlertDialog = false;
+	}
+
+	// ============ 优化的数据加载函数 ============
 	async function loadTabData() {
 		if (!user?.id) return;
 
+		// 防止并发加载
+		if (loadingTabs[currentTab]) {
+			console.log(`Tab ${currentTab} is already loading, skipping...`);
+			return;
+		}
+
+		// 如果数据已缓存，直接使用
+		if (dataCache[currentTab]) {
+			console.log(`Using cached data for tab: ${currentTab}`);
+			restoreFromCache(currentTab);
+			return;
+		}
+
+		loadingTabs[currentTab] = true;
 		isLoading = true;
 
 		try {
+			console.log(`Loading data for tab: ${currentTab}`);
+
 			switch (currentTab) {
 				case 'profile':
 					await loadUserStats();
@@ -104,7 +227,31 @@
 			}
 		} finally {
 			isLoading = false;
+			loadingTabs[currentTab] = false;
 		}
+	}
+
+	// 从缓存恢复数据
+	function restoreFromCache(tab: string) {
+		const cached = dataCache[tab];
+		if (!cached) return;
+
+		switch (tab) {
+			case 'profile':
+				userStats = cached;
+				break;
+			case 'orders':
+				orders = cached;
+				break;
+			case 'addresses':
+				addresses = cached;
+				break;
+			case 'favorites':
+				favorites = cached;
+				break;
+		}
+
+		isLoading = false;
 	}
 
 	// 加载用户统计
@@ -113,6 +260,7 @@
 		const result = await profileService.getUserStats(user.id);
 		if (result.success) {
 			userStats = result.stats!;
+			dataCache.profile = userStats;
 		}
 	}
 
@@ -122,6 +270,7 @@
 		const result = await profileService.getOrders(user.id);
 		if (result.success) {
 			orders = (result.orders as unknown as Order[]) || [];
+			dataCache.orders = orders;
 		}
 	}
 
@@ -131,6 +280,7 @@
 		const result = await profileService.getAddresses(user.id);
 		if (result.success) {
 			addresses = (result.addresses as unknown as Address[]) || [];
+			dataCache.addresses = addresses;
 		}
 	}
 
@@ -153,7 +303,13 @@
 		const result = await profileService.getFavorites(user.id);
 		if (result.success) {
 			favorites = mapFavorites(result.favorites || []) as unknown as Favorite[];
+			dataCache.favorites = favorites;
 		}
+	}
+
+	// 清除缓存的辅助函数
+	function clearCache(tab: string) {
+		dataCache[tab] = null;
 	}
 
 	// ============ 地址管理 ============
@@ -194,21 +350,39 @@
 			: await profileService.createAddress(user.id, addressForm);
 
 		if (result.success) {
+			clearCache('addresses');
 			await loadAddresses();
 			closeAddressModal();
 		} else {
-			alert(`住所の${editingAddress ? '更新' : '作成'}に失敗しました: ${result.error}`);
+			showAlert({
+				title: 'エラー',
+				message: `住所の${editingAddress ? '更新' : '作成'}に失敗しました: ${result.error}`,
+				type: 'error'
+			});
 		}
 	}
 
 	async function deleteAddress(addressId: string) {
-		if (!confirm('この住所を削除してもよろしいですか?')) return;
+		const confirmed = await showConfirm({
+			title: '確認',
+			message: 'この住所を削除してもよろしいですか?',
+			type: 'danger',
+			confirmText: '削除',
+			cancelText: 'キャンセル'
+		});
+
+		if (!confirmed) return;
 
 		const result = await profileService.deleteAddress(addressId);
 		if (result.success) {
+			clearCache('addresses');
 			await loadAddresses();
 		} else {
-			alert(`住所の削除に失敗しました: ${result.error}`);
+			showAlert({
+				title: 'エラー',
+				message: `住所の削除に失敗しました: ${result.error}`,
+				type: 'error'
+			});
 		}
 	}
 
@@ -217,6 +391,7 @@
 
 		const result = await profileService.setDefaultAddress(addressId, user.id);
 		if (result.success) {
+			clearCache('addresses');
 			await loadAddresses();
 		}
 	}
@@ -225,16 +400,27 @@
 	async function removeFavorite(favoriteId: string) {
 		const result = await profileService.removeFavorite(favoriteId);
 		if (result.success) {
+			clearCache('favorites');
 			await loadFavorites();
 		}
 	}
 
 	async function clearAllFavorites() {
 		if (!user?.id) return;
-		if (!confirm('すべてのお気に入りを削除してもよろしいですか?')) return;
+
+		const confirmed = await showConfirm({
+			title: '確認',
+			message: 'すべてのお気に入りを削除してもよろしいですか?',
+			type: 'warning',
+			confirmText: '削除',
+			cancelText: 'キャンセル'
+		});
+
+		if (!confirmed) return;
 
 		const result = await profileService.clearFavorites(user.id);
 		if (result.success) {
+			clearCache('favorites');
 			await loadFavorites();
 		}
 	}
@@ -257,7 +443,6 @@
 		if (input.files && input.files[0]) {
 			avatarFile = input.files[0];
 
-			// 生成预览
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				avatarPreview = e.target?.result as string;
@@ -271,86 +456,85 @@
 
 		const result = await profileService.updateAvatar(user.id, avatarFile);
 		if (result.success) {
-			// 更新用户 store
 			await userStore.refresh();
 			closeAvatarModal();
 		} else {
-			alert(`アバターのアップロードに失敗しました: ${result.error}`);
+			showAlert({
+				title: 'エラー',
+				message: `アバターのアップロードに失敗しました: ${result.error}`,
+				type: 'error'
+			});
 		}
 	}
 
 	// ============ 退款管理 ============
-
-	// 判断订单是否可以退款
 	function canRefund(order: Order): boolean {
-		// pending(待处理) - 可以直接取消并退款
-		// processing(处理中) - 可以申请退款
-		// shipped(已发货) - 可以退货退款（需要退货单号）
-		// delivered(已送达) - 可以退货退款（需要退货单号）
-		// cancelled(已取消) - 不可退款
 		return ['pending', 'processing', 'shipped', 'delivered'].includes(order.status);
 	}
 
-	// 判断是否需要退货单号
 	function needsTrackingNumber(order: Order): boolean {
-		// 已发货或已送达的订单需要填写退货单号
 		return ['shipped', 'delivered'].includes(order.status);
 	}
 
-	// 获取退款类型文本
 	function getRefundTypeText(order: Order): string {
 		if (order.status === 'pending' || order.status === 'processing') {
-			return '直接返金'; // 未发货，直接退款
+			return '直接返金';
 		} else {
-			return '返品返金'; // 已发货，需要退货
+			return '返品返金';
 		}
 	}
 
-	// 打开退款模态框
 	function openRefundModal(order: Order) {
 		refundingOrder = order;
 		refundForm = {
 			refundType: 'full',
 			refundReason: '',
 			refundAmount: order.total_amount,
-			returnGoods: needsTrackingNumber(order), // 已发货的订单自动设置为退货
+			returnGoods: needsTrackingNumber(order),
 			trackingNumber: ''
 		};
 		showRefundModal = true;
 	}
 
-	// 关闭退款模态框
 	function closeRefundModal() {
 		showRefundModal = false;
 		refundingOrder = null;
 		isRefunding = false;
 	}
 
-	// 更新退款金额
 	function updateRefundAmount() {
 		if (refundingOrder && refundForm.refundType === 'full') {
 			refundForm.refundAmount = refundingOrder.total_amount;
 		}
 	}
 
-	// 提交退款申请
-	// 在你的 profile 页面中修复 submitRefund 函数
 	async function submitRefund() {
 		if (!refundingOrder || !user?.id) return;
 
-		// 验证表单
 		if (!refundForm.refundReason) {
-			alert('返金理由を選択してください');
+			showAlert({
+				title: '入力エラー',
+				message: '返金理由を選択してください',
+				type: 'error'
+			});
 			return;
 		}
 
 		if (refundForm.refundType === 'partial' && refundForm.refundAmount <= 0) {
-			alert('返金金額を入力してください');
+			showAlert({
+				title: '入力エラー',
+				message: '返金金額を入力してください',
+				type: 'error'
+			});
 			return;
 		}
 
 		if (refundForm.refundAmount > refundingOrder.total_amount) {
-			alert('返金金額が注文金額を超えています');
+			showAlert({
+				title: '入力エラー',
+				message: '返金金額が注文金額を超えています',
+				type: 'error'
+			});
 			return;
 		}
 
@@ -359,7 +543,11 @@
 			refundForm.returnGoods &&
 			!refundForm.trackingNumber.trim()
 		) {
-			alert('返品追跡番号を入力してください');
+			showAlert({
+				title: '入力エラー',
+				message: '返品追跡番号を入力してください',
+				type: 'error'
+			});
 			return;
 		}
 
@@ -367,74 +555,78 @@
 			? `返品返金を申請しますか？\n金額: ¥${refundForm.refundAmount.toLocaleString('ja-JP')}\n追跡番号: ${refundForm.trackingNumber}`
 			: `¥${refundForm.refundAmount.toLocaleString('ja-JP')} の返金を申請しますか？`;
 
-		if (!confirm(confirmMessage)) {
-			return;
-		}
+		const confirmed = await showConfirm({
+			title: '返金申請の確認',
+			message: confirmMessage,
+			type: 'warning',
+			confirmText: '申請する',
+			cancelText: 'キャンセル'
+		});
+
+		if (!confirmed) return;
 
 		isRefunding = true;
 
 		try {
-			// ✅ 关键修复：只有已支付的订单才调用 PayPay 退款 API
 			const needPayPalRefund =
 				refundingOrder.payment_id &&
 				refundingOrder.status !== 'pending' &&
 				refundingOrder.payment_method === 'paypay';
 
-			if (needPayPalRefund) {
-				// 生成唯一的退款ID
-				const merchantRefundId = `REFUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+			const merchantRefundId = `REFUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-				// 调用 PayPay 退款 API
+			if (needPayPalRefund) {
 				const refundResponse = await fetch('/api/paypay/refund', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						merchantRefundId: merchantRefundId,
 						paymentId: refundingOrder.payment_id,
-						amount: {
-							amount: refundForm.refundAmount,
-							currency: 'JPY'
-						},
-						reason: refundForm.refundReason,
-						metadata: {
-							orderId: refundingOrder.id,
-							returnGoods: refundForm.returnGoods,
-							trackingNumber: refundForm.trackingNumber
-						}
+						amount: refundingOrder.amount,
+						reason: refundForm.refundReason
 					})
 				});
-
 				const refundResult = await refundResponse.json();
-
 				if (!refundResult.success) {
-					alert(`返金申請に失敗しました: ${refundResult.error}`);
+					showAlert({
+						title: 'エラー',
+						message: `返金申請に失敗しました: ${refundResult.error}`,
+						type: 'error'
+					});
 					isRefunding = false;
 					return;
 				}
 			}
 
-			// 更新订单状态为已取消
-			const statusResponse = await fetch(`/api/orders/${refundingOrder.id}/status`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					status: 'cancelled',
-					trackingNumber: refundForm.trackingNumber || undefined
-				})
-			});
-
+			const statusResponse = await fetch(`/api/paypay/refundStatus/${merchantRefundId}`);
 			const statusResult = await statusResponse.json();
 
 			if (statusResult.success) {
-				alert(needPayPalRefund ? '返金申請が正常に送信されました' : '注文をキャンセルしました');
+				await pb.collection('orders').update(refundingOrder.id, {
+					status: 'cancelled'
+				});
+				showAlert({
+					title: '成功',
+					message: needPayPalRefund ? '返金申請が正常に送信されました' : '注文をキャンセルしました',
+					type: 'success'
+				});
 				closeRefundModal();
+				clearCache('orders');
 				await loadOrders();
 			} else {
-				alert(`注文状態の更新に失敗しました: ${statusResult.error}`);
+				showAlert({
+					title: 'エラー',
+					message: `注文状態の更新に失敗しました: ${statusResult.error}`,
+					type: 'error'
+				});
 			}
 		} catch (error) {
 			console.error('Refund error:', error);
-			alert('返金処理中にエラーが発生しました');
+			showAlert({
+				title: 'エラー',
+				message: '返金処理中にエラーが発生しました',
+				type: 'error'
+			});
 		} finally {
 			isRefunding = false;
 		}
@@ -463,39 +655,14 @@
 		return classMap[status] || 'status-default';
 	}
 
-	// SVG 图标
-	const icons = {
-		profile: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`,
-		orders: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`,
-		addresses: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-		favorites: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`,
-		settings: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-		support: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`,
-		logout: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>`,
-		edit: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`,
-		add: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>`,
-		delete: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
-		cart: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
-		close: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
-		arrow: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`,
-		camera: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-		refund: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>`,
-		// 空状态图标
-		emptyBox: `<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`,
-		emptyLocation: `<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-		emptyHeart: `<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`
-	};
-
-	// 导航菜单
 	const menuItems = [
-		{ id: 'profile', label: 'プロフィール', icon: icons.profile },
-		{ id: 'orders', label: '注文履歴', icon: icons.orders },
-		{ id: 'addresses', label: '住所管理', icon: icons.addresses },
-		{ id: 'favorites', label: 'お気に入り', icon: icons.favorites },
-		{ id: 'settings', label: '設定', icon: icons.settings }
+		{ id: 'profile', label: 'プロフィール', icon: profile },
+		{ id: 'orders', label: '注文履歴', icon: aordersIcon },
+		{ id: 'addresses', label: '住所管理', icon: addressesIcon },
+		{ id: 'favorites', label: 'お気に入り', icon: favoritesIcon },
+		{ id: 'settings', label: '設定', icon: settings }
 	];
 
-	// 导航切换
 	function changeTab(itemId: string) {
 		goto(`/profile/${itemId}`, {
 			replaceState: false,
@@ -504,7 +671,6 @@
 		});
 	}
 
-	// 组件挂载时加载数据
 	onMount(() => {
 		loadTabData();
 	});
@@ -535,7 +701,7 @@
 										class="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#2d3748] text-white hover:bg-[#1a202c]"
 										title="アバターを変更"
 									>
-										{@html icons.camera}
+										{@html camera}
 									</button>
 								</div>
 								<div class="flex-1 overflow-hidden">
@@ -594,14 +760,14 @@
 								href="/support"
 								class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#4a5568] no-underline transition-colors hover:bg-[#f7fafc]"
 							>
-								{@html icons.support}
+								{@html support}
 								<span>サポート</span>
 							</a>
 							<button
 								onclick={() => userStore.logout()}
 								class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[#e53e3e] transition-colors hover:bg-[#fff5f5]"
 							>
-								{@html icons.logout}
+								{@html logout}
 								<span>ログアウト</span>
 							</button>
 						</div>
@@ -620,7 +786,7 @@
 							<div class="mb-6 flex items-center justify-between">
 								<h2 class="text-xl font-semibold text-[#1a1a1a]">プロフィール</h2>
 								<button class="btn-secondary">
-									{@html icons.edit}
+									{@html editProfile}
 									<span>編集</span>
 								</button>
 							</div>
@@ -629,13 +795,16 @@
 								<!-- 个人信息 -->
 								<div class="grid gap-4 md:grid-cols-2">
 									<div class="space-y-2">
+										<!-- svelte-ignore a11y_label_has_associated_control -->
 										<label class="block text-sm font-medium text-[#4a5568]">お名前</label>
 										<div class="input-display">{user.name}</div>
 									</div>
 									<div class="space-y-2">
+										<!-- svelte-ignore a11y_label_has_associated_control -->
 										<label class="block text-sm font-medium text-[#4a5568]">メールアドレス</label>
 										<div class="input-display">{user.email}</div>
 									</div>
+									<!-- svelte-ignore a11y_label_has_associated_control -->
 									<div class="space-y-2">
 										<label class="block text-sm font-medium text-[#4a5568]">会員ランク</label>
 										<div class="input-display flex items-center gap-2">
@@ -648,6 +817,7 @@
 										</div>
 									</div>
 									<div class="space-y-2">
+										<!-- svelte-ignore a11y_label_has_associated_control -->
 										<label class="block text-sm font-medium text-[#4a5568]">会員登録日</label>
 										<div class="input-display">
 											{new Date(user.created).toLocaleDateString('ja-JP')}
@@ -736,7 +906,7 @@
 																	class="btn-link-danger"
 																	onclick={() => openRefundModal(order)}
 																>
-																	{@html icons.refund}
+																	{@html refund}
 																	<span>{getRefundTypeText(order)}</span>
 																</button>
 															{/if}
@@ -750,7 +920,7 @@
 							{:else}
 								<div class="py-12 text-center">
 									<div class="mb-3 flex justify-center text-gray-300">
-										{@html icons.emptyBox}
+										{@html emptyBox}
 									</div>
 									<p class="text-[#718096]">注文履歴がありません</p>
 								</div>
@@ -762,7 +932,7 @@
 							<div class="mb-6 flex items-center justify-between">
 								<h2 class="text-xl font-semibold text-[#1a1a1a]">住所管理</h2>
 								<button class="btn-primary" onclick={() => openAddressModal()}>
-									{@html icons.add}
+									{@html addrPofile}
 									<span>新しい住所を追加</span>
 								</button>
 							</div>
@@ -784,13 +954,13 @@
 												</div>
 												<div class="flex gap-1">
 													<button class="icon-btn" onclick={() => openAddressModal(address)}>
-														{@html icons.edit}
+														{@html editProfile}
 													</button>
 													<button
 														class="icon-btn text-[#e53e3e]"
 														onclick={() => deleteAddress(address.id)}
 													>
-														{@html icons.delete}
+														{@html deleteProfile}
 													</button>
 												</div>
 											</div>
@@ -814,7 +984,7 @@
 							{:else}
 								<div class="py-12 text-center">
 									<div class="mb-3 flex justify-center text-gray-300">
-										{@html icons.emptyLocation}
+										{@html emptyLocation}
 									</div>
 									<p class="text-[#718096]">登録された住所がありません</p>
 								</div>
@@ -827,7 +997,7 @@
 								<h2 class="text-xl font-semibold text-[#1a1a1a]">お気に入り商品</h2>
 								{#if favorites.length > 0}
 									<button class="btn-secondary" onclick={clearAllFavorites}>
-										{@html icons.delete}
+										{@html deleteProfile}
 										<span>すべて削除</span>
 									</button>
 								{/if}
@@ -850,14 +1020,14 @@
 											</div>
 											<div class="flex gap-2">
 												<button class="btn-primary flex-1">
-													{@html icons.cart}
+													{@html cart}
 													<span>カートに入れる</span>
 												</button>
 												<button
 													class="icon-btn text-[#e53e3e]"
 													onclick={() => removeFavorite(favorite.id)}
 												>
-													{@html icons.close}
+													{@html close}
 												</button>
 											</div>
 										</div>
@@ -866,7 +1036,7 @@
 							{:else}
 								<div class="py-12 text-center">
 									<div class="mb-3 flex justify-center text-gray-300">
-										{@html icons.emptyHeart}
+										{@html emptyHeart}
 									</div>
 									<p class="text-[#718096]">お気に入り商品がありません</p>
 								</div>
@@ -903,11 +1073,11 @@
 									<div class="space-y-2">
 										<button class="setting-btn">
 											<span>パスワードを変更</span>
-											{@html icons.arrow}
+											{@html arrow}
 										</button>
 										<button class="setting-btn">
 											<span>2段階認証を設定</span>
-											{@html icons.arrow}
+											{@html arrow}
 										</button>
 									</div>
 								</div>
@@ -918,11 +1088,11 @@
 									<div class="space-y-2">
 										<button class="setting-btn">
 											<span>ダウンロードデータ</span>
-											{@html icons.arrow}
+											{@html arrow}
 										</button>
 										<button class="setting-btn text-[#e53e3e] hover:bg-[#fff5f5]">
 											<span>アカウントを削除</span>
-											{@html icons.arrow}
+											{@html arrow}
 										</button>
 									</div>
 								</div>
@@ -935,7 +1105,9 @@
 	</div>
 
 	<!-- 地址编辑模态框 -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	{#if showAddressModal}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="modal-overlay" onclick={closeAddressModal}>
 			<div class="modal-content" onclick={(e) => e.stopPropagation()}>
 				<div class="mb-4 flex items-center justify-between">
@@ -943,7 +1115,7 @@
 						{editingAddress ? '住所を編集' : '新しい住所を追加'}
 					</h3>
 					<button class="icon-btn" onclick={closeAddressModal}>
-						{@html icons.close}
+						{@html close}
 					</button>
 				</div>
 
@@ -955,6 +1127,7 @@
 					class="space-y-4"
 				>
 					<div>
+						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="mb-1 block text-sm font-medium text-[#4a5568]">ラベル</label>
 						<input
 							type="text"
@@ -966,6 +1139,7 @@
 					</div>
 
 					<div>
+						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="mb-1 block text-sm font-medium text-[#4a5568]">受取人</label>
 						<input
 							type="text"
@@ -977,6 +1151,7 @@
 					</div>
 
 					<div>
+						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="mb-1 block text-sm font-medium text-[#4a5568]">電話番号</label>
 						<input
 							type="tel"
@@ -988,6 +1163,7 @@
 					</div>
 
 					<div>
+						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="mb-1 block text-sm font-medium text-[#4a5568]">郵便番号</label>
 						<input
 							type="text"
@@ -999,6 +1175,7 @@
 					</div>
 
 					<div>
+						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="mb-1 block text-sm font-medium text-[#4a5568]">住所</label>
 						<textarea
 							bind:value={addressForm.address}
@@ -1026,18 +1203,20 @@
 	{/if}
 
 	<!-- 头像上传模态框 -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	{#if showAvatarModal}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="modal-overlay" onclick={closeAvatarModal}>
 			<div class="modal-content" onclick={(e) => e.stopPropagation()}>
 				<div class="mb-4 flex items-center justify-between">
 					<h3 class="text-lg font-semibold text-[#1a1a1a]">アバターを変更</h3>
 					<button class="icon-btn" onclick={closeAvatarModal}>
-						{@html icons.close}
+						{@html close}
 					</button>
 				</div>
 
 				<div class="space-y-4">
-					<!-- 预览区域 -->
 					<div class="flex justify-center">
 						<img
 							src={avatarPreview || user.avatar || '/logo.png'}
@@ -1046,12 +1225,11 @@
 						/>
 					</div>
 
-					<!-- 文件选择 -->
 					<div>
 						<label
 							class="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-[#cbd5e0] bg-[#f7fafc] px-4 py-8 transition-colors hover:border-[#2d3748] hover:bg-[#edf2f7]"
 						>
-							{@html icons.camera}
+							{@html camera}
 							<span class="text-sm text-[#4a5568]">
 								{avatarFile ? avatarFile.name : 'クリックして画像を選択'}
 							</span>
@@ -1065,7 +1243,6 @@
 						<p class="mt-2 text-xs text-[#718096]">JPG、PNG、GIF、WebP形式、最大5MB</p>
 					</div>
 
-					<!-- 操作按钮 -->
 					<div class="flex gap-3">
 						<button type="button" class="btn-secondary flex-1" onclick={closeAvatarModal}>
 							キャンセル
@@ -1084,34 +1261,58 @@
 		</div>
 	{/if}
 
-	<!-- 退款模态框 -->
+	<!-- ✨ 优化后的退款模态框 -->
 	{#if showRefundModal && refundingOrder}
-		<div class="modal-overlay" onclick={closeRefundModal}>
-			<div class="modal-content max-w-md" onclick={(e) => e.stopPropagation()}>
-				<div class="mb-4 flex items-center justify-between">
-					<h3 class="text-lg font-semibold text-[#1a1a1a]">返金申請</h3>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="refund-modal-overlay" onclick={closeRefundModal}>
+			<div class="refund-modal-content" onclick={(e) => e.stopPropagation()}>
+				<!-- 头部 -->
+				<div class="refund-modal-header">
+					<div class="flex items-center gap-3">
+						<div class="refund-icon-wrapper">
+							{@html refund}
+						</div>
+						<div>
+							<h3 class="text-xl font-bold text-[#1a1a1a]">返金申請</h3>
+							<p class="text-xs text-[#718096]">以下の内容をご確認ください</p>
+						</div>
+					</div>
 					<button class="icon-btn" onclick={closeRefundModal} disabled={isRefunding}>
-						{@html icons.close}
+						{@html close}
 					</button>
 				</div>
 
-				<!-- 订单信息 -->
-				<div class="mb-4 rounded-lg bg-[#f7fafc] p-4">
-					<div class="mb-3 flex items-center justify-between">
-						<span class="text-sm text-[#718096]">注文番号</span>
-						<span class="font-medium text-[#1a1a1a]">{refundingOrder.order_number}</span>
-					</div>
-					<div class="mb-3 flex items-center justify-between">
-						<span class="text-sm text-[#718096]">注文金額</span>
-						<span class="text-lg font-bold text-[#1a1a1a]">
-							¥{refundingOrder.total_amount.toLocaleString('ja-JP')}
+				<!-- 订单信息卡片 -->
+				<div class="refund-order-info">
+					<div class="order-info-header">
+						<span class="text-xs font-semibold tracking-wide text-[#718096] uppercase"
+							>注文情報</span
+						>
+						<span class="status-badge {getStatusClass(refundingOrder.status)}">
+							{getStatusLabel(refundingOrder.status)}
 						</span>
 					</div>
-					<div class="flex items-center justify-between">
-						<span class="text-sm text-[#718096]">返金タイプ</span>
-						<span class="rounded bg-[#2d3748] px-2 py-1 text-xs font-semibold text-white">
-							{getRefundTypeText(refundingOrder)}
-						</span>
+
+					<div class="order-info-details">
+						<div class="order-info-row">
+							<span class="text-sm">注文番号</span>
+							<span class="font-mono text-sm font-semibold">
+								{refundingOrder.order_number}
+							</span>
+						</div>
+						<div class="order-info-row">
+							<span class="text-sm">注文金額</span>
+							<span class="text-2xl font-bold">
+								¥{refundingOrder.total_amount.toLocaleString('ja-JP')}
+							</span>
+						</div>
+						<div class="order-info-row">
+							<span class="text-sm">返金タイプ</span>
+							<span class="refund-type-badge">
+								{getRefundTypeText(refundingOrder)}
+							</span>
+						</div>
 					</div>
 				</div>
 
@@ -1120,13 +1321,14 @@
 						e.preventDefault();
 						submitRefund();
 					}}
-					class="space-y-4"
+					class="refund-form"
 				>
-					<!-- 退款类型 -->
-					<div>
-						<label class="mb-2 block text-sm font-medium text-[#4a5568]">返金金額</label>
-						<div class="flex gap-3">
-							<label class="refund-type-option flex-1">
+					<!-- 退款类型选择 -->
+					<div class="form-section">
+						<!-- svelte-ignore a11y_label_has_associated_control -->
+						<label class="form-label">返金金額</label>
+						<div class="refund-type-grid">
+							<label class="refund-type-card {refundForm.refundType === 'full' ? 'active' : ''}">
 								<input
 									type="radio"
 									bind:group={refundForm.refundType}
@@ -1135,12 +1337,16 @@
 									disabled={isRefunding}
 									class="sr-only"
 								/>
-								<div class="option-content">
-									<div class="font-medium">全額返金</div>
-									<div class="text-xs text-[#718096]">全額返金</div>
+								<div class="refund-type-content">
+									<div class="refund-type-title">全額返金</div>
+									<div class="refund-type-desc">全額を返金します</div>
+								</div>
+								<div class="refund-type-check">
+									{@html checkCircle}
 								</div>
 							</label>
-							<label class="refund-type-option flex-1">
+
+							<label class="refund-type-card {refundForm.refundType === 'partial' ? 'active' : ''}">
 								<input
 									type="radio"
 									bind:group={refundForm.refundType}
@@ -1148,45 +1354,53 @@
 									disabled={isRefunding}
 									class="sr-only"
 								/>
-								<div class="option-content">
-									<div class="font-medium">一部返金</div>
-									<div class="text-xs text-[#718096]">金額を指定</div>
+								<div class="refund-type-content">
+									<div class="refund-type-title">一部返金</div>
+									<div class="refund-type-desc">金額を指定します</div>
+								</div>
+								<div class="refund-type-check">
+									{@html checkCircle}
 								</div>
 							</label>
 						</div>
 					</div>
 
-					<!-- 退款金额（部分退款时显示） -->
+					<!-- 部分退款金额输入 -->
 					{#if refundForm.refundType === 'partial'}
-						<div>
-							<label class="mb-1 block text-sm font-medium text-[#4a5568]"> 返金金額 </label>
-							<div class="relative">
-								<span class="absolute top-1/2 left-3 -translate-y-1/2 text-[#718096]">¥</span>
+						<div class="form-section partial-amount-section">
+							<!-- svelte-ignore a11y_label_has_associated_control -->
+							<label class="form-label">返金金額を入力</label>
+							<div class="amount-input-wrapper">
+								<span class="amount-currency">¥</span>
 								<input
 									type="number"
 									bind:value={refundForm.refundAmount}
 									min="1"
 									max={refundingOrder.total_amount}
 									disabled={isRefunding}
-									class="input-field pl-8"
+									class="amount-input"
 									placeholder="金額を入力"
 									required
 								/>
 							</div>
-							<p class="mt-1 text-xs text-[#718096]">
-								最大: ¥{refundingOrder.total_amount.toLocaleString('ja-JP')}
-							</p>
+							<div class="amount-range">
+								<span class="text-xs text-[#718096]">最小: ¥1</span>
+								<span class="text-xs font-semibold text-[#2d3748]">
+									最大: ¥{refundingOrder.total_amount.toLocaleString('ja-JP')}
+								</span>
+							</div>
 						</div>
 					{/if}
 
 					<!-- 退款理由 -->
-					<div>
-						<label class="mb-2 block text-sm font-medium text-[#4a5568]">
+					<!-- svelte-ignore a11y_label_has_associated_control -->
+					<div class="form-section">
+						<label class="form-label">
 							返金理由 <span class="text-[#e53e3e]">*</span>
 						</label>
-						<div class="space-y-2">
+						<div class="reason-grid">
 							{#each refundReasons as reason}
-								<label class="refund-reason-option">
+								<label class="reason-option {refundForm.refundReason === reason ? 'active' : ''}">
 									<input
 										type="radio"
 										bind:group={refundForm.refundReason}
@@ -1194,31 +1408,33 @@
 										disabled={isRefunding}
 										class="sr-only"
 									/>
-									<div class="option-content">
-										<span class="text-sm">{reason}</span>
-									</div>
+									<span class="reason-text">{reason}</span>
+									<span class="reason-check">
+										{@html checkCircle}
+									</span>
 								</label>
 							{/each}
 						</div>
 					</div>
 
-					<!-- 退货单号（已发货/已送达时显示） -->
+					<!-- 退货单号（已发货时） -->
 					{#if needsTrackingNumber(refundingOrder)}
-						<div class="rounded-lg border-2 border-[#fbbf24] bg-[#fffbeb] p-4">
-							<div class="mb-3 flex items-start gap-2">
-								<div class="mt-0.5 flex-shrink-0 text-[#f59e0b]">
+						<div class="tracking-notice">
+							<div class="tracking-notice-header">
+								<div class="tracking-notice-icon">
 									{@html warningIcon}
 								</div>
-								<div class="flex-1">
-									<h4 class="mb-1 font-semibold text-[#92400e]">返品が必要です</h4>
-									<p class="text-xs text-[#78350f]">
+								<div>
+									<h4 class="tracking-notice-title">返品が必要です</h4>
+									<p class="tracking-notice-desc">
 										商品が既に発送されているため、返品追跡番号の入力が必要です。
 									</p>
 								</div>
 							</div>
 
-							<div>
-								<label class="mb-1 block text-sm font-medium text-[#92400e]">
+							<div class="tracking-input-section">
+								<!-- svelte-ignore a11y_label_has_associated_control -->
+								<label class="form-label-dark">
 									返品追跡番号 <span class="text-[#e53e3e]">*</span>
 								</label>
 								<input
@@ -1226,29 +1442,27 @@
 									bind:value={refundForm.trackingNumber}
 									placeholder="例: 1234-5678-9012"
 									disabled={isRefunding}
-									class="input-field"
+									class="tracking-input"
 									required
 								/>
-								<p class="mt-1 text-xs text-[#78350f]">
-									配送業者から受け取った追跡番号を入力してください
-								</p>
+								<p class="tracking-hint">配送業者から受け取った追跡番号を入力してください</p>
 							</div>
 						</div>
 					{/if}
 
-					<!-- 是否退货（未发货时显示） -->
+					<!-- 是否退货（未发货时） -->
 					{#if !needsTrackingNumber(refundingOrder)}
-						<div class="rounded-lg border border-[#e2e8f0] bg-[#f7fafc] p-4">
-							<label class="flex items-start gap-3">
+						<div class="return-goods-notice">
+							<label class="return-goods-option">
 								<input
 									type="checkbox"
 									bind:checked={refundForm.returnGoods}
 									disabled={isRefunding}
-									class="checkbox mt-0.5"
+									class="return-goods-checkbox"
 								/>
-								<div class="flex-1">
-									<div class="font-medium text-[#1a1a1a]">商品を返品する</div>
-									<p class="mt-1 text-xs text-[#718096]">
+								<div class="return-goods-content">
+									<div class="return-goods-title">商品を返品する</div>
+									<p class="return-goods-desc">
 										商品を返品する場合は、チェックしてください。商品がまだ発送されていないため、直接返金されます。
 									</p>
 								</div>
@@ -1257,36 +1471,38 @@
 					{/if}
 
 					<!-- 操作按钮 -->
-					<div class="flex gap-3 pt-2">
+					<div class="modal-actions">
 						<button
 							type="button"
-							class="btn-secondary flex-1"
+							class="btn-cancel"
 							onclick={closeRefundModal}
 							disabled={isRefunding}
 						>
-							キャンセル
+							<span>キャンセル</span>
 						</button>
-						<button type="submit" class="btn-primary flex-1" disabled={isRefunding}>
+						<button type="submit" class="btn-submit" disabled={isRefunding}>
 							{#if isRefunding}
-								<div class="mr-2">
+								<div class="btn-spinner">
 									{@html spinnerSm}
 								</div>
 								処理中...
 							{:else}
-								返金申請を送信
+								<span>返金申請を送信</span>
+								<span class="btn-arrow">→</span>
 							{/if}
 						</button>
 					</div>
 				</form>
 
 				<!-- 注意事项 -->
-				<div class="mt-4 rounded-lg bg-[#fffaf0] p-3">
-					<div class="flex items-start gap-2">
-						<div class="mt-0.5 flex-shrink-0 text-[#c05621]">
-							{@html infoIcon}
-						</div>
-						<p class="text-xs text-[#744210]">
-							返金申請後、2-5営業日以内に処理されます。返金は元の支払い方法に戻されます。
+				<div class="refund-notice">
+					<div class="refund-notice-icon">
+						{@html infoIcon}
+					</div>
+					<div class="refund-notice-content">
+						<p class="refund-notice-text">
+							返金申請後、<strong>2-5営業日以内</strong
+							>に処理されます。返金は元の支払い方法に戻されます。
 							{#if needsTrackingNumber(refundingOrder)}
 								返品された商品が確認された後、返金が処理されます。
 							{/if}
@@ -1296,10 +1512,64 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- 自定义确认对话框 -->
+	{#if showConfirmDialog}
+		<div class="confirm-dialog-overlay">
+			<div class="confirm-dialog-content {confirmDialogData.type}">
+				<div class="confirm-dialog-header">
+					<div class="confirm-dialog-icon">
+						{#if confirmDialogData.type === 'danger'}
+							{@html cancelIcon}
+						{:else if confirmDialogData.type === 'warning'}
+							{@html warningIcon}
+						{:else}
+							{@html infoIcon}
+						{/if}
+					</div>
+					<h3 class="confirm-dialog-title">{confirmDialogData.title}</h3>
+				</div>
+				<p class="confirm-dialog-message">{confirmDialogData.message}</p>
+				<div class="confirm-dialog-actions">
+					<button class="confirm-btn-cancel" onclick={confirmDialogData.onCancel}>
+						{confirmDialogData.cancelText}
+					</button>
+					<button class="confirm-btn-confirm" onclick={confirmDialogData.onConfirm}>
+						{confirmDialogData.confirmText}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- 自定义提示对话框 -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	{#if showAlertDialog}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div class="alert-dialog-overlay" onclick={closeAlertDialog}>
+			<div class="alert-dialog-content {alertDialogData.type}" onclick={(e) => e.stopPropagation()}>
+				<div class="alert-dialog-header">
+					<div class="alert-dialog-icon">
+						{#if alertDialogData.type === 'error'}
+							{@html cancelIcon}
+						{:else if alertDialogData.type === 'success'}
+							{@html checkCircle}
+						{:else}
+							{@html infoIcon}
+						{/if}
+					</div>
+					<h3 class="alert-dialog-title">{alertDialogData.title}</h3>
+				</div>
+				<p class="alert-dialog-message">{alertDialogData.message}</p>
+				<button class="alert-btn-close" onclick={closeAlertDialog}>閉じる</button>
+			</div>
+		</div>
+	{/if}
 {/if}
 
 <style>
-	/* 按钮样式 */
+	/* ==================== 基础样式 ==================== */
 	.btn-primary {
 		display: inline-flex;
 		align-items: center;
@@ -1407,7 +1677,6 @@
 		cursor: not-allowed;
 	}
 
-	/* 输入框样式 */
 	.input-display {
 		padding: 0.625rem 0.75rem;
 		font-size: 0.875rem;
@@ -1452,7 +1721,6 @@
 		opacity: 0.5;
 	}
 
-	/* 统计卡片 */
 	.stat-card {
 		padding: 1rem;
 		background-color: #fafafa;
@@ -1460,7 +1728,6 @@
 		border-radius: 0.5rem;
 	}
 
-	/* 状态徽章 */
 	.status-badge {
 		display: inline-block;
 		padding: 0.25rem 0.625rem;
@@ -1489,7 +1756,6 @@
 		background-color: #fed7d7;
 	}
 
-	/* 地址卡片 */
 	.address-card {
 		padding: 1.25rem;
 		border: 1px solid #e0e0e0;
@@ -1501,7 +1767,6 @@
 		border-color: #cbd5e0;
 	}
 
-	/* 商品卡片 */
 	.product-card {
 		padding: 1rem;
 		border: 1px solid #e0e0e0;
@@ -1513,7 +1778,6 @@
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 	}
 
-	/* 设置项 */
 	.setting-item {
 		display: flex;
 		align-items: center;
@@ -1550,12 +1814,12 @@
 		background-color: #f0f0f0;
 	}
 
-	/* 开关样式 */
 	.toggle {
 		position: relative;
 		width: 44px;
 		height: 24px;
 		-webkit-appearance: none;
+		appearance: none;
 		background: #cbd5e0;
 		border-radius: 12px;
 		cursor: pointer;
@@ -1583,7 +1847,7 @@
 		transform: translateX(20px);
 	}
 
-	/* 模态框样式 */
+	/* 原有模态框样式 */
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
@@ -1605,67 +1869,842 @@
 		overflow-y: auto;
 	}
 
-	.modal-content.max-w-md {
-		max-width: 28rem;
+	/* ==================== 退款模态框专属样式 ==================== */
+
+	/* 背景遮罩 - 降低透明度 */
+	.refund-modal-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.35);
+		backdrop-filter: blur(2px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		z-index: 50;
+		animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
-	/* 退款选项卡片 */
-	.refund-type-option {
-		cursor: pointer;
+	/* 模态框容器 */
+	.refund-modal-content {
+		background: linear-gradient(to bottom, #ffffff 0%, #fafafa 100%);
+		border-radius: 1rem;
+		padding: 0;
+		max-width: 560px;
+		width: 100%;
+		max-height: 90vh;
+		overflow-y: auto;
+		box-shadow:
+			0 20px 25px -5px rgba(0, 0, 0, 0.1),
+			0 10px 10px -5px rgba(0, 0, 0, 0.04);
+		animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
-	.refund-type-option input:checked + .option-content {
-		background-color: #2d3748;
+	/* 模态框头部 */
+	.refund-modal-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1.5rem;
+		border-bottom: 2px solid #e2e8f0;
+		background: white;
+		border-radius: 1rem 1rem 0 0;
+	}
+
+	.refund-icon-wrapper {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+		border-radius: 0.75rem;
 		color: white;
+	}
+
+	/* 订单信息卡片 */
+	.refund-order-info {
+		margin: 1.5rem;
+		background: linear-gradient(135deg, #1a202c 0%, #1a202c 100%);
+		border-radius: 0.75rem;
+		overflow: hidden;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	}
+
+	.order-info-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1rem 1.25rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.order-info-details {
+		padding: 1.25rem;
+	}
+
+	.order-info-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.75rem 0;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+		color: white;
+	}
+
+	.order-info-row:last-child {
+		border-bottom: none;
+	}
+
+	.refund-type-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.375rem 0.75rem;
+		background: rgba(252, 129, 129, 0.2);
+		color: #fed7d7;
+		font-size: 0.75rem;
+		font-weight: 600;
+		border-radius: 9999px;
+		border: 1px solid rgba(252, 129, 129, 0.3);
+	}
+
+	/* 表单部分 */
+	.refund-form {
+		padding: 0 1.5rem 1.5rem;
+	}
+
+	.form-section {
+		margin-bottom: 1.5rem;
+	}
+
+	.form-label {
+		display: block;
+		margin-bottom: 0.75rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #2d3748;
+	}
+
+	/* 退款类型选择卡片 */
+	.refund-type-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.75rem;
+	}
+
+	.refund-type-card {
+		position: relative;
+		cursor: pointer;
+		border: 2px solid #e2e8f0;
+		border-radius: 0.75rem;
+		background: white;
+		overflow: hidden;
+		transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.refund-type-card:hover {
+		border-color: #cbd5e0;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	}
+
+	.refund-type-card.active {
 		border-color: #2d3748;
+		background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+		box-shadow: 0 4px 12px -2px rgba(45, 55, 72, 0.4);
 	}
 
-	.refund-type-option input:disabled + .option-content {
-		opacity: 0.5;
-		cursor: not-allowed;
+	.refund-type-card.active .refund-type-content {
+		color: white;
 	}
 
-	.option-content {
-		padding: 0.75rem;
+	.refund-type-content {
+		padding: 1.25rem;
 		text-align: center;
+	}
+
+	.refund-type-icon {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 0.5rem;
+		color: inherit;
+	}
+
+	.refund-type-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin-bottom: 0.25rem;
+	}
+
+	.refund-type-desc {
+		font-size: 0.75rem;
+		opacity: 0.75;
+	}
+
+	.refund-type-check {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		background: #48bb78;
+		color: white;
+		border-radius: 9999px;
+		opacity: 0;
+		transform: scale(0);
+		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.refund-type-card.active .refund-type-check {
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	/* 部分退款金额输入 */
+	.partial-amount-section {
+		animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.amount-input-wrapper {
+		position: relative;
+		margin-bottom: 0.5rem;
+	}
+
+	.amount-currency {
+		position: absolute;
+		left: 1rem;
+		top: 50%;
+		transform: translateY(-50%);
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: #4a5568;
+		pointer-events: none;
+	}
+
+	.amount-input {
+		width: 100%;
+		padding: 0.875rem 1rem 0.875rem 2.5rem;
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: #1a1a1a;
+		background: white;
 		border: 2px solid #e2e8f0;
 		border-radius: 0.5rem;
 		transition: all 0.2s;
 	}
 
-	.option-content:hover {
-		border-color: #cbd5e0;
+	.amount-input:focus {
+		outline: none;
+		border-color: #2d3748;
+		box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.1);
 	}
 
-	/* 退款理由选项 */
-	.refund-reason-option {
+	.amount-input:disabled {
+		background-color: #f7fafc;
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
+
+	.amount-range {
+		display: flex;
+		justify-content: space-between;
+		padding: 0 0.25rem;
+	}
+
+	/* 退款理由网格 */
+	.reason-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+	}
+
+	.reason-option {
+		position: relative;
+		display: flex;
+		align-items: center;
+		padding: 0.875rem 1rem;
+		background: white;
+		border: 2px solid #e2e8f0;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.reason-option:hover {
+		border-color: #cbd5e0;
+		background: #f7fafc;
+	}
+
+	.reason-option.active {
+		border-color: #2d3748;
+		background: #edf2f7;
+	}
+
+	.reason-text {
+		flex: 1;
+		font-size: 0.8125rem;
+		color: #4a5568;
+		font-weight: 500;
+	}
+
+	.reason-option.active .reason-text {
+		color: #1a1a1a;
+		font-weight: 600;
+	}
+
+	.reason-check {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.25rem;
+		height: 1.25rem;
+		color: #48bb78;
+		opacity: 0;
+		transform: scale(0);
+		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.reason-option.active .reason-check {
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	/* 退货单号提示框 */
+	.tracking-notice {
+		padding: 1.25rem;
+		background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+		border: 2px solid #fbbf24;
+		border-radius: 0.75rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.tracking-notice-header {
+		display: flex;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.tracking-notice-icon {
+		flex-shrink: 0;
+		width: 2rem;
+		height: 2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #f59e0b;
+	}
+
+	.tracking-notice-title {
+		font-size: 0.9375rem;
+		font-weight: 700;
+		color: #92400e;
+		margin-bottom: 0.25rem;
+	}
+
+	.tracking-notice-desc {
+		font-size: 0.8125rem;
+		color: #78350f;
+		line-height: 1.5;
+	}
+
+	.tracking-input-section {
+		margin-top: 1rem;
+	}
+
+	.form-label-dark {
 		display: block;
+		margin-bottom: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #92400e;
+	}
+
+	.tracking-input {
+		width: 100%;
+		padding: 0.75rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #1a1a1a;
+		background: white;
+		border: 2px solid #fbbf24;
+		border-radius: 0.5rem;
+		transition: all 0.2s;
+	}
+
+	.tracking-input:focus {
+		outline: none;
+		border-color: #f59e0b;
+		box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
+	}
+
+	.tracking-input:disabled {
+		background-color: #fef3c7;
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
+
+	.tracking-hint {
+		margin-top: 0.5rem;
+		font-size: 0.75rem;
+		color: #78350f;
+	}
+
+	/* 未发货退货选项 */
+	.return-goods-notice {
+		padding: 1rem;
+		background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+		border: 2px solid #0ea5e9;
+		border-radius: 0.75rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.return-goods-option {
+		display: flex;
+		gap: 0.75rem;
 		cursor: pointer;
 	}
 
-	.refund-reason-option input:checked + .option-content {
-		background-color: #edf2f7;
-		border-color: #2d3748;
+	.return-goods-checkbox {
+		flex-shrink: 0;
+		width: 1.25rem;
+		height: 1.25rem;
+		margin-top: 0.125rem;
+		border: 2px solid #0ea5e9;
+		border-radius: 0.25rem;
+		cursor: pointer;
+		appearance: none;
+		background: white;
+		transition: all 0.2s;
 	}
 
-	.refund-reason-option input:disabled + .option-content {
+	.return-goods-checkbox:checked {
+		background: #0ea5e9;
+		border-color: #0ea5e9;
+	}
+
+	.return-goods-checkbox:checked::after {
+		content: '✓';
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: white;
+		font-size: 0.75rem;
+		font-weight: 700;
+	}
+
+	.return-goods-content {
+		flex: 1;
+	}
+
+	.return-goods-title {
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: #075985;
+		margin-bottom: 0.375rem;
+	}
+
+	.return-goods-desc {
+		font-size: 0.8125rem;
+		color: #0c4a6e;
+		line-height: 1.5;
+	}
+
+	/* 操作按钮 */
+	.modal-actions {
+		display: flex;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+	}
+
+	.btn-cancel {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.875rem 1.5rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: #4a5568;
+		background: white;
+		border: 2px solid #e2e8f0;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.btn-cancel:hover:not(:disabled) {
+		background: #f7fafc;
+		border-color: #cbd5e0;
+	}
+
+	.btn-cancel:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
-	.refund-reason-option .option-content {
-		padding: 0.75rem 1rem;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.375rem;
+	.btn-submit {
+		flex: 2;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.875rem 1.5rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: white;
+		background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+		border: none;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: 0 4px 6px -1px rgba(229, 62, 62, 0.3);
+	}
+
+	.btn-submit:hover:not(:disabled) {
+		background: linear-gradient(135deg, #c53030 0%, #9b2c2c 100%);
+		transform: translateY(-2px);
+		box-shadow: 0 6px 12px -2px rgba(229, 62, 62, 0.4);
+	}
+
+	.btn-submit:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+		transform: none;
+	}
+
+	.btn-icon {
+		display: inline-flex;
+		width: 1.125rem;
+		height: 1.125rem;
+	}
+
+	.btn-spinner {
+		display: inline-flex;
+		animation: spin 1s linear infinite;
+	}
+
+	.btn-arrow {
+		display: inline-flex;
+		transition: transform 0.2s;
+	}
+
+	.btn-submit:hover:not(:disabled) .btn-arrow {
+		transform: translateX(4px);
+	}
+
+	/* 底部提示 */
+	.refund-notice {
+		display: flex;
+		gap: 0.75rem;
+		margin: 1.5rem;
+		padding: 1rem;
+		background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+		border: 1px solid #93c5fd;
+		border-radius: 0.75rem;
+	}
+
+	.refund-notice-icon {
+		flex-shrink: 0;
+		width: 1.5rem;
+		height: 1.5rem;
+		color: #3b82f6;
+	}
+
+	.refund-notice-content {
+		flex: 1;
+	}
+
+	.refund-notice-text {
+		font-size: 0.8125rem;
+		color: #1e40af;
+		line-height: 1.6;
+	}
+
+	.refund-notice-text strong {
+		font-weight: 700;
+		color: #1e3a8a;
+	}
+
+	/* ==================== 自定义确认对话框样式 ==================== */
+	.confirm-dialog-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(2px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		z-index: 60;
+		animation: fadeIn 0.2s ease-out;
+	}
+
+	.confirm-dialog-content {
+		background: white;
+		border-radius: 0.75rem;
+		padding: 1.5rem;
+		max-width: 420px;
+		width: 100%;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+		animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.confirm-dialog-header {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.confirm-dialog-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 9999px;
+	}
+
+	.confirm-dialog-content.warning .confirm-dialog-icon {
+		background: #fef3c7;
+		color: #f59e0b;
+	}
+
+	.confirm-dialog-content.danger .confirm-dialog-icon {
+		background: #fee2e2;
+		color: #ef4444;
+	}
+
+	.confirm-dialog-content.info .confirm-dialog-icon {
+		background: #dbeafe;
+		color: #3b82f6;
+	}
+
+	.confirm-dialog-title {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: #1a1a1a;
+		text-align: center;
+	}
+
+	.confirm-dialog-message {
+		color: #4a5568;
+		text-align: center;
+		line-height: 1.6;
+		margin-bottom: 1.5rem;
+		white-space: pre-line;
+	}
+
+	.confirm-dialog-actions {
+		display: flex;
+		gap: 0.75rem;
+	}
+
+	.confirm-btn-cancel {
+		flex: 1;
+		padding: 0.75rem 1.5rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: #4a5568;
+		background: white;
+		border: 2px solid #e2e8f0;
+		border-radius: 0.5rem;
+		cursor: pointer;
 		transition: all 0.2s;
 	}
 
-	.refund-reason-option .option-content:hover {
-		background-color: #f7fafc;
+	.confirm-btn-cancel:hover {
+		background: #f7fafc;
 		border-color: #cbd5e0;
 	}
 
-	/* 隐藏单选按钮 */
+	.confirm-btn-confirm {
+		flex: 1;
+		padding: 0.75rem 1.5rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.confirm-dialog-content.warning .confirm-btn-confirm {
+		background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+	}
+
+	.confirm-dialog-content.danger .confirm-btn-confirm {
+		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+	}
+
+	.confirm-dialog-content.info .confirm-btn-confirm {
+		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	}
+
+	.confirm-btn-confirm:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2);
+	}
+
+	/* ==================== 自定义提示对话框样式 ==================== */
+	.alert-dialog-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(2px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		z-index: 60;
+		animation: fadeIn 0.2s ease-out;
+	}
+
+	.alert-dialog-content {
+		background: white;
+		border-radius: 0.75rem;
+		padding: 1.5rem;
+		max-width: 380px;
+		width: 100%;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+		animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.alert-dialog-header {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.alert-dialog-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 9999px;
+	}
+
+	.alert-dialog-content.error .alert-dialog-icon {
+		background: #fee2e2;
+		color: #ef4444;
+	}
+
+	.alert-dialog-content.success .alert-dialog-icon {
+		background: #d1fae5;
+		color: #10b981;
+	}
+
+	.alert-dialog-content.info .alert-dialog-icon {
+		background: #dbeafe;
+		color: #3b82f6;
+	}
+
+	.alert-dialog-title {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: #1a1a1a;
+		text-align: center;
+	}
+
+	.alert-dialog-message {
+		color: #4a5568;
+		text-align: center;
+		line-height: 1.6;
+		margin-bottom: 1.5rem;
+	}
+
+	.alert-btn-close {
+		width: 100%;
+		padding: 0.75rem 1.5rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.alert-dialog-content.error .alert-btn-close {
+		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+	}
+
+	.alert-dialog-content.success .alert-btn-close {
+		background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	}
+
+	.alert-dialog-content.info .alert-btn-close {
+		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	}
+
+	.alert-btn-close:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2);
+	}
+
+	/* ==================== 动画定义 ==================== */
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	@keyframes slideUp {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@keyframes slideDown {
+		from {
+			opacity: 0;
+			max-height: 0;
+		}
+		to {
+			opacity: 1;
+			max-height: 500px;
+		}
+	}
+
+	@keyframes scaleUp {
+		from {
+			opacity: 0;
+			transform: scale(0.9);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
+	}
+
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	/* ==================== 其他样式 ==================== */
 	.sr-only {
 		position: absolute;
 		width: 1px;
@@ -1678,33 +2717,18 @@
 		border-width: 0;
 	}
 
-	/* 文字截断 */
 	.line-clamp-2 {
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		overflow: hidden;
-	}
-
-	/* 加载动画 */
-	@keyframes spin {
-		from {
-			transform: rotate(0deg);
-		}
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.animate-spin {
-		animation: spin 1s linear infinite;
 	}
 
 	a {
 		text-decoration: none;
 	}
 
-	/* SVG 图标大小 */
 	:global(.w-5) {
 		width: 1.25rem;
 	}

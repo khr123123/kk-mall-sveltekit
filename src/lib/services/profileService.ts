@@ -10,6 +10,9 @@ export interface Order {
     items_count: number;
     items?: any[];
     shipping_address?: string;
+    payment_id:string;
+    amount:any;
+    payment_method:string;
     created: string;
     updated: string;
 }

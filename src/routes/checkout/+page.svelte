@@ -429,6 +429,7 @@
 													class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
 												>
 													<div class="flex items-center gap-3">
+															<img src={`/payment/${method.id}.png`} class="w-16" alt="" />
 														<div>
 															<h3 class="font-medium text-gray-900">{method.name}</h3>
 															<p class="text-sm text-gray-500">{method.description}</p>

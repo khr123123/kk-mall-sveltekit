@@ -3,7 +3,14 @@
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { pb } from '$lib/services/PBConfig';
-	import { lockMd as lock, checkMd as check, paypay, creditCard, spinner, link } from '$lib/icons/svgs';
+	import {
+		lockMd as lock,
+		checkMd as check,
+		paypay,
+		creditCard,
+		spinner,
+		link
+	} from '$lib/icons/svgs';
 
 	// 状态变量
 	let paymentStatus: 'processing' | 'created' | 'success' | 'failed' = 'processing';
@@ -17,7 +24,10 @@
 	let countdownInterval: NodeJS.Timeout | null = null;
 
 	// 格式化价格
-	function formatPrice(price: number): string {
+	function formatPrice(price: number | undefined | null): string {
+		if (price === undefined || price === null || isNaN(price)) {
+			return '¥0';
+		}
 		return `¥${price.toLocaleString('ja-JP')}`;
 	}
 
@@ -49,8 +59,14 @@
 
 	// 检查支付状态
 	async function checkStatus() {
+		// 检查 merchantPaymentId 是否存在
+		if (!merchantPaymentId) {
+			console.error('merchantPaymentId 不存在，无法查询支付状态');
+			return;
+		}
+
 		try {
-			const res = await fetch(`/api/paypay/status/${merchantPaymentId}`);
+			const res = await fetch(`/api/paypay/createStatus/${merchantPaymentId}`);
 			const data = await res.json();
 			console.log('支付状态响应:', data);
 
@@ -64,9 +80,26 @@
 				paymentStatus = 'success';
 				startCountdown();
 				// 更新订单状态和 payment_id
-				await pb.collection('orders').update(orderData.id, {
-					payment_id: paymentId
-				});
+				console.log('订单数据:', orderData);
+
+				// 只有在 orderData 和 recordId 存在时才更新订单
+				if (orderData?.recordId) {
+					try {
+						await pb.collection('orders').update(orderData.recordId, {
+							payment_id: paymentId,
+							amount: {
+								amount: 1,
+								currency: 'JPY'
+							},
+							status: 'processing'
+						});
+						console.log('订单更新成功');
+					} catch (updateError) {
+						console.error('更新订单失败:', updateError);
+					}
+				} else {
+					console.warn('订单 recordId 不存在，跳过订单更新');
+				}
 			} else if (status === 'FAILED' || status === 'CANCELED') {
 				// 支付失败
 				cleanupTimers();
@@ -98,25 +131,17 @@
 		}, 300);
 
 		try {
-			// 如果没有订单数据，使用默认测试数据
+			// 如果没有订单数据，从 localStorage 获取
 			if (!orderData) {
-				orderData = {
-					total: 42200,
-					items: [
-						{
-							name: 'ワイヤレスイヤホン Pro',
-							quantity: 1,
-							price: 12800
-						},
-						{
-							name: 'スマートウォッチ Series 5',
-							quantity: 1,
-							price: 28900
-						}
-					],
-					orderId: `ORDER_${Date.now()}`,
-					payment: { id: 'paypay', name: 'PayPay' }
-				};
+				const savedOrder = localStorage.getItem('currentOrder');
+				if (savedOrder) {
+					try {
+						orderData = JSON.parse(savedOrder);
+					} catch (e) {
+						console.error('解析订单数据失败:', e);
+						orderData = null;
+					}
+				}
 			}
 
 			console.log('创建订单数据:', orderData);
@@ -359,7 +384,7 @@
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済金額</span>
-								<span class="font-bold text-gray-900">{formatPrice(orderData.total)}</span>
+								<span class="font-bold text-gray-900">{formatPrice(orderData?.total)}</span>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済方法</span>
@@ -413,7 +438,7 @@
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済金額</span>
-								<span class="font-bold text-gray-900">{formatPrice(orderData.total)}</span>
+								<span class="font-bold text-gray-900">{formatPrice(orderData?.total)}</span>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済方法</span>
@@ -493,7 +518,7 @@
 							</div>
 							<div class="flex justify-between">
 								<span class="text-gray-600">決済金額</span>
-								<span class="font-bold text-gray-900">{formatPrice(orderData.total)}</span>
+								<span class="font-bold text-gray-900">{formatPrice(orderData?.total)}</span>
 							</div>
 						</div>
 					</div>

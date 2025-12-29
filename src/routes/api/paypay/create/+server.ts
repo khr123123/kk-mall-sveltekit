@@ -21,6 +21,8 @@ export const POST: RequestHandler = async ({ request }) => {
             }
         });
     });
+    console.log("create",response);
+    
     return json({
         success: true,
         data: response
