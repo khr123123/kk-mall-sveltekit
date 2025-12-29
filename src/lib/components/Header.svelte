@@ -2,8 +2,6 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount, onDestroy } from 'svelte';
-
-	// 导入组件
 	import UserDropdown from './headercomponents/UserDropdown.svelte';
 	import CategoryDropdown from './headercomponents/CategoryDropdown.svelte';
 	import QRCodeDropdown from './headercomponents/QRCodeDropdown.svelte';
@@ -331,8 +329,6 @@
 
 				<!-- 购物车下拉组件 -->
 				<CartDropdown
-					{cartItems}
-					itemCount={displayUser.cartItems}
 					on:open={handleCartOpen}
 					on:updateQuantity={handleUpdateQuantity}
 					on:removeItem={handleRemoveItem}
