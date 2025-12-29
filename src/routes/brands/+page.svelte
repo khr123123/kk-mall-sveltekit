@@ -2,20 +2,19 @@
 	import { onMount } from 'svelte';
 	import { pb } from '$lib/services/PBConfig';
 	import { empty, fourSquer, hitobito, hoshi, hot, more } from '$lib/icons/svgs';
+	import type { Brand } from '$lib/types/type';
 
-	let brands: any[] = [];
-	let selectedCategory = 'all';
-	let searchQuery = '';
-	let viewMode = 'grid';
-	let sortBy = 'popular';
-	let loading = true;
+	let brands: Brand[] = [];
+	let searchQuery: string = '';
+	let viewMode: 'grid' | 'list' = 'grid';
+	let sortBy: 'popular' | 'name' | 'rating' = 'popular';
+	let loading: boolean = true;
 
+	// 加载品牌数据
 	async function loadBrands() {
 		try {
 			loading = true;
-			const records = await pb.collection('brands').getFullList({
-				sort: '-created'
-			});
+			const records = (await pb.collection('brands').getFullList({ sort: '-created' })) as Brand[];
 			brands = records;
 		} catch (error) {
 			console.error('ブランドの読み込みに失敗:', error);
@@ -27,9 +26,6 @@
 	// 排序和过滤
 	$: displayedBrands = brands
 		.filter((brand) => {
-			if (selectedCategory !== 'all' && brand.category !== selectedCategory) {
-				return false;
-			}
 			if (searchQuery && !brand.name.toLowerCase().includes(searchQuery.toLowerCase())) {
 				return false;
 			}
@@ -48,17 +44,14 @@
 			}
 		});
 
-	// 跟随品牌
+	//TODO 跟随品牌
 	function followBrand(brand: any, event: Event) {
 		event.stopPropagation();
 		event.preventDefault();
 		console.log('フォロー:', brand.name);
-		alert(`${brand.name}をフォローしました！`);
 	}
 
-	onMount(() => {
-		loadBrands();
-	});
+	onMount(() => loadBrands());
 </script>
 
 <svelte:head>

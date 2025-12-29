@@ -1,7 +1,8 @@
 ﻿<script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import PocketBase from 'pocketbase';
 	import type { RecordModel } from 'pocketbase';
+	import { pb } from '$lib/services/PBConfig';
+	import { boltIcon, imagePlaceholder, starRatingSm, warningIcon, clockIconSm, arrowRight } from '$lib/icons/svgs';
 
 	interface FlashSaleProduct extends RecordModel {
 		flash_sale_id: string;
@@ -33,8 +34,6 @@
 			};
 		};
 	}
-
-	const pb = new PocketBase('http://localhost:8090');
 
 	let flashSaleProducts = $state<FlashSaleProduct[]>([]);
 	let isLoading = $state(true);
@@ -162,19 +161,9 @@
 		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<div class="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
 				<div class="relative">
-					<svg
-						class="h-10 w-10 sm:h-12 sm:w-12"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M13 10V3L4 14h7v7l9-11h-7z"
-						/>
-					</svg>
+					<div class="h-10 w-10 sm:h-12 sm:w-12">
+						{@html boltIcon}
+					</div>
 					<div
 						class="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-yellow-400"
 					></div>
@@ -269,19 +258,7 @@
 											/>
 										{:else}
 											<div class="flex h-full items-center justify-center text-gray-400">
-												<svg
-													class="h-12 w-12"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="1.5"
-														d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-													/>
-												</svg>
+												{@html imagePlaceholder}
 											</div>
 										{/if}
 									</div>
@@ -330,17 +307,9 @@
 											<div class="flex items-center gap-1 text-xs">
 												<div class="flex">
 													{#each Array(5) as _, i}
-														<svg
-															class="h-3 w-3 {i < Math.floor(product.rating)
-																? 'text-yellow-400'
-																: 'text-gray-300'}"
-															fill="currentColor"
-															viewBox="0 0 20 20"
-														>
-															<path
-																d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-															/>
-														</svg>
+														<div class={i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}>
+															{@html starRatingSm}
+														</div>
 													{/each}
 												</div>
 												<span class="text-gray-600">{product.rating.toFixed(1)}</span>
@@ -375,32 +344,17 @@
 			<!-- 促销提醒 -->
 			<div class="mt-6 rounded-lg bg-gradient-to-r from-red-50 to-orange-50 p-4 text-center">
 				<div class="flex items-center justify-center gap-2">
-					<svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-						/>
-					</svg>
+					<div class="h-6 w-6 text-red-600">
+						{@html warningIcon}
+					</div>
 					<p class="text-sm text-gray-700">セール終了間近！在庫が少ない商品もあります</p>
 				</div>
 			</div>
 		{:else}
 			<div class="rounded-lg border border-dashed border-gray-300 bg-white py-12 text-center">
-				<svg
-					class="mx-auto mb-4 h-12 w-12 text-gray-400"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
+				<div class="mx-auto mb-4 h-12 w-12 text-gray-400">
+					{@html clockIconSm}
+				</div>
 				<h3 class="mb-2 text-lg font-bold text-gray-700">現在開催中のタイムセールはありません</h3>
 				<p class="mb-4 text-gray-600">次のタイムセールをお楽しみに！</p>
 				<a
@@ -408,14 +362,7 @@
 					class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
 				>
 					<span>全ての商品を見る</span>
-					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M14 5l7 7m0 0l-7 7m7-7H3"
-						/>
-					</svg>
+					{@html arrowRight}
 				</a>
 			</div>
 		{/if}

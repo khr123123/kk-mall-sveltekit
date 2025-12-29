@@ -3,16 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { pb } from '$lib/services/PBConfig';
-
-	// SVG 图标
-	const icons = {
-		lock: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`,
-		check: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`,
-		paypay: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M16.5,12c0,1.93-1.57,3.5-3.5,3.5S9.5,13.93,9.5,12 c0-1.93,1.57-3.5,3.5-3.5S16.5,10.07,16.5,12z"/></svg>`,
-		creditCard: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>`,
-		spinner: `<svg class="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`,
-		link: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>`
-	};
+	import { lockMd as lock, checkMd as check, paypay, creditCard, spinner, link } from '$lib/icons/svgs';
 
 	// 状态变量
 	let paymentStatus: 'processing' | 'created' | 'success' | 'failed' = 'processing';
@@ -272,11 +263,11 @@
 					<div class="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100">
 						{#if paymentStatus === 'processing'}
 							<div class="text-blue-600">
-								{@html icons.spinner}
+								{@html spinner}
 							</div>
 						{:else if paymentStatus === 'created'}
 							<div class="text-blue-600">
-								{@html icons.link}
+								{@html link}
 							</div>
 						{/if}
 					</div>
@@ -313,7 +304,7 @@
 				{#if paymentStatus === 'processing'}
 					<div class="mb-6 flex justify-center">
 						<div class="text-blue-600">
-							{@html icons.spinner}
+							{@html spinner}
 						</div>
 					</div>
 				{/if}
@@ -333,7 +324,7 @@
 								rel="noopener noreferrer"
 								class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
 							>
-								{@html icons.paypay}
+								{@html paypay}
 								<span class="font-medium">PayPay決済ページを開く</span>
 							</a>
 
@@ -341,7 +332,7 @@
 								on:click={copyPaymentLink}
 								class="mt-2 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
 							>
-								{@html icons.link}
+								{@html link}
 								<span>リンクをコピー</span>
 							</button>
 						</div>
@@ -385,7 +376,7 @@
 				<div class="mb-6 flex justify-center">
 					<div class="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
 						<div class="text-green-600">
-							{@html icons.check}
+							{@html check}
 						</div>
 					</div>
 				</div>
@@ -539,7 +530,7 @@
 		<div class="mt-6 rounded-lg bg-gray-100 p-4">
 			<div class="flex items-start gap-3">
 				<div class="text-gray-600">
-					{@html icons.lock}
+					{@html lock}
 				</div>
 				<div class="text-xs text-gray-600">
 					<span class="font-medium text-gray-900">セキュリティ保護</span>
@@ -551,15 +542,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .animate-spin {
-        animation: spin 1s linear infinite;
-    }
-</style>

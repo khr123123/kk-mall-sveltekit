@@ -1,21 +1,19 @@
-// src/routes/api/paypay/refund/+server.ts
 import PAYPAY from "@paypayopa/paypayopa-sdk-node";
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
+import config from "$lib/config/paypayconfig";
 
+// 退款
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		// 配置 PayPay
 		PAYPAY.Configure({
-			clientId: "a_rAkl3nPJIv_ZSrN",
-			clientSecret: "J7bHSwcSNRDtiBmMOkKZYIjyQqhhzcQlAUe46Vzc9yE=",
-			merchantId: "990268679139298865",
-			productionMode: false
+			clientId: config.paypayconfig.clientId,
+			clientSecret: config.paypayconfig.clientSecret,
+			merchantId: config.paypayconfig.merchantId,
+			productionMode: config.paypayconfig.productionMode
 		});
 
 		const payload = await request.json();
-
-		// 验证必需参数
 		if (!payload.merchantRefundId || !payload.paymentId || !payload.amount) {
 			throw error(400, "必須パラメータが不足しています");
 		}

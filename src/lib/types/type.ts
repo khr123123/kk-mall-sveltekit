@@ -123,3 +123,16 @@ export interface OrderData {
 	total: number;
 	orderDate: string;
 }
+
+export interface Brand {
+	id: string;
+	name: string;
+	description: string;
+	logo: string;
+	followers: number;
+	rating: number;
+	discounts: number;
+	isPopular: boolean;
+	created: string;
+	updated: string;
+}

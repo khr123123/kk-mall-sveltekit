@@ -1,8 +1,8 @@
 ﻿<script lang="ts">
 	import { onMount } from 'svelte';
-	import PocketBase from 'pocketbase';
 	import type { RecordModel } from 'pocketbase';
-
+	import { pb } from '$lib/services/PBConfig';
+	import { settingsIcon, imagePlaceholder, starRatingSm, emptyProducts } from '$lib/icons/svgs';
 	interface Product extends RecordModel {
 		name: string;
 		name_ja?: string;
@@ -15,8 +15,6 @@
 		reviews?: number;
 		created: string;
 	}
-
-	const pb = new PocketBase('http://localhost:8090');
 
 	let products = $state<Product[]>([]);
 	let isLoading = $state(true);
@@ -83,14 +81,9 @@
 	<section class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
 		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<div class="flex items-center gap-3">
-				<svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-					/>
-				</svg>
+				<div class="h-10 w-10">
+					{@html settingsIcon}
+				</div>
 				<div>
 					<h1 class="mb-2 text-3xl font-bold">新着商品</h1>
 					<p class="text-white/90">最新入荷の商品をいち早くチェック</p>
@@ -162,14 +155,7 @@
 								/>
 							{:else}
 								<div class="flex h-full items-center justify-center text-gray-400">
-									<svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="1.5"
-											d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-										/>
-									</svg>
+									{@html imagePlaceholder}
 								</div>
 							{/if}
 
@@ -203,17 +189,9 @@
 								<div class="mb-2 flex items-center gap-1">
 									<div class="flex">
 										{#each Array(5) as _, i}
-											<svg
-												class="h-3 w-3 {i < Math.floor(product.rating)
-													? 'text-yellow-400'
-													: 'text-gray-300'}"
-												fill="currentColor"
-												viewBox="0 0 20 20"
-											>
-												<path
-													d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-												/>
-											</svg>
+											<div class={i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}>
+												{@html starRatingSm}
+											</div>
 										{/each}
 									</div>
 									<span class="text-xs text-gray-600">{product.rating.toFixed(1)}</span>
@@ -236,19 +214,9 @@
 			</div>
 		{:else}
 			<div class="py-16 text-center">
-				<svg
-					class="mx-auto mb-4 h-16 w-16 text-gray-400"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-					/>
-				</svg>
+				<div class="mx-auto mb-4 h-16 w-16 text-gray-400">
+					{@html emptyProducts}
+				</div>
 				<p class="text-gray-600">新着商品が見つかりませんでした</p>
 			</div>
 		{/if}

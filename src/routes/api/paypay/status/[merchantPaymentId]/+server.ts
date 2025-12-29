@@ -1,22 +1,22 @@
 ﻿import PAYPAY from "@paypayopa/paypayopa-sdk-node";
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
+import config from "$lib/config/paypayconfig";
 
+// 获取支付状态
 export const GET: RequestHandler = async ({ params }) => {
     const merchantPaymentId = [params.merchantPaymentId];
 
-    // 验证参数
     if (!merchantPaymentId) {
         throw error(400, "merchantPaymentId is required");
     }
 
     try {
-        // 配置 PayPay
         PAYPAY.Configure({
-            clientId: "a_rAkl3nPJIv_ZSrN",
-            clientSecret: "J7bHSwcSNRDtiBmMOkKZYIjyQqhhzcQlAUe46Vzc9yE=",
-            merchantId: "990268679139298865",
-            productionMode: false
+            clientId: config.paypayconfig.clientId,
+            clientSecret: config.paypayconfig.clientSecret,
+            merchantId: config.paypayconfig.merchantId,
+            productionMode: config.paypayconfig.productionMode
         });
 
         const response = await new Promise<any>((resolve, reject) => {

@@ -100,10 +100,10 @@
 					<div class="flex border-b border-gray-100 pb-4">
 						<span class="w-32 font-light text-gray-500">Email</span>
 						<a
-							href="mailto:info@example.com"
+							href="mailto:KKMallINFO@gmail.com"
 							class="text-gray-700 transition-colors hover:text-gray-900"
 						>
-							info@example.com
+							KKMallINFO@gmail.com
 						</a>
 					</div>
 					<div class="flex border-b border-gray-100 pb-4">

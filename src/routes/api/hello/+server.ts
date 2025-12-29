@@ -1,6 +1,6 @@
 ﻿import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
-
+// Test API
 export const GET: RequestHandler = async () => {
     return json({
         message: 'Hello SvelteKit API'

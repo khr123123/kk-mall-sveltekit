@@ -5,6 +5,14 @@
 	import { categoryStore } from '$lib/stores/categoryStore';
 	import type { RecordModel } from 'pocketbase';
 	import PocketBase from 'pocketbase';
+	import {
+		categoryBreadcrumbArrow,
+		categoryIconPlaceholder,
+		categoryEmptyProducts,
+		categoryWishlistHeart,
+		categoryPaginationPrev,
+		categoryPaginationNext
+	} from '$lib/icons/svgs';
 	let pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL);
 	// 状态管理
 	let mainId = $state('');
@@ -283,19 +291,7 @@
 			<nav class="py-3">
 				<div class="flex items-center text-sm">
 					<a href="/" class="text-gray-600 hover:text-gray-900">ホーム</a>
-					<svg
-						class="mx-2 h-3 w-3 text-gray-400"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 5l7 7-7 7"
-						/>
-					</svg>
+					{@html categoryBreadcrumbArrow}
 					<span class="font-medium text-gray-900">{currentCategory?.name || 'カテゴリー'}</span>
 				</div>
 			</nav>
@@ -315,14 +311,7 @@
 						/>
 					{:else}
 						<div class="flex h-10 w-10 items-center justify-center text-gray-400">
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-								/>
-							</svg>
+							{@html categoryIconPlaceholder}
 						</div>
 					{/if}
 				</div>
@@ -507,19 +496,7 @@
 					</div>
 				{:else if products.length === 0}
 					<div class="flex flex-col items-center justify-center py-20">
-						<svg
-							class="mb-4 h-24 w-24 text-gray-300"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1"
-								d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-							/>
-						</svg>
+						{@html categoryEmptyProducts}
 						<h3 class="mb-2 text-lg font-medium text-gray-900">商品が見つかりませんでした</h3>
 						<p class="text-gray-600">フィルター条件を変更してみてください</p>
 					</div>
@@ -565,19 +542,7 @@
 										class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-white"
 										aria-label="お気に入りに追加"
 									>
-										<svg
-											class="h-5 w-5 text-gray-600"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="1.5"
-												d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-											/>
-										</svg>
+										{@html categoryWishlistHeart}
 									</button>
 
 									<!-- 缺货标记 -->
@@ -675,14 +640,7 @@
 									disabled={currentPage === 1}
 									class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 								>
-									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15 19l-7-7 7-7"
-										/>
-									</svg>
+									{@html categoryPaginationPrev}
 								</button>
 
 								{#each Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -707,14 +665,7 @@
 									disabled={currentPage === totalPages}
 									class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 								>
-									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M9 5l7 7-7 7"
-										/>
-									</svg>
+									{@html categoryPaginationNext}
 								</button>
 							</nav>
 						</div>
@@ -729,6 +680,7 @@
 	.line-clamp-2 {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}

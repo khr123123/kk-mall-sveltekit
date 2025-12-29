@@ -10,6 +10,7 @@
 		type Favorite
 	} from '$lib/services/profileService';
 	import { onMount } from 'svelte';
+	import { spinnerSm, infoIcon, warningIcon } from '$lib/icons/svgs';
 
 	// 响应式监听路由变化
 	let currentTab = $state('profile');
@@ -353,7 +354,11 @@
 			return;
 		}
 
-		if (needsTrackingNumber(refundingOrder) && refundForm.returnGoods && !refundForm.trackingNumber.trim()) {
+		if (
+			needsTrackingNumber(refundingOrder) &&
+			refundForm.returnGoods &&
+			!refundForm.trackingNumber.trim()
+		) {
 			alert('返品追跡番号を入力してください');
 			return;
 		}
@@ -370,7 +375,8 @@
 
 		try {
 			// ✅ 关键修复：只有已支付的订单才调用 PayPay 退款 API
-			const needPayPalRefund = refundingOrder.payment_id &&
+			const needPayPalRefund =
+				refundingOrder.payment_id &&
 				refundingOrder.status !== 'pending' &&
 				refundingOrder.payment_method === 'paypay';
 
@@ -420,9 +426,7 @@
 			const statusResult = await statusResponse.json();
 
 			if (statusResult.success) {
-				alert(needPayPalRefund
-					? '返金申請が正常に送信されました'
-					: '注文をキャンセルしました');
+				alert(needPayPalRefund ? '返金申請が正常に送信されました' : '注文をキャンセルしました');
 				closeRefundModal();
 				await loadOrders();
 			} else {
@@ -435,7 +439,6 @@
 			isRefunding = false;
 		}
 	}
-
 
 	// ============ 订单状态映射 ============
 	function getStatusLabel(status: string): string {
@@ -682,71 +685,65 @@
 								<div class="overflow-x-auto">
 									<table class="w-full">
 										<thead>
-										<tr class="border-b border-[#e0e0e0]">
-											<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>注文番号
-											</th
-											>
-											<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>注文日
-											</th
-											>
-											<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>商品数
-											</th
-											>
-											<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>合計金額
-											</th
-											>
-											<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>ステータス
-											</th
-											>
-											<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-											>操作
-											</th
-											>
-										</tr>
+											<tr class="border-b border-[#e0e0e0]">
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>注文番号
+												</th>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>注文日
+												</th>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>商品数
+												</th>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>合計金額
+												</th>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>ステータス
+												</th>
+												<th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
+													>操作
+												</th>
+											</tr>
 										</thead>
 										<tbody>
-										{#each orders as order}
-											<tr class="border-b border-[#f0f0f0] transition-colors hover:bg-[#fafafa]">
-												<td class="px-4 py-3">
-													<div class="text-sm font-medium text-[#1a1a1a]">
-														{order.order_number}
-													</div>
-												</td>
-												<td class="px-4 py-3 text-sm text-[#718096]">
-													{new Date(order.order_date).toLocaleDateString('ja-JP')}
-												</td>
-												<td class="px-4 py-3 text-sm text-[#718096]">{order.items_count}点</td>
-												<td class="px-4 py-3">
-													<div class="font-semibold text-[#1a1a1a]">
-														¥{order.total_amount.toLocaleString('ja-JP')}
-													</div>
-												</td>
-												<td class="px-4 py-3">
+											{#each orders as order}
+												<tr class="border-b border-[#f0f0f0] transition-colors hover:bg-[#fafafa]">
+													<td class="px-4 py-3">
+														<div class="text-sm font-medium text-[#1a1a1a]">
+															{order.order_number}
+														</div>
+													</td>
+													<td class="px-4 py-3 text-sm text-[#718096]">
+														{new Date(order.order_date).toLocaleDateString('ja-JP')}
+													</td>
+													<td class="px-4 py-3 text-sm text-[#718096]">{order.items_count}点</td>
+													<td class="px-4 py-3">
+														<div class="font-semibold text-[#1a1a1a]">
+															¥{order.total_amount.toLocaleString('ja-JP')}
+														</div>
+													</td>
+													<td class="px-4 py-3">
 														<span class="status-badge {getStatusClass(order.status)}">
 															{getStatusLabel(order.status)}
 														</span>
-												</td>
-												<td class="px-4 py-3">
-													<div class="flex gap-2">
-														<button class="btn-link">詳細</button>
-														{#if canRefund(order)}
-															<button
-																class="btn-link-danger"
-																onclick={() => openRefundModal(order)}
-															>
-																{@html icons.refund}
-																<span>{getRefundTypeText(order)}</span>
-															</button>
-														{/if}
-													</div>
-												</td>
-											</tr>
-										{/each}
+													</td>
+													<td class="px-4 py-3">
+														<div class="flex gap-2">
+															<button class="btn-link">詳細</button>
+															{#if canRefund(order)}
+																<button
+																	class="btn-link-danger"
+																	onclick={() => openRefundModal(order)}
+																>
+																	{@html icons.refund}
+																	<span>{getRefundTypeText(order)}</span>
+																</button>
+															{/if}
+														</div>
+													</td>
+												</tr>
+											{/each}
 										</tbody>
 									</table>
 								</div>
@@ -1118,7 +1115,13 @@
 					</div>
 				</div>
 
-				<form onsubmit={(e) => { e.preventDefault(); submitRefund(); }} class="space-y-4">
+				<form
+					onsubmit={(e) => {
+						e.preventDefault();
+						submitRefund();
+					}}
+					class="space-y-4"
+				>
 					<!-- 退款类型 -->
 					<div>
 						<label class="mb-2 block text-sm font-medium text-[#4a5568]">返金金額</label>
@@ -1156,11 +1159,9 @@
 					<!-- 退款金额（部分退款时显示） -->
 					{#if refundForm.refundType === 'partial'}
 						<div>
-							<label class="mb-1 block text-sm font-medium text-[#4a5568]">
-								返金金額
-							</label>
+							<label class="mb-1 block text-sm font-medium text-[#4a5568]"> 返金金額 </label>
 							<div class="relative">
-								<span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#718096]">¥</span>
+								<span class="absolute top-1/2 left-3 -translate-y-1/2 text-[#718096]">¥</span>
 								<input
 									type="number"
 									bind:value={refundForm.refundAmount}
@@ -1205,11 +1206,9 @@
 					{#if needsTrackingNumber(refundingOrder)}
 						<div class="rounded-lg border-2 border-[#fbbf24] bg-[#fffbeb] p-4">
 							<div class="mb-3 flex items-start gap-2">
-								<svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#f59e0b]" fill="none" stroke="currentColor"
-										 viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-												d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-								</svg>
+								<div class="mt-0.5 flex-shrink-0 text-[#f59e0b]">
+									{@html warningIcon}
+								</div>
 								<div class="flex-1">
 									<h4 class="mb-1 font-semibold text-[#92400e]">返品が必要です</h4>
 									<p class="text-xs text-[#78350f]">
@@ -1267,17 +1266,11 @@
 						>
 							キャンセル
 						</button>
-						<button
-							type="submit"
-							class="btn-primary flex-1"
-							disabled={isRefunding}
-						>
+						<button type="submit" class="btn-primary flex-1" disabled={isRefunding}>
 							{#if isRefunding}
-								<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-									<path class="opacity-75" fill="currentColor"
-												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-								</svg>
+								<div class="mr-2">
+									{@html spinnerSm}
+								</div>
 								処理中...
 							{:else}
 								返金申請を送信
@@ -1289,11 +1282,9 @@
 				<!-- 注意事项 -->
 				<div class="mt-4 rounded-lg bg-[#fffaf0] p-3">
 					<div class="flex items-start gap-2">
-						<svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-[#c05621]" fill="none" stroke="currentColor"
-								 viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-										d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-						</svg>
+						<div class="mt-0.5 flex-shrink-0 text-[#c05621]">
+							{@html infoIcon}
+						</div>
 						<p class="text-xs text-[#744210]">
 							返金申請後、2-5営業日以内に処理されます。返金は元の支払い方法に戻されます。
 							{#if needsTrackingNumber(refundingOrder)}
@@ -1308,433 +1299,433 @@
 {/if}
 
 <style>
-    /* 按钮样式 */
-    .btn-primary {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        padding: 0.625rem 1rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: white;
-        background-color: #2d3748;
-        border: none;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
+	/* 按钮样式 */
+	.btn-primary {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.625rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: white;
+		background-color: #2d3748;
+		border: none;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
 
-    .btn-primary:hover:not(:disabled) {
-        background-color: #1a202c;
-    }
+	.btn-primary:hover:not(:disabled) {
+		background-color: #1a202c;
+	}
 
-    .btn-primary:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+	.btn-primary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 
-    .btn-secondary {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.625rem 1rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #4a5568;
-        background-color: #f7fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
+	.btn-secondary {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.625rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #4a5568;
+		background-color: #f7fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
 
-    .btn-secondary:hover {
-        background-color: #edf2f7;
-        border-color: #cbd5e0;
-    }
+	.btn-secondary:hover {
+		background-color: #edf2f7;
+		border-color: #cbd5e0;
+	}
 
-    .btn-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #4a5568;
-        background-color: transparent;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
+	.btn-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.375rem 0.75rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #4a5568;
+		background-color: transparent;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
 
-    .btn-link:hover {
-        background-color: #f7fafc;
-        border-color: #cbd5e0;
-    }
+	.btn-link:hover {
+		background-color: #f7fafc;
+		border-color: #cbd5e0;
+	}
 
-    .btn-link-danger {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #e53e3e;
-        background-color: transparent;
-        border: 1px solid #fc8181;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
+	.btn-link-danger {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.375rem 0.75rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #e53e3e;
+		background-color: transparent;
+		border: 1px solid #fc8181;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
 
-    .btn-link-danger:hover {
-        background-color: #fff5f5;
-        border-color: #e53e3e;
-    }
+	.btn-link-danger:hover {
+		background-color: #fff5f5;
+		border-color: #e53e3e;
+	}
 
-    .icon-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.5rem;
-        color: #718096;
-        background-color: transparent;
-        border: none;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
+	.icon-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.5rem;
+		color: #718096;
+		background-color: transparent;
+		border: none;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
 
-    .icon-btn:hover:not(:disabled) {
-        background-color: #f7fafc;
-    }
+	.icon-btn:hover:not(:disabled) {
+		background-color: #f7fafc;
+	}
 
-    .icon-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+	.icon-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 
-    /* 输入框样式 */
-    .input-display {
-        padding: 0.625rem 0.75rem;
-        font-size: 0.875rem;
-        color: #1a1a1a;
-        background-color: #f7fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.375rem;
-    }
+	/* 输入框样式 */
+	.input-display {
+		padding: 0.625rem 0.75rem;
+		font-size: 0.875rem;
+		color: #1a1a1a;
+		background-color: #f7fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+	}
 
-    .input-field {
-        width: 100%;
-        padding: 0.625rem 0.75rem;
-        font-size: 0.875rem;
-        color: #1a1a1a;
-        background-color: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.375rem;
-        transition: border-color 0.2s;
-    }
+	.input-field {
+		width: 100%;
+		padding: 0.625rem 0.75rem;
+		font-size: 0.875rem;
+		color: #1a1a1a;
+		background-color: white;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		transition: border-color 0.2s;
+	}
 
-    .input-field:focus {
-        outline: none;
-        border-color: #2d3748;
-    }
+	.input-field:focus {
+		outline: none;
+		border-color: #2d3748;
+	}
 
-    .input-field:disabled {
-        background-color: #f7fafc;
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
+	.input-field:disabled {
+		background-color: #f7fafc;
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
 
-    .checkbox {
-        width: 1rem;
-        height: 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.25rem;
-        cursor: pointer;
-    }
+	.checkbox {
+		width: 1rem;
+		height: 1rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.25rem;
+		cursor: pointer;
+	}
 
-    .checkbox:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-    }
+	.checkbox:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
 
-    /* 统计卡片 */
-    .stat-card {
-        padding: 1rem;
-        background-color: #fafafa;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
-    }
+	/* 统计卡片 */
+	.stat-card {
+		padding: 1rem;
+		background-color: #fafafa;
+		border: 1px solid #e0e0e0;
+		border-radius: 0.5rem;
+	}
 
-    /* 状态徽章 */
-    .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.625rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-        border-radius: 9999px;
-    }
+	/* 状态徽章 */
+	.status-badge {
+		display: inline-block;
+		padding: 0.25rem 0.625rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		border-radius: 9999px;
+	}
 
-    .status-success {
-        color: #22543d;
-        background-color: #c6f6d5;
-    }
+	.status-success {
+		color: #22543d;
+		background-color: #c6f6d5;
+	}
 
-    .status-info {
-        color: #2c5282;
-        background-color: #bee3f8;
-    }
+	.status-info {
+		color: #2c5282;
+		background-color: #bee3f8;
+	}
 
-    .status-default {
-        color: #4a5568;
-        background-color: #edf2f7;
-    }
+	.status-default {
+		color: #4a5568;
+		background-color: #edf2f7;
+	}
 
-    .status-danger {
-        color: #742a2a;
-        background-color: #fed7d7;
-    }
+	.status-danger {
+		color: #742a2a;
+		background-color: #fed7d7;
+	}
 
-    /* 地址卡片 */
-    .address-card {
-        padding: 1.25rem;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
-        transition: border-color 0.2s;
-    }
+	/* 地址卡片 */
+	.address-card {
+		padding: 1.25rem;
+		border: 1px solid #e0e0e0;
+		border-radius: 0.5rem;
+		transition: border-color 0.2s;
+	}
 
-    .address-card:hover {
-        border-color: #cbd5e0;
-    }
+	.address-card:hover {
+		border-color: #cbd5e0;
+	}
 
-    /* 商品卡片 */
-    .product-card {
-        padding: 1rem;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
-        transition: box-shadow 0.2s;
-    }
+	/* 商品卡片 */
+	.product-card {
+		padding: 1rem;
+		border: 1px solid #e0e0e0;
+		border-radius: 0.5rem;
+		transition: box-shadow 0.2s;
+	}
 
-    .product-card:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
+	.product-card:hover {
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	}
 
-    /* 设置项 */
-    .setting-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem 1rem;
-        background-color: #fafafa;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
+	/* 设置项 */
+	.setting-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.75rem 1rem;
+		background-color: #fafafa;
+		border: 1px solid #e0e0e0;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
 
-    .setting-item:hover {
-        background-color: #f0f0f0;
-    }
+	.setting-item:hover {
+		background-color: #f0f0f0;
+	}
 
-    .setting-btn {
-        display: flex;
-        width: 100%;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem 1rem;
-        font-size: 0.875rem;
-        color: #4a5568;
-        text-align: left;
-        background-color: #fafafa;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
+	.setting-btn {
+		display: flex;
+		width: 100%;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.75rem 1rem;
+		font-size: 0.875rem;
+		color: #4a5568;
+		text-align: left;
+		background-color: #fafafa;
+		border: 1px solid #e0e0e0;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
 
-    .setting-btn:hover {
-        background-color: #f0f0f0;
-    }
+	.setting-btn:hover {
+		background-color: #f0f0f0;
+	}
 
-    /* 开关样式 */
-    .toggle {
-        position: relative;
-        width: 44px;
-        height: 24px;
-        -webkit-appearance: none;
-        background: #cbd5e0;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
+	/* 开关样式 */
+	.toggle {
+		position: relative;
+		width: 44px;
+		height: 24px;
+		-webkit-appearance: none;
+		background: #cbd5e0;
+		border-radius: 12px;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
 
-    .toggle:checked {
-        background: #2d3748;
-    }
+	.toggle:checked {
+		background: #2d3748;
+	}
 
-    .toggle:before {
-        content: '';
-        position: absolute;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        top: 3px;
-        left: 3px;
-        background: white;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s;
-    }
+	.toggle:before {
+		content: '';
+		position: absolute;
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		top: 3px;
+		left: 3px;
+		background: white;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+		transition: transform 0.2s;
+	}
 
-    .toggle:checked:before {
-        transform: translateX(20px);
-    }
+	.toggle:checked:before {
+		transform: translateX(20px);
+	}
 
-    /* 模态框样式 */
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-        z-index: 50;
-    }
+	/* 模态框样式 */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		z-index: 50;
+	}
 
-    .modal-content {
-        background-color: white;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        max-width: 500px;
-        width: 100%;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
+	.modal-content {
+		background-color: white;
+		border-radius: 0.5rem;
+		padding: 1.5rem;
+		max-width: 500px;
+		width: 100%;
+		max-height: 90vh;
+		overflow-y: auto;
+	}
 
-    .modal-content.max-w-md {
-        max-width: 28rem;
-    }
+	.modal-content.max-w-md {
+		max-width: 28rem;
+	}
 
-    /* 退款选项卡片 */
-    .refund-type-option {
-        cursor: pointer;
-    }
+	/* 退款选项卡片 */
+	.refund-type-option {
+		cursor: pointer;
+	}
 
-    .refund-type-option input:checked + .option-content {
-        background-color: #2d3748;
-        color: white;
-        border-color: #2d3748;
-    }
+	.refund-type-option input:checked + .option-content {
+		background-color: #2d3748;
+		color: white;
+		border-color: #2d3748;
+	}
 
-    .refund-type-option input:disabled + .option-content {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+	.refund-type-option input:disabled + .option-content {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 
-    .option-content {
-        padding: 0.75rem;
-        text-align: center;
-        border: 2px solid #e2e8f0;
-        border-radius: 0.5rem;
-        transition: all 0.2s;
-    }
+	.option-content {
+		padding: 0.75rem;
+		text-align: center;
+		border: 2px solid #e2e8f0;
+		border-radius: 0.5rem;
+		transition: all 0.2s;
+	}
 
-    .option-content:hover {
-        border-color: #cbd5e0;
-    }
+	.option-content:hover {
+		border-color: #cbd5e0;
+	}
 
-    /* 退款理由选项 */
-    .refund-reason-option {
-        display: block;
-        cursor: pointer;
-    }
+	/* 退款理由选项 */
+	.refund-reason-option {
+		display: block;
+		cursor: pointer;
+	}
 
-    .refund-reason-option input:checked + .option-content {
-        background-color: #edf2f7;
-        border-color: #2d3748;
-    }
+	.refund-reason-option input:checked + .option-content {
+		background-color: #edf2f7;
+		border-color: #2d3748;
+	}
 
-    .refund-reason-option input:disabled + .option-content {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+	.refund-reason-option input:disabled + .option-content {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 
-    .refund-reason-option .option-content {
-        padding: 0.75rem 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.375rem;
-        transition: all 0.2s;
-    }
+	.refund-reason-option .option-content {
+		padding: 0.75rem 1rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		transition: all 0.2s;
+	}
 
-    .refund-reason-option .option-content:hover {
-        background-color: #f7fafc;
-        border-color: #cbd5e0;
-    }
+	.refund-reason-option .option-content:hover {
+		background-color: #f7fafc;
+		border-color: #cbd5e0;
+	}
 
-    /* 隐藏单选按钮 */
-    .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border-width: 0;
-    }
+	/* 隐藏单选按钮 */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border-width: 0;
+	}
 
-    /* 文字截断 */
-    .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        overflow: hidden;
-    }
+	/* 文字截断 */
+	.line-clamp-2 {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+	}
 
-    /* 加载动画 */
-    @keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
-    }
+	/* 加载动画 */
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
 
-    .animate-spin {
-        animation: spin 1s linear infinite;
-    }
+	.animate-spin {
+		animation: spin 1s linear infinite;
+	}
 
-    a {
-        text-decoration: none;
-    }
+	a {
+		text-decoration: none;
+	}
 
-    /* SVG 图标大小 */
-    :global(.w-5) {
-        width: 1.25rem;
-    }
+	/* SVG 图标大小 */
+	:global(.w-5) {
+		width: 1.25rem;
+	}
 
-    :global(.h-5) {
-        height: 1.25rem;
-    }
+	:global(.h-5) {
+		height: 1.25rem;
+	}
 
-    :global(.w-4) {
-        width: 1rem;
-    }
+	:global(.w-4) {
+		width: 1rem;
+	}
 
-    :global(.h-4) {
-        height: 1rem;
-    }
+	:global(.h-4) {
+		height: 1rem;
+	}
 
-    :global(.w-16) {
-        width: 4rem;
-    }
+	:global(.w-16) {
+		width: 4rem;
+	}
 
-    :global(.h-16) {
-        height: 4rem;
-    }
+	:global(.h-16) {
+		height: 4rem;
+	}
 </style>

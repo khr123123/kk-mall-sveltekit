@@ -1,11 +1,9 @@
 ﻿<script lang="ts">
 	import { onMount } from 'svelte';
-	import PocketBase from 'pocketbase';
 	import { categoryStore } from '$lib/stores/categoryStore';
 	import CategoryService from '$lib/services/categoryService';
-
-	// 初始化 PocketBase
-	const pb = new PocketBase('http://127.0.0.1:8090');
+	import { searchIcon, imagePlaceholder, starRating, emptyState } from '$lib/icons/svgs';
+	import {pb} from "$lib/services/PBConfig"
 
 	// 过滤条件接口
 	interface Filters {
@@ -267,19 +265,9 @@
 			<!-- 搜索框 -->
 			<div class="mb-6">
 				<div class="relative">
-					<svg
-						class="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-gray-400"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-						/>
-					</svg>
+					<div class="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-gray-400">
+						{@html searchIcon}
+					</div>
 					<input
 						type="text"
 						placeholder="商品名、ブランド、キーワードで検索..."
@@ -416,20 +404,8 @@
 										class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 									/>
 								{:else}
-									<div class="flex h-full w-full items-center justify-center bg-gray-100">
-										<svg
-											class="h-12 w-12 text-gray-300"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="1.5"
-												d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-											/>
-										</svg>
+									<div class="flex h-full w-full items-center justify-center bg-gray-100 text-gray-300">
+										{@html imagePlaceholder}
 									</div>
 								{/if}
 
@@ -501,17 +477,9 @@
 									<div class="mb-4 flex items-center">
 										<div class="flex">
 											{#each Array(5) as _, i}
-												<svg
-													class="h-4 w-4 {i < Math.floor(product.rating || 0)
-														? 'text-yellow-400'
-														: 'text-gray-300'}"
-													fill="currentColor"
-													viewBox="0 0 20 20"
-												>
-													<path
-														d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-													/>
-												</svg>
+												<div class={i < Math.floor(product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>
+													{@html starRating}
+												</div>
 											{/each}
 										</div>
 										<span class="ml-2 text-sm font-medium text-gray-900"
@@ -691,19 +659,9 @@
 		{:else}
 			<!-- 空状态 -->
 			<div class="flex min-h-[60vh] flex-col items-center justify-center py-12 text-center">
-				<svg
-					class="mb-6 h-24 w-24 text-gray-300"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1"
-						d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
+				<div class="mb-6 text-gray-300">
+					{@html emptyState}
+				</div>
 				<h3 class="mb-2 text-xl font-semibold text-gray-900">商品が見つかりませんでした</h3>
 				<p class="mb-6 max-w-md text-gray-600">
 					{#if filters.search}
@@ -792,6 +750,7 @@
 	.line-clamp-2 {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}

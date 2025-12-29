@@ -2,9 +2,10 @@
 	import { goto } from '$app/navigation';
 	import { cart, cartStats, coupon } from '$lib/stores/cartStore';
 	import { onMount } from 'svelte';
+	import { cartEmpty, cartDelete, cartMinus, cartPlus, cartClose } from '$lib/icons/svgs';
 
-	let couponCode = '';
-	let loading = true;
+	let couponCode: string = '';
+	let loading: boolean = true;
 	let error: string | null = null;
 
 	onMount(() => {
@@ -13,7 +14,6 @@
 			loading = cartLoading;
 			error = cartError;
 		});
-
 		return unsubscribe;
 	});
 
@@ -116,19 +116,7 @@
 		{:else if $cart.items.length === 0}
 			<!-- 空购物车 -->
 			<div class="rounded-lg bg-white px-6 py-16 text-center shadow-sm">
-				<svg
-					class="mx-auto mb-4 h-24 w-24 text-gray-300"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1"
-						d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-					/>
-				</svg>
+				{@html cartEmpty}
 				<h2 class="mb-2 text-xl font-semibold text-gray-900">カートは空です</h2>
 				<p class="mb-6 text-sm text-gray-500">お気に入りの商品を追加してください</p>
 				<button
@@ -215,14 +203,7 @@
 												on:click={() => removeItem(item.id)}
 												aria-label="削除"
 											>
-												<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-													/>
-												</svg>
+												{@html cartDelete}
 											</button>
 										</div>
 
@@ -245,20 +226,9 @@
 													class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 													on:click={() => cart.updateQuantity(item.id, -1)}
 													disabled={item.quantity <= 1 || !item.product.in_stock}
+													aria-label="减少数量"
 												>
-													<svg
-														class="h-4 w-4"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M20 12H4"
-														/>
-													</svg>
+													{@html cartMinus}
 												</button>
 												<span class="min-w-[2rem] text-center font-medium text-gray-900">
 													{item.quantity}
@@ -267,20 +237,9 @@
 													class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 													on:click={() => cart.updateQuantity(item.id, 1)}
 													disabled={!item.product.in_stock}
+													aria-label="增加数量"
 												>
-													<svg
-														class="h-4 w-4"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M12 4v16m8-8H4"
-														/>
-													</svg>
+													{@html cartPlus}
 												</button>
 											</div>
 										</div>
@@ -303,15 +262,12 @@
 										<p class="text-sm font-medium text-green-900">{$coupon.code}</p>
 										<p class="text-xs text-green-700">-{formatPrice($coupon.discount)}</p>
 									</div>
-									<button class="text-green-700 hover:text-green-800" on:click={removeCoupon}>
-										<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M6 18L18 6M6 6l12 12"
-											/>
-										</svg>
+									<button
+										class="text-green-700 hover:text-green-800"
+										on:click={removeCoupon}
+										aria-label="删除优惠券"
+									>
+										{@html cartClose}
 									</button>
 								</div>
 							{:else}

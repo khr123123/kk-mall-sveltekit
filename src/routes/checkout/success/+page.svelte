@@ -2,23 +2,21 @@
 	import { goto } from '$app/navigation';
 	import { cart } from '$lib/stores/cartStore';
 	import { onMount } from 'svelte';
-
-	// SVG 图标
-	const icons = {
-		checkCircle: `<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
-		package: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`,
-		truck: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>`,
-		email: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`,
-		user: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`,
-		phone: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`,
-		mapPin: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-		calendar: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
-		download: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>`,
-		print: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>`,
-		share: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>`,
-		heart: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`,
-		star: `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
-	};
+	import {
+		checkCircle,
+		packageBox as packageIcon,
+		truck,
+		email,
+		user,
+		phone,
+		mapPin,
+		calendar,
+		download,
+		print,
+		share,
+		heartSm as heart,
+		starFill as star
+	} from '$lib/icons/svgs';
 
 	// 状态管理
 	let orderData = $state<any>(null);
@@ -127,7 +125,7 @@
 						? 'animate-bounce'
 						: ''}"
 				>
-					{@html icons.checkCircle}
+					{@html checkCircle}
 				</div>
 			</div>
 			<h1 class="mb-2 text-3xl font-bold text-gray-900">ご注文ありがとうございます！</h1>
@@ -148,14 +146,14 @@
 							class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 							title="領収書をダウンロード"
 						>
-							{@html icons.download}
+							{@html download}
 						</button>
 						<button
 							onclick={printOrder}
 							class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 							title="印刷"
 						>
-							{@html icons.print}
+							{@html print}
 						</button>
 					</div>
 				</div>
@@ -163,7 +161,7 @@
 				<div class="grid gap-4 sm:grid-cols-2">
 					<div class="rounded-lg bg-green-50 p-4">
 						<div class="mb-2 flex items-center gap-2 text-green-900">
-							{@html icons.email}
+							{@html email}
 							<span class="font-medium">注文確認メール</span>
 						</div>
 						<p class="text-sm text-green-700">
@@ -172,7 +170,7 @@
 					</div>
 					<div class="rounded-lg bg-blue-50 p-4">
 						<div class="mb-2 flex items-center gap-2 text-blue-900">
-							{@html icons.calendar}
+							{@html calendar}
 							<span class="font-medium">お届け予定日</span>
 						</div>
 						<p class="text-sm text-blue-700">
@@ -187,21 +185,21 @@
 				<!-- 配送信息 -->
 				<div class="border-b border-gray-200 p-6">
 					<h3 class="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900">
-						{@html icons.truck}
+						{@html truck}
 						<span>配送先情報</span>
 					</h3>
 					{#if orderData.address}
 						<div class="space-y-2 text-sm">
 							<div class="flex items-center gap-2 text-gray-600">
-								{@html icons.user}
+								{@html user}
 								<span class="font-medium text-gray-900">{orderData.address.recipient}</span>
 							</div>
 							<div class="flex items-center gap-2 text-gray-600">
-								{@html icons.phone}
+								{@html phone}
 								<span>{orderData.address.phone}</span>
 							</div>
 							<div class="flex items-start gap-2 text-gray-600">
-								{@html icons.mapPin}
+								{@html mapPin}
 								<span>{orderData.address.address}</span>
 							</div>
 						</div>
@@ -211,7 +209,7 @@
 				<!-- 商品列表 -->
 				<div class="border-b border-gray-200 p-6">
 					<h3 class="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900">
-						{@html icons.package}
+						{@html packageIcon}
 						<span>注文商品</span>
 					</h3>
 					<div class="space-y-4">
@@ -314,7 +312,7 @@
 							<span class="text-sm font-bold text-gray-900">{formatPrice(product.price)}</span>
 							<div class="flex items-center gap-1">
 								<div class="text-yellow-400">
-									{@html icons.star}
+									{@html star}
 								</div>
 								<span class="text-xs text-gray-600">{product.rating}</span>
 							</div>
@@ -390,11 +388,5 @@
 
 	.animate-bounce {
 		animation: bounce 1s infinite;
-	}
-
-	@media print {
-		.no-print {
-			display: none;
-		}
 	}
 </style>
