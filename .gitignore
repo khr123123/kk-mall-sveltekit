@@ -16,3 +16,4 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 auxiliary.db-wal
+pocketbase_0.34.2_windows_amd64/pb_data/auxiliary.db-wal
