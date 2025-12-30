@@ -1,12 +1,12 @@
 ﻿<script lang="ts">
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import PocketBase from 'pocketbase';
 	import { categoryStore } from '$lib/stores/categoryStore';
 	import type { RecordModel } from 'pocketbase';
 	import { goto } from '$app/navigation';
 	import { cart } from '$lib/stores/cartStore';
 	import { starRatingMd, minus, plus, spinner, spinnerWhite, checkIcon } from '$lib/icons/svgs';
+	import { pb } from '$lib/services/PBConfig';
 
 	// 商品数据结构
 	interface Product extends RecordModel {
@@ -20,7 +20,7 @@
 		image?: string;
 		images?: string[];
 		inStock?: boolean;
-		stock?: number; // Optional
+		stock?: number;
 		isHot?: boolean;
 		isNew?: boolean;
 		discount?: number;
@@ -29,36 +29,40 @@
 		specs?: Record<string, string | number>;
 	}
 
-	const pb = new PocketBase('http://localhost:8090');
+	interface ProductSku extends RecordModel {
+		product_id: string;
+		specs: Record<string, string>;
+		price: number;
+		stock: number;
+		status: boolean;
+	}
 
+	// 状态管理
 	let product = $state<Product | null>(null);
+	let skus = $state<ProductSku[]>([]);
+	let specOptions = $state<{ name: string; values: string[] }[]>([]);
+	let selectedSpecs = $state<Record<string, string>>({});
 	let selectedImageIndex = $state(0);
 	let quantity = $state(1);
 	let isLoading = $state(false);
+	let addingToCart = $state(false);
+	let message = $state('');
 
 	// 计算属性
 	let images = $derived(getImages());
 	let categoryName = $derived(getCategoryName());
 	let features = $derived(getFeatures());
 	let specifications = $derived(getSpecifications());
-	let displayPrice = $derived(product?.price || 0);
+	let currentSku = $derived<ProductSku | null>(getCurrentSku());
+	let displayPrice = $derived(getDisplayPrice());
 	let displayOriginalPrice = $derived(product?.originalPrice || 0);
 	let discountPercentage = $derived(product?.discount || 0);
-	let isStockAvailable = $derived(product?.inStock !== false); // Default to true if undefined, or strictly check false
-	let stockCount = $derived(product?.stock || (isStockAvailable ? 10 : 0)); // Fallback stock
+	let isStockAvailable = $derived(getIsStockAvailable());
+	let stockCount = $derived(getStockCount());
 
 	const productId = page.params.id;
 
-	onMount(async () => {
-		try {
-			if (!productId) throw new Error('商品IDが未定義です');
-			const response = (await pb.collection('products').getOne(productId as string)) as Product;
-			product = response;
-		} catch (error) {
-			console.error('Error fetching product:', error);
-		}
-	});
-
+	// 工具函数
 	function getImages() {
 		if (!product) return [];
 		const imgs: string[] = [];
@@ -73,11 +77,9 @@
 	function getCategoryName() {
 		if (!product || !product.category_id) return '商品';
 
-		// Search in top level categories
 		let category = $categoryStore.categories.find((c) => c.id === product?.category_id);
 		if (category) return category.name;
 
-		// Deep search if needed (assuming structure)
 		for (const cat of $categoryStore.categories) {
 			if (cat.expand?.children) {
 				const sub = cat.expand.children.find((c: any) => c.id === product?.category_id);
@@ -93,7 +95,6 @@
 		if (product.isNew) feats.push('新商品');
 		if (product.isHot) feats.push('人気商品');
 		if (product.discount && product.discount > 0) feats.push(`${product.discount}%割引中`);
-		// Add generic features if list is empty
 		if (feats.length === 0) {
 			feats.push('高品質', '送料無料');
 		}
@@ -102,7 +103,7 @@
 
 	function getSpecifications() {
 		if (!product) return [];
-		const specs = [];
+		const specs: { key: string; value: string }[] = [];
 		if (product.brand) specs.push({ key: 'ブランド', value: product.brand });
 		if (product.specs) {
 			Object.entries(product.specs).forEach(([key, value]) => {
@@ -111,21 +112,118 @@
 		}
 		return specs;
 	}
-	let selectedColor = '';
-	let selectedSize = '';
-	let addingToCart = false;
-	let message = '';
+
+	function extractSpecOptions(skus: ProductSku[]) {
+		const map: Record<string, Set<string>> = {};
+
+		skus.forEach((sku) => {
+			Object.entries(sku.specs).forEach(([key, value]) => {
+				if (!map[key]) map[key] = new Set();
+				map[key].add(value);
+			});
+		});
+
+		return Object.entries(map).map(([name, values]) => ({
+			name,
+			values: Array.from(values)
+		}));
+	}
+
+	function getCurrentSku(): ProductSku | null {
+		if (skus.length === 0) return null;
+
+		return (
+			skus.find((sku) =>
+				Object.entries(selectedSpecs).every(([key, value]) => sku.specs[key] === value)
+			) ?? null
+		);
+	}
+
+	function getDisplayPrice() {
+		if (currentSku) {
+			return currentSku.price;
+		}
+		return product?.price || 0;
+	}
+
+	function getIsStockAvailable() {
+		if (currentSku) {
+			return currentSku.status && currentSku.stock > 0;
+		}
+		return product?.inStock !== false;
+	}
+
+	function getStockCount() {
+		if (currentSku) {
+			return currentSku.stock;
+		}
+		return product?.stock || (isStockAvailable ? 10 : 0);
+	}
+
+	async function loadProduct() {
+		try {
+			if (!productId) throw new Error('商品IDが未定義です');
+
+			// 加载商品数据
+			const responseProd = await pb.collection('products').getOne(productId as string);
+			product = responseProd as Product;
+
+			// 加载SKU数据
+			const responseProdSkus = await pb.collection('product_skus').getFullList({
+				filter: `product_id = "${productId}"`
+			});
+			skus = responseProdSkus as ProductSku[];
+
+			// 处理规格选项
+			if (skus.length > 0) {
+				specOptions = extractSpecOptions(skus);
+
+				// 初始化默认规格选择
+				const initialSpecs: Record<string, string> = {};
+				specOptions.forEach((spec) => {
+					if (spec.values.length > 0) {
+						initialSpecs[spec.name] = spec.values[0];
+					}
+				});
+				selectedSpecs = initialSpecs;
+			}
+		} catch (error) {
+			console.error('Error fetching product:', error);
+			// 这里可以添加错误处理，比如显示错误信息
+		}
+	}
+
+	// 事件处理函数
+	function handleSpecSelect(specName: string, value: string) {
+		selectedSpecs = { ...selectedSpecs, [specName]: value };
+	}
+
 	async function addToCart() {
-		if (!product) return;
+		if (!product || !isStockAvailable) return;
+
 		isLoading = true;
+		message = '';
+
+		// 检查登录状态
 		if (!pb.authStore.model) {
 			goto('/login?redirect=/product/' + product.id);
+			isLoading = false;
 			return;
 		}
-		addingToCart = true;
-		message = '';
+
 		try {
-			await cart.addItem(product.id, quantity);
+			// 构建添加到购物车的数据
+			const cartItem = {
+				productId: product.id,
+				skuId: currentSku?.id, // 如果有SKU则记录SKU ID
+				specs: selectedSpecs,
+				quantity,
+				price: displayPrice,
+				name: product.name_ja || product.name,
+				image: images[0] || ''
+			};
+			// TODO
+			await cart.addItem(product.id);
 			message = 'カートに追加しました！';
 
 			// 3秒后清除消息
@@ -136,15 +234,19 @@
 			message = 'エラーが発生しました';
 			console.error('Failed to add to cart:', error);
 		} finally {
-			addingToCart = false;
+			isLoading = false;
 		}
 	}
+
 	function buyNow() {
-		if (!product) return;
+		if (!product || !isStockAvailable) return;
+
 		isLoading = true;
+		// 这里可以跳转到立即购买页面或结账流程
 		setTimeout(() => {
 			isLoading = false;
-			alert(`購入手続きに進みます`);
+			// 临时使用alert，实际项目中应该跳转到结账页面
+			alert(`購入手続きに進みます（商品: ${product?.name_ja || product?.name}）`);
 		}, 500);
 	}
 
@@ -159,6 +261,11 @@
 			quantity--;
 		}
 	}
+
+	// 生命周期
+	onMount(async () => {
+		await loadProduct();
+	});
 </script>
 
 <main class="min-h-screen bg-white pb-16">
@@ -222,6 +329,14 @@
 								{/each}
 							</div>
 						{/if}
+
+						<!-- 商品描述 -->
+						{#if product.description}
+							<div class="border-t border-b border-gray-100 py-6">
+								<h3 class="mb-3 text-sm font-medium text-gray-900">商品説明</h3>
+								<p class="leading-relaxed text-gray-600">{product.description}</p>
+							</div>
+						{/if}
 					</div>
 
 					<!-- 商品信息 -->
@@ -236,6 +351,11 @@
 									残りわずか
 								</span>
 							{/if}
+							{#if product.isNew}
+								<span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600">
+									新商品
+								</span>
+							{/if}
 						</div>
 
 						<!-- 商品名称 -->
@@ -244,17 +364,23 @@
 						</h1>
 
 						<!-- 评分和评价 -->
-						<div class="flex items-center space-x-4">
-							<div class="flex items-center">
-								{#each Array(5) as _, i}
-									<div class={i < Math.floor(product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>
-										{@html starRatingMd}
-									</div>
-								{/each}
-								<span class="ml-2 text-sm text-gray-600">{(product.rating || 0).toFixed(1)}</span>
+						{#if product.rating !== undefined}
+							<div class="flex items-center space-x-4">
+								<div class="flex items-center">
+									{#each Array(5) as _, i}
+										<div
+											class={i < Math.floor(product.rating || 0)
+												? 'text-yellow-400'
+												: 'text-gray-300'}
+										>
+											{@html starRatingMd}
+										</div>
+									{/each}
+									<span class="ml-2 text-sm text-gray-600">{(product.rating || 0).toFixed(1)}</span>
+								</div>
+								<span class="text-sm text-gray-500">({product.reviews || 0}件のレビュー)</span>
 							</div>
-							<span class="text-sm text-gray-500">({product.reviews || 0}件のレビュー)</span>
-						</div>
+						{/if}
 
 						<!-- 价格 -->
 						<div class="space-y-2">
@@ -262,6 +388,7 @@
 								<span class="text-3xl font-light text-gray-900"
 									>¥{displayPrice.toLocaleString()}</span
 								>
+								<div class="text-sm text-gray-500">税込</div>
 								{#if displayOriginalPrice > displayPrice}
 									<span class="text-lg text-gray-400 line-through"
 										>¥{displayOriginalPrice.toLocaleString()}</span
@@ -270,40 +397,94 @@
 										{Math.round((1 - displayPrice / displayOriginalPrice) * 100)}% OFF
 									</span>
 								{/if}
+
+								<!-- 库存状态 -->
+								<div class="flex items-center text-sm">
+									<div
+										class={`mr-2 h-2 w-2 rounded-full ${isStockAvailable ? 'bg-green-500' : 'bg-red-500'}`}
+									></div>
+									{#if isStockAvailable}
+										<span class="text-gray-600"
+											>在庫あり ({stockCount > 0 ? stockCount + '個' : '在庫あり'})</span
+										>
+									{:else}
+										<span class="text-red-600">在庫切れ</span>
+									{/if}
+								</div>
 							</div>
-							<div class="text-sm text-gray-500">税込</div>
 						</div>
+						<!-- SKU 规格选择 -->
+						{#if specOptions.length > 0}
+							<div class="space-y-2">
+								{#each specOptions as spec}
+									<div>
+										<label class="mb-1 block text-sm font-medium text-gray-700">
+											{spec.name}
+										</label>
+										<div class="flex flex-wrap gap-2">
+											{#each spec.values as value}
+												<button
+													on:click={() => handleSpecSelect(spec.name, value)}
+													class={`rounded border px-4 py-2 text-sm transition-all
+														${
+															selectedSpecs[spec.name] === value
+																? 'border-gray-900 bg-gray-900 text-white'
+																: 'border-gray-300 bg-white text-gray-700 hover:border-gray-900'
+														}
+														${
+															!skus.some((sku) =>
+																Object.entries({ ...selectedSpecs, [spec.name]: value }).every(
+																	([key, val]) => sku.specs[key] === val
+																)
+															)
+																? 'cursor-not-allowed opacity-50'
+																: ''
+														}`}
+													disabled={!skus.some((sku) =>
+														Object.entries({ ...selectedSpecs, [spec.name]: value }).every(
+															([key, val]) => sku.specs[key] === val
+														)
+													)}
+												>
+													{value}
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
 
-						<!-- 库存状态 -->
-						<div class="flex items-center text-sm">
-							<div
-								class={`mr-2 h-2 w-2 rounded-full ${isStockAvailable ? 'bg-green-500' : 'bg-red-500'}`}
-							></div>
-							{#if isStockAvailable}
-								<span class="text-gray-600"
-									>在庫あり ({stockCount > 0 ? stockCount + '個' : '在庫あり'})</span
-								>
-							{:else}
-								<span class="text-red-600">在庫切れ</span>
-							{/if}
-						</div>
-
-						<!-- 商品描述 -->
-						<div class="border-t border-b border-gray-100 py-6">
-							<h3 class="mb-3 text-sm font-medium text-gray-900">商品説明</h3>
-							<p class="leading-relaxed text-gray-600">{product.description}</p>
-						</div>
+						<!-- 成功消息 -->
+						{#if message}
+							<div class="rounded-lg bg-green-50 p-4">
+								<div class="flex items-center">
+									<div class="flex-shrink-0">
+										<svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+											<path
+												fill-rule="evenodd"
+												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</div>
+									<div class="ml-3">
+										<p class="text-sm font-medium text-green-800">{message}</p>
+									</div>
+								</div>
+							</div>
+						{/if}
 
 						<!-- 购买选项 -->
 						<div class="space-y-4">
 							<!-- 数量选择 -->
 							<div>
-								<label class="mb-2 block text-sm font-medium text-gray-700">数量</label>
+								<label class="mb-1 block text-sm font-medium text-gray-700">数量</label>
 								<div class="flex items-center">
 									<button
 										on:click={decrementQuantity}
 										class="flex h-10 w-10 items-center justify-center rounded-l border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-										disabled={quantity <= 1}
+										disabled={quantity <= 1 || !isStockAvailable}
 									>
 										{@html minus}
 									</button>
@@ -316,7 +497,7 @@
 									<button
 										on:click={incrementQuantity}
 										class="flex h-10 w-10 items-center justify-center rounded-r border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-										disabled={quantity >= stockCount}
+										disabled={quantity >= stockCount || !isStockAvailable}
 									>
 										{@html plus}
 									</button>
@@ -512,43 +693,6 @@
 								<span>返品送料はお客様負担</span>
 							</li>
 						</ul>
-					</div>
-
-					<!-- 分享 -->
-					<div class="rounded-lg bg-gray-50 p-6">
-						<h3 class="mb-4 text-lg font-normal text-gray-900">シェア</h3>
-						<div class="flex space-x-3">
-							<button
-								aria-label="Facebookでシェア"
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700"
-							>
-								<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-									<path
-										d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-									/>
-								</svg>
-							</button>
-							<button
-								aria-label="Twitterでシェア"
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400 text-white transition-colors hover:bg-blue-500"
-							>
-								<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-									<path
-										d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.213c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"
-									/>
-								</svg>
-							</button>
-							<button
-								aria-label="YouTube"
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-red-700"
-							>
-								<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-									<path
-										d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
-									/>
-								</svg>
-							</button>
-						</div>
 					</div>
 				</div>
 			</div>
