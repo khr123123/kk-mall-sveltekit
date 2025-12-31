@@ -180,7 +180,7 @@
 						</div>
 
 						<!-- 描述 -->
-						<p class="text-neutral-600">{brand.description}</p>
+						<p class="text-neutral-600">{@html brand.description}</p>
 
 						<!-- 统计信息 -->
 						<div class="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3">

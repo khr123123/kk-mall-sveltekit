@@ -104,7 +104,10 @@
 	function getSpecifications() {
 		if (!product) return [];
 		const specs: { key: string; value: string }[] = [];
-		if (product.brand) specs.push({ key: 'ブランド', value: product.brand });
+		if (product.brand) {
+			specs.push({ key: 'ブランド', value: product.brand });
+		}
+
 		if (product.specs) {
 			Object.entries(product.specs).forEach(([key, value]) => {
 				specs.push({ key: key.charAt(0).toUpperCase() + key.slice(1), value: String(value) });
@@ -163,9 +166,10 @@
 	async function loadProduct() {
 		try {
 			if (!productId) throw new Error('商品IDが未定義です');
-
 			// 加载商品数据
-			const responseProd = await pb.collection('products').getOne(productId as string);
+			const responseProd = await pb.collection('products').getOne(productId as string, {
+				expand: 'brand'
+			});
 			product = responseProd as Product;
 
 			// 加载SKU数据
@@ -334,7 +338,7 @@
 						{#if product.description}
 							<div class="border-t border-b border-gray-100 py-6">
 								<h3 class="mb-3 text-sm font-medium text-gray-900">商品説明</h3>
-								<p class="leading-relaxed text-gray-600">{product.description}</p>
+								<p class="leading-relaxed text-gray-600">{@html product.description}</p>
 							</div>
 						{/if}
 					</div>
@@ -576,12 +580,23 @@
 								<tbody class="divide-y divide-gray-200 bg-white">
 									{#each specifications as spec}
 										<tr class="transition-colors hover:bg-gray-50">
-											<td
-												class="w-1/3 px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900"
-												>{spec.key}</td
-											>
-											<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-600">{spec.value}</td
-											>
+											<td class="w-1/3 px-6 py-4 text-sm font-medium text-gray-900">
+												{spec.key}
+											</td>
+
+											{#if spec.key === 'ブランド'}
+												<!-- svelte-ignore event_directive_deprecated -->
+												<td
+													class="cursor-pointer px-6 py-4 text-sm text-blue-600 hover:underline"
+													on:click={() => goto(`/brands/${spec.value}`)}
+												>
+													{product.expand?.brand.name}
+												</td>
+											{:else}
+												<td class="px-6 py-4 text-sm text-gray-600">
+													{spec.value}
+												</td>
+											{/if}
 										</tr>
 									{/each}
 								</tbody>
