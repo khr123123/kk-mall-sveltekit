@@ -2,7 +2,14 @@
 	import { onMount, onDestroy } from 'svelte';
 	import type { RecordModel } from 'pocketbase';
 	import { pb } from '$lib/services/PBConfig';
-	import { boltIcon, imagePlaceholder, starRatingSm, warningIcon, clockIconSm, arrowRight } from '$lib/icons/svgs';
+	import {
+		boltIcon,
+		imagePlaceholder,
+		starRatingSm,
+		warningIcon,
+		clockIconSm,
+		arrowRight
+	} from '$lib/icons/svgs';
 
 	interface FlashSaleProduct extends RecordModel {
 		flash_sale_id: string;
@@ -307,7 +314,11 @@
 											<div class="flex items-center gap-1 text-xs">
 												<div class="flex">
 													{#each Array(5) as _, i}
-														<div class={i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}>
+														<div
+															class={i < Math.floor(product.rating)
+																? 'text-yellow-400'
+																: 'text-gray-300'}
+														>
 															{@html starRatingSm}
 														</div>
 													{/each}

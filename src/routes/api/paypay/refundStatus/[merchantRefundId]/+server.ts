@@ -1,42 +1,42 @@
-import PAYPAY from "@paypayopa/paypayopa-sdk-node";
-import { json, error } from "@sveltejs/kit";
-import type { RequestHandler } from "@sveltejs/kit";
-import config from "$lib/config/paypayconfig";
+import PAYPAY from '@paypayopa/paypayopa-sdk-node';
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
+import config from '$lib/config/paypayconfig';
 
 // 获取退款状态
 export const GET: RequestHandler = async ({ params }) => {
-    const merchantRefundId = [params.merchantRefundId];
+	const merchantRefundId = [params.merchantRefundId];
 
-    if (!merchantRefundId) {
-        throw error(400, "merchantRefundId is required");
-    }
+	if (!merchantRefundId) {
+		throw error(400, 'merchantRefundId is required');
+	}
 
-    try {
-        PAYPAY.Configure({
-            clientId: config.paypayconfig.clientId,
-            clientSecret: config.paypayconfig.clientSecret,
-            merchantId: config.paypayconfig.merchantId,
-            productionMode: config.paypayconfig.productionMode
-        });
+	try {
+		PAYPAY.Configure({
+			clientId: config.paypayconfig.clientId,
+			clientSecret: config.paypayconfig.clientSecret,
+			merchantId: config.paypayconfig.merchantId,
+			productionMode: config.paypayconfig.productionMode
+		});
 
-        const response = await new Promise<any>((resolve, reject) => {
-            PAYPAY.GetRefundDetails(merchantRefundId as any, (res: any) => {
-                console.log(res);
-                if (res?.BODY?.resultInfo?.code === "SUCCESS") {
-                    resolve(res);
-                } else {
-                    reject(res);
-                }
-            });
-        });
-		console.log("refundStatus",response);
+		const response = await new Promise<any>((resolve, reject) => {
+			PAYPAY.GetRefundDetails(merchantRefundId as any, (res: any) => {
+				console.log(res);
+				if (res?.BODY?.resultInfo?.code === 'SUCCESS') {
+					resolve(res);
+				} else {
+					reject(res);
+				}
+			});
+		});
+		console.log('refundStatus', response);
 
-        return json({
-            success: true,
-            data: response
-        });
-    } catch (err) {
-        console.error("PayPay API Error:", err);
-        throw error(500, "Failed to fetch payment details");
-    }
+		return json({
+			success: true,
+			data: response
+		});
+	} catch (err) {
+		console.error('PayPay API Error:', err);
+		throw error(500, 'Failed to fetch payment details');
+	}
 };

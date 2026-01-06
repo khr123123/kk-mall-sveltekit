@@ -53,7 +53,7 @@
 		}, 150);
 	}
 
-	function selectLocale(locale: typeof locales[0]) {
+	function selectLocale(locale: (typeof locales)[0]) {
 		currentLocale = locale;
 		dispatch('change', locale);
 		showDropdown = false;
@@ -72,7 +72,9 @@
 	>
 		<span class="text-2xl">{currentLocale.flag}</span>
 		<div class="flex flex-col overflow-hidden text-left leading-tight">
-			<span class="truncate text-xs text-gray-500">{currentLocale.name} / {currentLocale.language}</span>
+			<span class="truncate text-xs text-gray-500"
+				>{currentLocale.name} / {currentLocale.language}</span
+			>
 			<span class="truncate text-xs font-medium">{currentLocale.currency}</span>
 		</div>
 	</button>
@@ -104,7 +106,12 @@
 						<span class="text-xs text-gray-500">{locale.language} • {locale.currency}</span>
 					</div>
 					{#if currentLocale.code === locale.code}
-						<svg class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<svg
+							class="h-4 w-4 text-green-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"

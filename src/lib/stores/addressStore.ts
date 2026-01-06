@@ -36,7 +36,7 @@ function createAddressStore() {
 				return;
 			}
 
-			update(state => ({ ...state, loading: true, error: null }));
+			update((state) => ({ ...state, loading: true, error: null }));
 
 			try {
 				const records = await pb.collection('addresses').getFullList<Address>({
@@ -44,14 +44,14 @@ function createAddressStore() {
 					sort: '-is_default,-created'
 				});
 
-				update(state => ({
+				update((state) => ({
 					...state,
 					addresses: records,
 					loading: false
 				}));
 			} catch (error) {
 				console.error('地址加载失败:', error);
-				update(state => ({
+				update((state) => ({
 					...state,
 					loading: false,
 					error: '住所の読み込みに失敗しました'
@@ -62,7 +62,12 @@ function createAddressStore() {
 		/**
 		 * 添加地址
 		 */
-		async add(address: Omit<Address, 'id' | 'collectionId' | 'collectionName' | 'created' | 'updated' | 'user'>) {
+		async add(
+			address: Omit<
+				Address,
+				'id' | 'collectionId' | 'collectionName' | 'created' | 'updated' | 'user'
+			>
+		) {
 			const user = get(currentUser);
 			if (!user) {
 				throw new Error('ログインが必要です');
@@ -74,8 +79,8 @@ function createAddressStore() {
 					const currentAddresses = get({ subscribe }).addresses;
 					await Promise.all(
 						currentAddresses
-							.filter(a => a.is_default)
-							.map(a => pb.collection('addresses').update(a.id, { is_default: false }))
+							.filter((a) => a.is_default)
+							.map((a) => pb.collection('addresses').update(a.id, { is_default: false }))
 					);
 				}
 
@@ -101,8 +106,8 @@ function createAddressStore() {
 					const currentAddresses = get({ subscribe }).addresses;
 					await Promise.all(
 						currentAddresses
-							.filter(a => a.id !== id && a.is_default)
-							.map(a => pb.collection('addresses').update(a.id, { is_default: false }))
+							.filter((a) => a.id !== id && a.is_default)
+							.map((a) => pb.collection('addresses').update(a.id, { is_default: false }))
 					);
 				}
 
@@ -120,10 +125,10 @@ function createAddressStore() {
 		async delete(id: string) {
 			try {
 				await pb.collection('addresses').delete(id);
-				
-				update(state => ({
+
+				update((state) => ({
 					...state,
-					addresses: state.addresses.filter(a => a.id !== id)
+					addresses: state.addresses.filter((a) => a.id !== id)
 				}));
 			} catch (error) {
 				console.error('地址删除失败:', error);

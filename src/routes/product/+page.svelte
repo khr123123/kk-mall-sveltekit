@@ -3,7 +3,7 @@
 	import { categoryStore } from '$lib/stores/categoryStore';
 	import CategoryService from '$lib/services/categoryService';
 	import { searchIcon, imagePlaceholder, starRating, emptyState } from '$lib/icons/svgs';
-	import {pb} from "$lib/services/PBConfig"
+	import { pb } from '$lib/services/PBConfig';
 
 	// 过滤条件接口
 	interface Filters {
@@ -404,7 +404,9 @@
 										class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 									/>
 								{:else}
-									<div class="flex h-full w-full items-center justify-center bg-gray-100 text-gray-300">
+									<div
+										class="flex h-full w-full items-center justify-center bg-gray-100 text-gray-300"
+									>
 										{@html imagePlaceholder}
 									</div>
 								{/if}
@@ -477,7 +479,11 @@
 									<div class="mb-4 flex items-center">
 										<div class="flex">
 											{#each Array(5) as _, i}
-												<div class={i < Math.floor(product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>
+												<div
+													class={i < Math.floor(product.rating || 0)
+														? 'text-yellow-400'
+														: 'text-gray-300'}
+												>
 													{@html starRating}
 												</div>
 											{/each}
@@ -750,7 +756,7 @@
 	.line-clamp-2 {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
-		
+
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}

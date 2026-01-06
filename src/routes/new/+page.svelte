@@ -189,7 +189,9 @@
 								<div class="mb-2 flex items-center gap-1">
 									<div class="flex">
 										{#each Array(5) as _, i}
-											<div class={i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}>
+											<div
+												class={i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}
+											>
 												{@html starRatingSm}
 											</div>
 										{/each}

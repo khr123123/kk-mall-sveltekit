@@ -1,4 +1,4 @@
-﻿import { pb } from "./PBConfig";
+﻿import { pb } from './PBConfig';
 export interface Product {
 	id: string;
 	name: string;
@@ -68,7 +68,7 @@ export class ProductService {
 			}
 
 			if (filter.brands && filter.brands.length > 0) {
-				const brandFilter = filter.brands.map(b => `brand = "${b}"`).join(' || ');
+				const brandFilter = filter.brands.map((b) => `brand = "${b}"`).join(' || ');
 				filterParts.push(`(${brandFilter})`);
 			}
 
