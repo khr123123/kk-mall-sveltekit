@@ -1,248 +1,292 @@
-﻿import { writable, derived, get } from 'svelte/store';
-import { cartAPI, couponAPI } from '$lib/services/cartService';
-import { pb } from '$lib/services/PBConfig';
-import { currentUser } from '$lib/stores/userStore';
-
-/* =======================
-   类型定义
-======================= */
+﻿// cartStore.ts
+import {derived, get, writable} from 'svelte/store';
+import {cartAPI} from '$lib/services/cartService';
+import {pb} from '$lib/services/PBConfig';
+import {currentUser} from '$lib/stores/userStore';
 
 export interface CartItem {
-	id: string;
-	quantity: number;
-	selected: boolean;
-	product: {
-		id: string;
-		name: string;
-		price: number;
-		original_price?: number;
-		image: string;
-		tags?: string;
-		in_stock: boolean;
-	};
+    id: string;
+    quantity: number;
+    selected: boolean;
+    sku?: string; // SKU ID
+    specs?: Record<string, string>; // 规格信息
+    product: {
+        id: string;
+        name: string;
+        price: number;
+        original_price?: number;
+        image: string;
+        tags?: string;
+        in_stock: boolean;
+    };
+    skuInfo?: {
+        id: string;
+        price: number;
+        stock: number;
+        status: boolean;
+        specs: Record<string, string>;
+    };
 }
 
 interface CartState {
-	items: CartItem[];
-	loading: boolean;
-	error: string | null;
+    items: CartItem[];
+    loading: boolean;
+    error: string | null;
 }
 
-/* =======================
-   Cart Store
-======================= */
+const createCartStore = () => {
+    const {subscribe, set, update} = writable<CartState>({
+        items: [],
+        loading: false,
+        error: null
+    });
 
-function createCartStore() {
-	const { subscribe, set, update } = writable<CartState>({
-		items: [],
-		loading: false,
-		error: null
-	});
+    /* ---------- 加载购物车 ---------- */
+    const loadCart = async (): Promise<void> => {
+        const user = pb.authStore.record;
+        if (!user) {
+            set({items: [], loading: false, error: null});
+            return;
+        }
 
-	/* ---------- 加载购物车 ---------- */
-	async function loadCart() {
-		const user = pb.authStore.model;
-		if (!user) {
-			set({ items: [], loading: false, error: null });
-			return;
-		}
+        update(s => ({...s, loading: true, error: null}));
 
-		update(s => ({ ...s, loading: true, error: null }));
+        try {
+            const records = await cartAPI.getCartItems(user.id);
 
-		try {
-			const records = await cartAPI.getCartItems(user.id);
+            const items: CartItem[] = records
+                .filter(r => r.expand?.product)
+                .map(r => {
+                    const skuInfo = r.expand?.sku ? {
+                        id: r.expand.sku.id,
+                        price: r.expand.sku.price,
+                        stock: r.expand.sku.stock,
+                        status: r.expand.sku.status,
+                        specs: r.expand.sku.specs
+                    } : undefined;
 
-			const items: CartItem[] = records
-				.filter(r => r.expand?.product)
-				.map(r => ({
-					id: r.id,
-					quantity: r.quantity,
-					selected: r.selected,
-					product: {
-						id: r.expand!.product.id,
-						name: r.expand!.product.name,
-						price: r.expand!.product.price,
-						original_price: r.expand!.product.originalPrice,
-						image: r.expand!.product.image,
-						tags: r.expand!.product.tags,
-						in_stock: r.expand!.product.inStock
-					}
-				}));
+                    // 如果有 SKU，使用 SKU 的价格和库存状态
+                    const price = skuInfo?.price ?? r.expand!.product.price;
+                    const inStock = skuInfo ? (skuInfo.status && skuInfo.stock > 0) : r.expand!.product.inStock;
 
-			set({ items, loading: false, error: null });
-		} catch (e) {
-			console.error('Cart load failed:', e);
-			set({ items: [], loading: false, error: 'カートの読み込みに失敗しました' });
-		}
-	}
+                    return {
+                        id: r.id,
+                        quantity: r.quantity,
+                        selected: r.selected,
+                        sku: r.sku,
+                        specs: r.specs,
+                        product: {
+                            id: r.expand!.product.id,
+                            name: r.expand!.product.name,
+                            price: price,
+                            original_price: r.expand!.product.originalPrice,
+                            image: r.expand!.product.image,
+                            tags: r.expand!.product.tags,
+                            in_stock: inStock
+                        },
+                        skuInfo
+                    };
+                });
 
-	/* ---------- 添加商品 ---------- */
-	async function addItem(productId: string, quantity = 1) {
-		const user = pb.authStore.model;
-		if (!user) throw new Error('ログインが必要です');
+            set({items, loading: false, error: null});
+        } catch (e) {
+            console.error('Cart load failed:', e);
+            set({items: [], loading: false, error: 'カートの読み込みに失敗しました'});
+        }
+    };
 
-		await cartAPI.addToCart(user.id, productId, quantity);
-		await loadCart();
-	}
+    /* ---------- 添加商品到购物车 ---------- */
+    const addItem = async (
+        productId: string,
+        quantity: number = 1,
+        skuId?: string,
+        specs?: Record<string, string>
+    ): Promise<void> => {
+        const user = pb.authStore.record;
+        if (!user) throw new Error('ログインが必要です');
 
-	/* ---------- 更新数量（本地优先） ---------- */
-	async function updateQuantity(itemId: string, delta: number) {
-		update(state => {
-			const item = state.items.find(i => i.id === itemId);
-			if (!item) return state;
+        await cartAPI.addToCart(user.id, productId, quantity, skuId, specs);
+        await loadCart();
+    };
 
-			const newQuantity = item.quantity + delta;
-			if (newQuantity <= 0) {
-				removeItem(itemId);
-				return state;
-			}
+    /* ---------- 更新数量 ---------- */
+    const updateQuantity = async (itemId: string, delta: number): Promise<void> => {
+        update(state => {
+            const item = state.items.find(i => i.id === itemId);
+            if (!item) return state;
 
-			cartAPI.updateCartItem(itemId, newQuantity).catch(console.error);
+            const newQuantity = item.quantity + delta;
 
-			return {
-				...state,
-				items: state.items.map(i =>
-					i.id === itemId ? { ...i, quantity: newQuantity } : i
-				)
-			};
-		});
-	}
+            // 检查库存限制
+            const maxStock = item.skuInfo?.stock ?? 999;
+            if (newQuantity > maxStock) {
+                return state;
+            }
 
-	/* ---------- 删除商品 ---------- */
-	async function removeItem(itemId: string) {
-		await cartAPI.removeCartItem(itemId);
-		update(s => ({
-			...s,
-			items: s.items.filter(i => i.id !== itemId)
-		}));
-	}
+            if (newQuantity <= 0) {
+                removeItem(itemId);
+                return state;
+            }
 
-	/* ---------- 切换选中 ---------- */
-	async function toggleSelect(itemId: string) {
-		update(state => {
-			const item = state.items.find(i => i.id === itemId);
-			if (!item) return state;
+            cartAPI.updateCartItem(itemId, newQuantity).catch(console.error);
 
-			const selected = !item.selected;
-			cartAPI.toggleSelectItem(itemId, selected).catch(console.error);
+            return {
+                ...state,
+                items: state.items.map(i =>
+                    i.id === itemId ? {...i, quantity: newQuantity} : i
+                )
+            };
+        });
+    };
 
-			return {
-				...state,
-				items: state.items.map(i =>
-					i.id === itemId ? { ...i, selected } : i
-				)
-			};
-		});
-	}
+    /* ---------- 设置具体数量 ---------- */
+    const setQuantity = async (itemId: string, quantity: number): Promise<void> => {
+        if (quantity <= 0) {
+            await removeItem(itemId);
+            return;
+        }
 
-	/* ---------- 全选 / 取消全选 ---------- */
-	async function toggleSelectAll(selected: boolean) {
-		const items = get({ subscribe }).items;
+        update(state => {
+            const item = state.items.find(i => i.id === itemId);
+            if (!item) return state;
 
-		await Promise.all(
-			items.map(item =>
-				cartAPI.toggleSelectItem(item.id, selected)
-			)
-		);
+            // 检查库存限制
+            const maxStock = item.skuInfo?.stock ?? 999;
+            const finalQuantity = Math.min(quantity, maxStock);
 
-		update(s => ({
-			...s,
-			items: s.items.map(i => ({ ...i, selected }))
-		}));
-	}
+            cartAPI.updateCartItem(itemId, finalQuantity).catch(console.error);
 
-	/* ---------- 清空购物车 ---------- */
-	async function clearCart() {
-		const user = pb.authStore.model;
-		if (!user) return;
+            return {
+                ...state,
+                items: state.items.map(i =>
+                    i.id === itemId ? {...i, quantity: finalQuantity} : i
+                )
+            };
+        });
+    };
 
-		await cartAPI.clearCart(user.id);
-		set({ items: [], loading: false, error: null });
-	}
+    /* ---------- 删除商品 ---------- */
+    const removeItem = async (itemId: string): Promise<void> => {
+        await cartAPI.removeCartItem(itemId);
+        update(s => ({
+            ...s,
+            items: s.items.filter(i => i.id !== itemId)
+        }));
+    };
 
-	/* ---------- 监听登录状态 ---------- */
-	currentUser.subscribe((user: any) => {
-		if (user) loadCart();
-		else set({ items: [], loading: false, error: null });
-	});
+    /* ---------- 批量删除选中的商品 ---------- */
+    const removeSelectedItems = async (): Promise<void> => {
+        const state = get({subscribe});
+        const selectedIds = state.items.filter(i => i.selected).map(i => i.id);
 
-	return {
-		subscribe,
-		loadCart,
-		refresh: loadCart,
-		addItem,
-		updateQuantity,
-		removeItem,
-		toggleSelect,
-		toggleSelectAll,
-		clearCart
-	};
-}
+        await Promise.all(selectedIds.map(id => cartAPI.removeCartItem(id)));
+        await loadCart();
+    };
+
+    /* ---------- 切换单个商品选中状态 ---------- */
+    const toggleSelect = async (itemId: string): Promise<void> => {
+        update(state => {
+            const item = state.items.find(i => i.id === itemId);
+            if (!item) return state;
+
+            const selected = !item.selected;
+            cartAPI.toggleSelectItem(itemId, selected).catch(console.error);
+
+            return {
+                ...state,
+                items: state.items.map(i =>
+                    i.id === itemId ? {...i, selected} : i
+                )
+            };
+        });
+    };
+
+    /* ---------- 全选/取消全选 ---------- */
+    const toggleSelectAll = async (selected: boolean): Promise<void> => {
+        const items = get({subscribe}).items;
+
+        await Promise.all(
+            items.map(item =>
+                cartAPI.toggleSelectItem(item.id, selected)
+            )
+        );
+
+        update(s => ({
+            ...s,
+            items: s.items.map(i => ({...i, selected}))
+        }));
+    };
+
+    /* ---------- 清空购物车 ---------- */
+    const clearCart = async (): Promise<void> => {
+        const user = pb.authStore.record;
+        if (!user) return;
+
+        await cartAPI.clearCart(user.id);
+        set({items: [], loading: false, error: null});
+    };
+
+    // 监听用户登录状态
+    currentUser.subscribe((user: any) => {
+        if (user) loadCart();
+        else set({items: [], loading: false, error: null});
+    });
+
+    return {
+        subscribe,
+        loadCart,
+        refresh: loadCart,
+        addItem,
+        updateQuantity,
+        setQuantity,
+        removeItem,
+        removeSelectedItems,
+        toggleSelect,
+        toggleSelectAll,
+        clearCart
+    };
+};
 
 export const cart = createCartStore();
 
-/* =======================
-   Cart 统计（derived）
-======================= */
-
+/* ---------- 购物车统计信息 ---------- */
 export const cartStats = derived(cart, $cart => {
-	const selectedItems = $cart.items.filter(
-		i => i.selected && i.product.in_stock
-	);
+    const selectedItems = $cart.items.filter(
+        i => i.selected && i.product.in_stock
+    );
 
-	return {
-		totalItems: $cart.items.reduce((s, i) => s + i.quantity, 0),
-		selectedCount: selectedItems.reduce((s, i) => s + i.quantity, 0),
-		subtotal: selectedItems.reduce(
-			(s, i) => s + i.product.price * i.quantity,
-			0
-		),
-		allSelected:
-			$cart.items.length > 0 &&
-			selectedItems.length === $cart.items.length
-	};
+    const subtotal = selectedItems.reduce(
+        (sum, item) => sum + item.product.price * item.quantity,
+        0
+    );
+
+    const originalTotal = selectedItems.reduce(
+        (sum, item) => sum + (item.product.original_price ?? item.product.price) * item.quantity,
+        0
+    );
+
+    const discount = originalTotal - subtotal;
+
+    return {
+        // 购物车总商品数（所有商品）
+        totalItems: $cart.items.reduce((sum, i) => sum + i.quantity, 0),
+        // 选中的商品数量
+        selectedCount: selectedItems.reduce((sum, i) => sum + i.quantity, 0),
+        // 选中商品的小计
+        subtotal,
+        // 原价总计
+        originalTotal,
+        // 折扣金额
+        discount,
+        // 是否全选
+        allSelected:
+            $cart.items.length > 0 &&
+            selectedItems.length === $cart.items.length,
+        // 是否有不可用商品
+        hasUnavailable: $cart.items.some(i => !i.product.in_stock),
+        // 是否加载中
+        loading: $cart.loading,
+        // 错误信息
+        error: $cart.error
+    };
 });
-
-/* =======================
-   Coupon Store
-======================= */
-
-function createCouponStore() {
-	const { subscribe, set } = writable({
-		code: '',
-		discount: 0,
-		type: '',
-		applied: false
-	});
-
-	return {
-		subscribe,
-		async applyCoupon(code: string, subtotal: number) {
-			const user = pb.authStore.model;
-			if (!user) throw new Error('ログインが必要です');
-
-			const coupon = await couponAPI.validateCoupon(code, user.id, subtotal);
-
-			let discount = 0;
-			if (coupon.discount_type === 'percentage') {
-				discount = Math.floor(subtotal * (coupon.discount_value / 100));
-			} else if (coupon.discount_type === 'fixed') {
-				discount = coupon.discount_value;
-			}
-
-			set({
-				code: coupon.code,
-				discount,
-				type: coupon.discount_type,
-				applied: true
-			});
-
-			return discount;
-		},
-		removeCoupon() {
-			set({ code: '', discount: 0, type: '', applied: false });
-		}
-	};
-}
-
-export const coupon = createCouponStore();

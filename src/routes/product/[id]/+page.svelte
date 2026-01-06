@@ -191,30 +191,32 @@
     };
 
     // 添加到购物车
+    // 在你的商品详情页中
+    // 添加到购物车
     const addToCart = async (): Promise<void> => {
         if (!product || !isStockAvailable) return;
+
         isLoading = true;
         message = '';
+
         // 检查登录状态
         if (!pb.authStore.record) {
             await goto('/login?redirect=/product/' + product.id);
             isLoading = false;
             return;
         }
+
         try {
             // 构建添加到购物车的数据
-            const cartItem: CartItem = {
-                productId: product.id,
-                skuId: currentSku?.id,
-                specs: selectedSpecs,
+            await cart.addItem(
+                product.id,
                 quantity,
-                price: displayPrice,
-                name: product.name,
-                image: images[0] || ''
-            };
-            // TODO: 实现完整的购物车逻辑
-            await cart.addItem(product.id);
-            message = 'カートに追加しました!';
+                currentSku?.id, // SKU ID
+                selectedSpecs   // 规格信息
+            );
+
+            message = 'カートに追加しました！';
+
             // 3秒后清除消息
             setTimeout(() => {
                 message = '';
@@ -227,10 +229,10 @@
         }
     };
 
+
     // 立即购买
     const buyNow = (): void => {
         if (!product || !isStockAvailable) return;
-
         isLoading = true;
         // 这里可以跳转到立即购买页面或结账流程
         setTimeout(() => {
@@ -298,9 +300,7 @@
                 <nav class="mb-6">
                     <ol class="flex items-center space-x-2 text-sm">
                         <li>
-                            <a href="/product" class="text-gray-500 transition-colors hover:text-gray-700"
-                            >商品一覧</a
-                            >
+                            <a href="/product" class="text-gray-500 transition-colors hover:text-gray-700">商品一覧</a>
                         </li>
                         <li class="text-gray-400">/</li>
                         <li>
@@ -341,11 +341,7 @@
                                             onclick={() => (selectedImageIndex = index)}
                                             class={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${selectedImageIndex === index ? 'border-gray-900' : 'border-transparent hover:border-gray-300'}`}
                                     >
-                                        <img
-                                                src={image}
-                                                alt="商品画像 {index + 1}"
-                                                class="h-full w-full object-cover"
-                                        />
+                                        <img src={image} alt="商品画像 {index + 1}" class="h-full w-full object-cover"/>
                                     </button>
                                 {/each}
                             </div>

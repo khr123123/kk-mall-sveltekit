@@ -1,114 +1,106 @@
-﻿import { writable } from 'svelte/store';
-import { pb } from "./PBConfig";
-// 用户认证状态 store
-export const currentUser = writable(pb.authStore.model);
+﻿// cartService.ts
+import {pb} from '$lib/services/PBConfig';
+import type {RecordModel} from 'pocketbase';
 
-// 监听认证状态变化
-pb.authStore.onChange(() => {
-    currentUser.set(pb.authStore.model);
-});
+export interface CartRecord extends RecordModel {
+    user: string;
+    product: string;
+    sku?: string;
+    quantity: number;
+    selected: boolean;
+    specs?: Record<string, string>;
+    expand?: {
+        product?: any;
+        sku?: any;
+    };
+}
 
-// API 工具函数
 export const cartAPI = {
-    // 获取用户购物车
-    async getCartItems(userId: string) {
-        return await pb.collection('cart_items').getFullList({
+    /* ---------- 获取用户购物车 ---------- */
+    getCartItems: async (userId: string): Promise<CartRecord[]> => {
+        return await pb.collection('cart_items').getFullList<CartRecord>({
             filter: `user = "${userId}"`,
-            expand: 'product'
+            expand: 'product,sku',
+            sort: '-created'
         });
     },
 
-    // 添加商品到购物车
-    async addToCart(userId: string, productId: string, quantity: number = 1) {
-        // 检查是否已存在
-        const existing = await pb.collection('cart_items').getFirstListItem(
-            `user = "${userId}" && product = "${productId}"`
-        ).catch(() => null);
+    /* ---------- 添加到购物车 ---------- */
+    addToCart: async (
+        userId: string,
+        productId: string,
+        quantity: number = 1,
+        skuId?: string,
+        specs?: Record<string, string>
+    ): Promise<CartRecord> => {
+        // 检查是否已存在相同商品（包括相同的 SKU）
+        const filter = skuId
+            ? `user = "${userId}" && product = "${productId}" && sku = "${skuId}"`
+            : `user = "${userId}" && product = "${productId}" && sku = ""`;
 
-        if (existing) {
-            // 更新数量
-            return await pb.collection('cart_items').update(existing.id, {
-                quantity: existing.quantity + quantity
+        const existing = await pb.collection('cart_items').getFullList<CartRecord>({
+            filter
+        });
+
+        if (existing.length > 0) {
+            // 已存在，更新数量
+            const item = existing[0];
+            return await pb.collection('cart_items').update<CartRecord>(item.id, {
+                quantity: item.quantity + quantity
             });
         } else {
-            // 新增
-            return await pb.collection('cart_items').create({
+            // 不存在，创建新记录
+            return await pb.collection('cart_items').create<CartRecord>({
                 user: userId,
                 product: productId,
+                sku: skuId || '',
+                specs: specs || {},
                 quantity,
                 selected: true
             });
         }
     },
 
-    // 更新购物车项数量
-    async updateCartItem(itemId: string, quantity: number) {
-        return await pb.collection('cart_items').update(itemId, {
-            quantity: Math.max(1, quantity)
+    /* ---------- 更新购物车商品数量 ---------- */
+    updateCartItem: async (
+        itemId: string,
+        quantity: number
+    ): Promise<CartRecord> => {
+        return await pb.collection('cart_items').update<CartRecord>(itemId, {
+            quantity
         });
     },
 
-    // 切换选择状态
-    async toggleSelectItem(itemId: string, selected: boolean) {
-        return await pb.collection('cart_items').update(itemId, { selected });
-    },
-
-    // 删除购物车项
-    async removeCartItem(itemId: string) {
+    /* ---------- 删除购物车商品 ---------- */
+    removeCartItem: async (itemId: string): Promise<boolean> => {
         return await pb.collection('cart_items').delete(itemId);
     },
 
-    // 清空购物车
-    async clearCart(userId: string) {
-        const items = await pb.collection('cart_items').getFullList({
+    /* ---------- 切换选中状态 ---------- */
+    toggleSelectItem: async (
+        itemId: string,
+        selected: boolean
+    ): Promise<CartRecord> => {
+        return await pb.collection('cart_items').update<CartRecord>(itemId, {
+            selected
+        });
+    },
+
+    /* ---------- 清空用户购物车 ---------- */
+    clearCart: async (userId: string): Promise<void> => {
+        const items = await pb.collection('cart_items').getFullList<CartRecord>({
             filter: `user = "${userId}"`
         });
 
-        for (const item of items) {
-            await pb.collection('cart_items').delete(item.id);
-        }
-    }
-};
-
-export const couponAPI = {
-    // 验证优惠券
-    async validateCoupon(code: string, userId: string, subtotal: number) {
-        const now = new Date().toISOString();
-
-        const coupon = await pb.collection('coupons').getFirstListItem(
-            `code = "${code}" && is_active = true && valid_from <= "${now}" && valid_until >= "${now}"`
-        ).catch(() => null);
-
-        if (!coupon) {
-            throw new Error('無効なクーポンコードです');
-        }
-
-        // 检查使用限制
-        if (coupon.usage_limit && coupon.used_count >= coupon.usage_limit) {
-            throw new Error('このクーポンの使用上限に達しました');
-        }
-
-        // 检查最低购买金额
-        if (coupon.min_purchase && subtotal < coupon.min_purchase) {
-            throw new Error(`このクーポンは¥${coupon.min_purchase.toLocaleString()}以上の購入でご利用いただけます`);
-        }
-
-        return coupon;
+        await Promise.all(
+            items.map(item => pb.collection('cart_items').delete(item.id))
+        );
     },
 
-    // 使用优惠券
-    async useCoupon(couponId: string, userId: string, orderId: string) {
-        await pb.collection('user_coupons').create({
-            user: userId,
-            coupon: couponId,
-            order_id: orderId,
-            used_at: new Date().toISOString()
-        });
-
-        // 更新使用计数
-        const coupon = await pb.collection('coupons').getOne(couponId);
-        await pb.collection('coupons').update(couponId, {
-            used_count: (coupon.used_count || 0) + 1
-        });
+    /* ---------- 批量删除 ---------- */
+    batchRemove: async (itemIds: string[]): Promise<void> => {
+        await Promise.all(
+            itemIds.map(id => pb.collection('cart_items').delete(id))
+        );
     }
 };
