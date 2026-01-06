@@ -23,7 +23,7 @@
 		support,
 		logout,
 		editProfile,
-		addrPofile,
+		addrProfile,
 		deleteProfile,
 		cart,
 		arrow,
@@ -932,7 +932,7 @@
 							<div class="mb-6 flex items-center justify-between">
 								<h2 class="text-xl font-semibold text-[#1a1a1a]">住所管理</h2>
 								<button class="btn-primary" onclick={() => openAddressModal()}>
-									{@html addrPofile}
+									{@html addrProfile}
 									<span>新しい住所を追加</span>
 								</button>
 							</div>

@@ -138,7 +138,7 @@
 			</div>
 
 			<!-- 商品列表 -->
-			<div class="max-h-[28rem] overflow-y-auto">
+			<div class="max-h-112 overflow-y-auto">
 				{#if $cart.loading}
 					<div class="flex items-center justify-center py-12">
 						<div class="text-gray-400">
