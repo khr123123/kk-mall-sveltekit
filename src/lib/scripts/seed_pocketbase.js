@@ -1,4 +1,5 @@
-﻿// PocketBase 数据生成脚本
+﻿// @ts-nocheck
+// PocketBase 数据生成脚本
 // 使用方法: node seed_pocketbase.js
 // 确保 PocketBase 服务运行在 http://127.0.0.1:8090
 
@@ -431,6 +432,7 @@ async function seedData() {
 		for (const brandData of brandsData) {
 			try {
 				const record = await pb.collection('brands').create(brandData);
+                // @ts-ignore
 				brandIdMap[brandData.name] = record.id;
 				console.log(`✅ ${brandData.name} を作成しました (ID: ${record.id})`);
 			} catch (error) {
@@ -441,6 +443,7 @@ async function seedData() {
 		console.log('\n📦 商品データを作成中...');
 		// 商品データを作成
 		for (const [brandName, products] of Object.entries(productsData)) {
+            // @ts-ignore
 			const brandId = brandIdMap[brandName];
 			if (!brandId) {
 				console.log(`⚠️  ${brandName} のIDが見つかりません。スキップします。`);

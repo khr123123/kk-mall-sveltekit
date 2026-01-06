@@ -1,19 +1,18 @@
 ﻿<script lang="ts">
-	import { goto } from '$app/navigation';
-	import { cart, cartStats } from '$lib/stores/cartStore';
-	import { onMount } from 'svelte';
-	import { cartDelete, cartEmpty, cartMinus, cartPlus } from '$lib/icons/svgs';
+    import {goto} from '$app/navigation';
+    import {cart, cartStats} from '$lib/stores/cartStore';
+    import {onMount} from 'svelte';
+    import {cartDelete, cartEmpty, cartMinus, cartPlus} from '$lib/icons/svgs';
 
-	let loading: boolean = true;
+    let loading: boolean = true;
 	let error: string | null = null;
 
 	onMount(() => {
 		// 订阅购物车变化
-		const unsubscribe = cart.subscribe(({ items, loading: cartLoading, error: cartError }) => {
-			loading = cartLoading;
-			error = cartError;
-		});
-		return unsubscribe;
+        return cart.subscribe(({items, loading: cartLoading, error: cartError}) => {
+            loading = cartLoading;
+            error = cartError;
+        });
 	});
 
 	// 计算总价
