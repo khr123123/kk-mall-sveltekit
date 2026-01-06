@@ -136,10 +136,10 @@
 			// 价格筛选
 			if (priceRange !== 'all') {
 				const ranges: Record<string, [number, number]> = {
-					'0-50000': [0, 50000],
-					'50000-100000': [50000, 100000],
-					'100000-200000': [100000, 200000],
-					'200000+': [200000, 9999999]
+					'0-500': [0, 500],
+					'500-1000': [500, 1000],
+					'1000-10000': [1000, 10000],
+					'10000+': [10000, 9999999]
 				};
 				const [min, max] = ranges[priceRange] || [0, 9999999];
 				filter += ` && price >= ${min} && price <= ${max}`;
@@ -360,45 +360,45 @@
 								<input
 									type="radio"
 									name="price"
-									value="0-50000"
+									value="0-500"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
 									class="h-4 w-4 text-gray-900"
 								/>
-								<span class="ml-2 text-gray-700">¥0 - ¥50,000</span>
+								<span class="ml-2 text-gray-700">¥0 - ¥500</span>
 							</label>
 							<label class="flex cursor-pointer items-center">
 								<input
 									type="radio"
 									name="price"
-									value="50000-100000"
+									value="500-1000"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
 									class="h-4 w-4 text-gray-900"
 								/>
-								<span class="ml-2 text-gray-700">¥50,000 - ¥100,000</span>
+								<span class="ml-2 text-gray-700">¥500 - ¥1000</span>
 							</label>
 							<label class="flex cursor-pointer items-center">
 								<input
 									type="radio"
 									name="price"
-									value="100000-200000"
+									value="1000-10000"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
 									class="h-4 w-4 text-gray-900"
 								/>
-								<span class="ml-2 text-gray-700">¥100,000 - ¥200,000</span>
+								<span class="ml-2 text-gray-700">¥1000 - ¥10,000</span>
 							</label>
 							<label class="flex cursor-pointer items-center">
 								<input
 									type="radio"
 									name="price"
-									value="200000+"
+									value="10000+"
 									bind:group={priceRange}
 									onchange={handlePriceChange}
 									class="h-4 w-4 text-gray-900"
 								/>
-								<span class="ml-2 text-gray-700">¥200,000以上</span>
+								<span class="ml-2 text-gray-700">¥10,000以上</span>
 							</label>
 						</div>
 					</div>
