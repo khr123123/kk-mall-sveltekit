@@ -11,14 +11,12 @@
         arrow,
         camera,
         cancelIcon,
-        cart,
         checkCircle,
         close,
         deleteProfile,
         downloadIcon,
         editProfile,
         emptyBox,
-        emptyHeart,
         emptyLocation,
         favorites as favoritesIcon,
         infoIcon,
@@ -313,23 +311,25 @@
 
     function mapFavorites(items: any[] = []) {
         return items.map((item: any) => {
-            const product = item.expand?.product_id;
-
             return {
                 id: item.id,
-                product_name: product?.name ?? '',
-                product_price: product?.price ?? 0,
-                product_image: product?.images?.[0] ?? ''
+                product_id: item.product_id,
+                brands_id: item.brands_id,
+                expand: item.expand, // 保留扩展数据
+                created: item.created,
+                updated: item.updated
             };
         });
     }
+
 
     // 加载收藏
     async function loadFavorites() {
         if (!user?.id) return;
         const result = await profileService.getFavorites(user.id);
         if (result.success) {
-            favorites = mapFavorites(result.favorites || []) as unknown as Favorite[];
+            favorites = mapFavorites(result.favorites || []) as any
+            console.log(favorites)
             dataCache.favorites = favorites;
         }
     }
@@ -478,8 +478,6 @@
     }
 
     async function addToCart(productId: string) {
-        // 这里实现添加到购物车的逻辑
-        console.log('Add to cart:', productId);
         showAlert({
             title: '成功',
             message: 'カートに追加しました',
@@ -1089,12 +1087,8 @@
                     {:else if currentTab === 'profile'}
                         <!-- 个人资料 -->
                         <div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
-                            <div class="mb-6 flex items-center justify-between">
+                            <div class="mb-6 ">
                                 <h2 class="text-xl font-semibold text-[#1a1a1a]">プロフィール</h2>
-                                <button class="btn-secondary">
-                                    {@html editProfile}
-                                    <span>編集</span>
-                                </button>
                             </div>
 
                             <div class="space-y-6">
@@ -1103,7 +1097,12 @@
                                     <div class="space-y-2">
                                         <!-- svelte-ignore a11y_label_has_associated_control -->
                                         <label class="block text-sm font-medium text-[#4a5568]">お名前</label>
-                                        <div class="input-display">{user.name}</div>
+                                        <div class="input-display flex items-center justify-between">{user.name}
+                                            <button class="btn-secondary h-5">
+                                                {@html editProfile}
+                                                <span>編集</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="space-y-2">
                                         <!-- svelte-ignore a11y_label_has_associated_control -->
@@ -1303,52 +1302,94 @@
                         <!-- 收藏管理 -->
                         <div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
                             <div class="mb-6 flex items-center justify-between">
-                                <h2 class="text-xl font-semibold text-[#1a1a1a]">お気に入り商品</h2>
+                                <h2 class="text-xl font-semibold text-[#1a1a1a]">お気に入り</h2>
                                 {#if favorites.length > 0}
-                                    <button class="btn-secondary" onclick={clearAllFavorites}>
-                                        {@html deleteProfile}
-                                        <span>すべて削除</span>
+                                    <button
+                                            class="btn-danger text-sm"
+                                            onclick={clearAllFavorites}
+                                    >
+                                        すべて削除
                                     </button>
                                 {/if}
                             </div>
 
                             {#if favorites.length > 0}
-                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {#each favorites as favorite}
-                                        <div class="product-card">
-                                            <img
-                                                    src={favorite.product_image || 'https://via.placeholder.com/200'}
-                                                    alt={favorite.product_name}
-                                                    class="mb-3 h-40 w-full rounded-md border border-[#e0e0e0] object-cover"
-                                            />
-                                            <h3 class="mb-2 line-clamp-2 text-sm font-semibold text-[#1a1a1a]">
-                                                {favorite.product_name}
-                                            </h3>
-                                            <div class="mb-3 text-lg font-bold text-[#1a1a1a]">
-                                                ¥{favorite.product_price.toLocaleString('ja-JP')}
-                                            </div>
-                                            <div class="flex gap-2">
-                                                <button class="btn-primary flex-1"
-                                                        onclick={() => addToCart(favorite.id)}>
-                                                    {@html cart}
-                                                    <span>カートに入れる</span>
-                                                </button>
-                                                <button
-                                                        class="icon-btn text-[#e53e3e]"
-                                                        onclick={() => removeFavorite(favorite.id)}
-                                                >
-                                                    {@html close}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    {/each}
+                                <!-- 喜欢的商品 -->
+                                <div class="mb-8">
+                                    <h3 class="mb-4 text-lg font-semibold text-[#1a1a1a]">商品のお気に入り</h3>
+                                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {#each favorites as favorite}
+                                            {#if favorite.expand?.product_id}
+                                                {#each favorite.expand.product_id as product}
+                                                    <div class="rounded-lg border border-[#e0e0e0] bg-white p-4">
+                                                        <div class="mb-3 aspect-square w-full overflow-hidden rounded-md">
+                                                            <img
+                                                                    src={product.images?.[0] }
+                                                                    alt={product.name}
+                                                                    class="h-full w-full object-cover"
+                                                            />
+                                                        </div>
+                                                        <h4 class="font-semibold text-[#1a1a1a]">{product.name}</h4>
+                                                        <p class="text-sm text-[#718096]">
+                                                            ¥{product.price?.toLocaleString('ja-JP')}</p>
+                                                        <div class="mt-3 flex gap-2">
+                                                            <button
+                                                                    class="btn-primary flex-1 text-sm"
+                                                                    onclick={() => addToCart(product.id)}
+                                                            >
+                                                                カートに追加
+                                                            </button>
+                                                            <button
+                                                                    class="btn-danger text-sm"
+                                                                    onclick={() => removeFavorite(favorite.id)}
+                                                            >
+                                                                削除
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                {/each}
+                                            {/if}
+                                        {/each}
+                                    </div>
+                                </div>
+
+                                <!-- 喜欢的品牌 -->
+                                <div>
+                                    <h3 class="mb-4 text-lg font-semibold text-[#1a1a1a]">ブランドのお気に入り</h3>
+                                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {#each favorites as favorite}
+                                            {#if favorite.expand?.brands_id}
+                                                {#each favorite.expand.brands_id as brand}
+                                                    <div class="rounded-lg border border-[#e0e0e0] bg-white p-4">
+                                                        <div class="mb-3 aspect-square w-full overflow-hidden rounded-md">
+                                                            <img
+                                                                    src={brand.logo}
+                                                                    alt={brand.name}
+                                                                    class="h-full w-full object-contain"
+                                                            />
+                                                        </div>
+                                                        <h4 class="font-semibold text-[#1a1a1a]">{brand.name}</h4>
+                                                        <p class="text-sm text-[#718096]">{brand.description}</p>
+                                                        <div class="mt-3">
+                                                            <button
+                                                                    class="btn-secondary w-full text-sm"
+                                                                    onclick={() => goto(`/brands/${brand.id}`)}
+                                                            >
+                                                                ブランドを見る
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                {/each}
+                                            {/if}
+                                        {/each}
+                                    </div>
                                 </div>
                             {:else}
                                 <div class="py-12 text-center">
                                     <div class="mb-3 flex justify-center text-gray-300">
-                                        {@html emptyHeart}
+                                        {@html emptyLocation}
                                     </div>
-                                    <p class="text-[#718096]">お気に入り商品がありません</p>
+                                    <p class="text-[#718096]">お気に入りがありません</p>
                                 </div>
                             {/if}
                         </div>
@@ -1413,8 +1454,10 @@
                                     <h3 class="mb-4 text-sm font-semibold text-[#1a1a1a]">データ管理</h3>
                                     <div class="space-y-2">
                                         <button class="setting-btn" onclick={downloadUserData}>
-                                            {@html downloadIcon}
-                                            <span>ダウンロードデータ</span>
+                                            <div class="flex items-center gap-2">
+                                                {@html downloadIcon}
+                                                <span>ダウンロードデータ</span>
+                                            </div>
                                             {@html arrow}
                                         </button>
                                         <button
