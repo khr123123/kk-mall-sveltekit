@@ -1,7 +1,6 @@
 ﻿<!-- routes/profile/[tab]/+page.svelte -->
 <script lang="ts">
     import {goto} from '$app/navigation';
-    import {page} from '$app/stores';
     import {userStore} from '$lib/stores/userStore';
     import {type Address, type Favorite, type Order, profileService} from '$lib/services/profileService';
     import {onMount, untrack} from 'svelte';
@@ -31,6 +30,7 @@
     } from '$lib/icons/svgs';
     import {pb} from '$lib/services/PBConfig';
     import {formatters} from '$lib/utils/formatters';
+    import {page} from "$app/state";
 
     // 响应式监听路由变化
     let currentTab = $state('profile');
@@ -47,7 +47,7 @@
 
     // 优化的 effect，避免多次触发
     $effect(() => {
-        const newTab = $page.params.tab ?? 'profile';
+        const newTab = page.params.tab ?? 'profile';
         if (currentTab !== newTab) {
             currentTab = newTab;
             untrack(() => {
