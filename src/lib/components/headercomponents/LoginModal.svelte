@@ -208,7 +208,7 @@
 {#if show}
 	<div
 		class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm transition-opacity duration-200"
-		on:click={handleCloseModal}
+		onclick={handleCloseModal}
 		role="button"
 		tabindex="0"
 		aria-label="モーダルを閉じる"
@@ -222,7 +222,7 @@
 			class:min-h-[600px]={!isMobile}
 			class:h-screen={isMobile}
 			class:scale-100={show}
-			on:click|stopPropagation
+            onclick={(e) => e.stopPropagation()}
 			role="dialog"
 			aria-modal="true"
 		>
@@ -238,7 +238,7 @@
 							class:text-gray-900={mode === 'login'}
 							class:shadow-sm={mode === 'login'}
 							class:text-gray-600={mode !== 'login'}
-							on:click={() => (mode = 'login')}
+							onclick={() => (mode = 'login')}
 						>
 							ログイン
 						</button>
@@ -249,13 +249,13 @@
 							class:text-gray-900={mode === 'register'}
 							class:shadow-sm={mode === 'register'}
 							class:text-gray-600={mode !== 'register'}
-							on:click={() => (mode = 'register')}
+							onclick={() => (mode = 'register')}
 						>
 							新規登録
 						</button>
 					</div>
 					<button
-						on:click={handleCloseModal}
+						onclick={handleCloseModal}
 						class="ml-4 rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
 						aria-label="閉じる"
 					>
@@ -308,7 +308,7 @@
 
 				{#if mode === 'login'}
 					<!-- 登录表单 -->
-					<form class="space-y-4" on:submit={handleLogin}>
+					<form class="space-y-4" onsubmit={handleLogin}>
 						<div>
 							<label for="login-email" class="mb-2 block text-sm font-medium text-gray-700">
 								メールアドレス
@@ -392,7 +392,7 @@
 					</form>
 				{:else}
 					<!-- 注册表单 -->
-					<form class="space-y-4" on:submit={handleRegister}>
+					<form class="space-y-4" onsubmit={handleRegister}>
 						<div>
 							<label for="register-name" class="mb-2 block text-sm font-medium text-gray-700">
 								名前
@@ -522,7 +522,7 @@
 				<div class="social-login space-y-3">
 					<button
 						type="button"
-						on:click={() => handleSocialLogin('google')}
+						onclick={() => handleSocialLogin('google')}
 						class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 						disabled={isLoading}
 					>
@@ -549,7 +549,7 @@
 					</button>
 					<button
 						type="button"
-						on:click={() => handleSocialLogin('github')}
+						onclick={() => handleSocialLogin('github')}
 						class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 						disabled={isLoading}
 					>
@@ -568,7 +568,7 @@
 			<div class="modal-footer flex-shrink-0 border-t border-gray-200 bg-white px-6 py-4 sm:hidden">
 				<button
 					type="button"
-					on:click={mode === 'login' ? handleLogin : handleRegister}
+					onclick={mode === 'login' ? handleLogin : handleRegister}
 					class="w-full rounded-lg bg-gray-900 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 focus:ring-2 focus:ring-gray-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={isLoading}
 				>
@@ -646,14 +646,14 @@
 		}
 
 		.modal-header {
-			position: sticky;
+			position :sticky;
 			top: 0;
 			z-index: 10;
 			background: white;
 		}
 
 		.modal-footer {
-			position: sticky;
+			position :sticky;
 			bottom: 0;
 			z-index: 10;
 			background: white;

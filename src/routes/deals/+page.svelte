@@ -332,7 +332,7 @@
 								<!-- 購入ボタン -->
 								<div class="border-t border-gray-100 p-3">
 									<button
-										on:click={() => handlePurchase(flashSaleItem, product.id)}
+										onclick={() => handlePurchase(flashSaleItem, product.id)}
 										class="w-full rounded-md py-2 text-sm font-medium text-white transition-colors {product.inStock ===
 										false
 											? 'cursor-not-allowed bg-gray-400'

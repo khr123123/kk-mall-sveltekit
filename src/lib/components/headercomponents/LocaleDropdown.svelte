@@ -62,8 +62,8 @@
 
 <div
 	class="locale-dropdown-container relative"
-	on:mouseenter={openDropdown}
-	on:mouseleave={closeDropdown}
+	onmouseenter={openDropdown}
+	onmouseleave={closeDropdown}
 >
 	<button
 		class="locale-button hidden min-w-[110px] items-center gap-2 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 lg:flex"
@@ -83,8 +83,8 @@
 	{#if showDropdown}
 		<div
 			class="locale-dropdown absolute top-full right-0 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-2 shadow-xl"
-			on:mouseenter={openDropdown}
-			on:mouseleave={closeDropdown}
+			onmouseenter={openDropdown}
+			onmouseleave={closeDropdown}
 			role="menu"
 		>
 			<div class="px-3 py-2">
@@ -93,7 +93,7 @@
 			<div class="my-1 border-t border-gray-100"></div>
 			{#each locales as locale}
 				<button
-					on:click={() => selectLocale(locale)}
+					onclick={() => selectLocale(locale)}
 					class="locale-option flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 {currentLocale.code ===
 					locale.code
 						? 'bg-gray-50 text-gray-900'
@@ -144,7 +144,7 @@
 	}
 
 	.locale-option {
-		position: relative;
+		position :relative;
 	}
 
 	@media (max-width: 1280px) {

@@ -57,13 +57,13 @@
 			text: '発送準備中',
 			color: 'text-blue-600',
 			bgColor: 'bg-blue-100',
-			icon: icons.package
+			icon :icons.package
 		},
 		shipped: {
 			text: '配送中',
 			color: 'text-purple-600',
 			bgColor: 'bg-purple-100',
-			icon: icons.truck
+			icon :icons.truck
 		},
 		delivered: {
 			text: '配達完了',
@@ -184,19 +184,19 @@
 		trackingHistory = [
 			{
 				status: '配達完了',
-				description: '商品をお届けしました',
+				description :'商品をお届けしました',
 				timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-				location: '東京都渋谷区'
+				location :'東京都渋谷区'
 			},
 			{
 				status: '配達中',
-				description: '配達員がお届けに向かっています',
+				description :'配達員がお届けに向かっています',
 				timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-				location: '東京都渋谷営業所'
+				location :'東京都渋谷営業所'
 			},
 			{
 				status: '輸送中',
-				description: '最寄りの営業所に到着しました',
+				description :'最寄りの営業所に到着しました',
 				timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
 				location: '東京都千代田営業所'
 			},
@@ -208,7 +208,7 @@
 			},
 			{
 				status: '発送準備中',
-				description: '商品の発送準備を開始しました',
+				description :'商品の発送準備を開始しました',
 				timestamp: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
 				location: '大阪物流センター'
 			}
@@ -224,7 +224,7 @@
 	<div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 		<!-- 返回按钮 -->
 		<button
-			on:click={backToOrders}
+			onclick={backToOrders}
 			class="mb-6 flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
 		>
 			{@html icons.arrowLeft}
@@ -243,21 +243,21 @@
 				</div>
 				<div class="flex gap-2">
 					<button
-						on:click={downloadInvoice}
+						onclick={downloadInvoice}
 						class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						{@html icons.download}
 						<span class="hidden sm:inline">領収書</span>
 					</button>
 					<button
-						on:click={printOrder}
+						onclick={printOrder}
 						class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						{@html icons.print}
 						<span class="hidden sm:inline">印刷</span>
 					</button>
 					<button
-						on:click={contactSupport}
+						onclick={contactSupport}
 						class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						{@html icons.support}
@@ -285,14 +285,14 @@
 
 					{#if orderData.status === 'processing' || orderData.status === 'pending'}
 						<button
-							on:click={cancelOrder}
+							onclick={cancelOrder}
 							class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
 						>
 							注文をキャンセル
 						</button>
 					{:else if orderData.status === 'delivered'}
 						<button
-							on:click={reorder}
+							onclick={reorder}
 							class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
 						>
 							再注文する
@@ -369,7 +369,7 @@
 										<p class="mt-2 text-sm text-gray-500">販売元: {item.seller}</p>
 										{#if orderData.status === 'delivered'}
 											<button
-												on:click={() => rateProduct(item.id)}
+												onclick={() => rateProduct(item.id)}
 												class="mt-2 flex items-center gap-1 text-sm text-blue-600 hover:underline"
 											>
 												{@html icons.star}

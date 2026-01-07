@@ -292,7 +292,7 @@
 							<!-- 轮播控制按钮 -->
 							<button
 								class="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white"
-								on:click={prevMainBanner}
+								onclick={prevMainBanner}
 								aria-label="前のバナー"
 							>
 								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -306,7 +306,7 @@
 							</button>
 							<button
 								class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-all hover:scale-110 hover:bg-white"
-								on:click={nextMainBanner}
+								onclick={nextMainBanner}
 								aria-label="次のバナー"
 							>
 								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -326,7 +326,7 @@
 										class="h-1.5 rounded-full transition-all {index === currentMainBanner
 											? 'w-6 bg-white'
 											: 'w-1.5 bg-white/50'}"
-										on:click={() => goToMainBanner(index)}
+										onclick={() => goToMainBanner(index)}
 										aria-label="バナー {index + 1} へ"
 									></button>
 								{/each}
@@ -427,7 +427,7 @@
 
 					<button
 						class="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-white/90 p-1.5 shadow transition-all hover:scale-110 hover:bg-white sm:left-4 sm:p-2"
-						on:click={prevMainBanner}
+						onclick={prevMainBanner}
 						aria-label="前のバナー"
 					>
 						<svg
@@ -446,7 +446,7 @@
 					</button>
 					<button
 						class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-white/90 p-1.5 shadow transition-all hover:scale-110 hover:bg-white sm:right-4 sm:p-2"
-						on:click={nextMainBanner}
+						onclick={nextMainBanner}
 						aria-label="次のバナー"
 					>
 						<svg
@@ -472,7 +472,7 @@
 								class="h-1.5 rounded-full transition-all {index === currentMainBanner
 									? 'w-5 bg-white sm:w-6'
 									: 'w-1.5 bg-white/50'}"
-								on:click={() => goToMainBanner(index)}
+								onclick={() => goToMainBanner(index)}
 								aria-label="バナー {index + 1} へ"
 							></button>
 						{/each}
@@ -539,7 +539,7 @@
 				<div class="hidden items-center gap-2 sm:flex">
 					{#each sortOptions as option}
 						<button
-							on:click={() => handleSort(option.id)}
+							onclick={() => handleSort(option.id)}
 							class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium transition-all hover:border-gray-900 hover:bg-gray-50 hover:shadow-sm {sortBy ===
 							option.id
 								? 'bg-gray-900 text-white hover:bg-gray-800'
@@ -552,7 +552,7 @@
 
 				<select
 					bind:value={sortBy}
-					on:change={(e) => handleSort(e.currentTarget.value)}
+					onchange={(e) => handleSort(e.currentTarget.value)}
 					class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition-colors hover:border-gray-400 sm:hidden"
 				>
 					{#each sortOptions as option}

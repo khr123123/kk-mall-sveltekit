@@ -13,7 +13,7 @@
 		id: string;
 		name: string;
 		price: number;
-		description: string;
+		description :string;
 		originalPrice: number;
 		discount?: number;
 		category_id: string;
@@ -779,7 +779,7 @@
 
 	/* 图片hover效果 */
 	img {
-		transition: opacity 0.3s ease;
+		transition :opacity 0.3s ease;
 	}
 
 	img:hover {

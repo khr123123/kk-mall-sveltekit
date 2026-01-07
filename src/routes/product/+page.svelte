@@ -272,11 +272,11 @@
 						type="text"
 						placeholder="商品名、ブランド、キーワードで検索..."
 						bind:value={filters.search}
-						on:keyup={(e) => e.key === 'Enter' && handleSearch()}
+						onkeyup={(e) => e.key === 'Enter' && handleSearch()}
 						class="w-full rounded-lg border border-gray-300 bg-white px-6 py-3 pl-12 text-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
 					/>
 					<button
-						on:click={handleSearch}
+						onclick={handleSearch}
 						class="absolute top-1/2 right-3 -translate-y-1/2 transform rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 					>
 						検索
@@ -352,7 +352,7 @@
 
 					<!-- 重置按钮 -->
 					<button
-						on:click={resetFilters}
+						onclick={resetFilters}
 						class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:outline-none"
 					>
 						条件をリセット
@@ -524,7 +524,7 @@
 										</span>
 									</div>
 									<button
-										on:click|preventDefault={(e) => {
+										onclick={(e) => {
 											e.stopPropagation();
 											console.log('カートに追加:', product.name);
 										}}
@@ -549,7 +549,7 @@
 					</div>
 					<nav class="flex items-center gap-2">
 						<button
-							on:click={() => currentPage > 1 && currentPage--}
+							onclick={() => currentPage > 1 && currentPage--}
 							disabled={currentPage === 1}
 							class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 						>
@@ -558,7 +558,7 @@
 
 						{#each Array.from({ length: 5 }, (_, i) => i + 1) as pageNum}
 							<button
-								on:click={() => (currentPage = pageNum)}
+								onclick={() => (currentPage = pageNum)}
 								class={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
 									currentPage === pageNum
 										? 'bg-blue-600 text-white'
@@ -570,7 +570,7 @@
 						{/each}
 
 						<button
-							on:click={() => currentPage++}
+							onclick={() => currentPage++}
 							class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
 						>
 							次へ
@@ -708,7 +708,7 @@
 				{/if}
 
 				<button
-					on:click={resetFilters}
+					onclick={resetFilters}
 					class="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 				>
 					すべての条件をリセット
@@ -742,7 +742,7 @@
 	}
 
 	.transition-transform {
-		transition: transform 0.3s ease-in-out;
+		transition :transform 0.3s ease-in-out;
 	}
 
 	/* 文本截断 */

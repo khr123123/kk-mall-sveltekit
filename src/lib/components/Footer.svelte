@@ -9,22 +9,22 @@
 		},
 		{
 			name: 'Instagram',
-			icon: '/svgs/instagram.svg',
+			icon :'/svgs/instagram.svg',
 			href: 'https://github.com/khr123123'
 		},
 		{
 			name: 'Facebook',
-			icon: '/svgs/facebook.svg',
+			icon :'/svgs/facebook.svg',
 			href: 'https://github.com/khr123123'
 		},
 		{
 			name: 'Line',
-			icon: '/svgs/line.svg',
+			icon :'/svgs/line.svg',
 			href: 'https://github.com/khr123123'
 		},
 		{
 			name: 'X',
-			icon: '/svgs/X.svg',
+			icon :'/svgs/X.svg',
 			href: 'https://github.com/khr123123'
 		}
 	];

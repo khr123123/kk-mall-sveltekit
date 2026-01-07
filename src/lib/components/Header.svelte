@@ -33,24 +33,24 @@
 
 	// 用户菜单项
 	const userMenuItems = [
-		{ label: 'マイページ', href: '/profile/profile', icon: '/svgs/user.svg' },
-		{ label: '注文履歴', href: '/profile/orders', icon: '/svgs/orders.svg' },
-		{ label: 'お気に入り', href: '/profile/favorites', icon: '/svgs/heart.svg' },
-		{ label: 'アドレス', href: '/profile/addresses', icon: '/svgs/addresses.svg' },
+		{ label: 'マイページ', href: '/profile/profile', icon :'/svgs/user.svg' },
+		{ label: '注文履歴', href: '/profile/orders', icon :'/svgs/orders.svg' },
+		{ label: 'お気に入り', href: '/profile/favorites', icon :'/svgs/heart.svg' },
+		{ label: 'アドレス', href: '/profile/addresses', icon :'/svgs/addresses.svg' },
 		{ label: '設定', href: '/profile/settings', icon: '/svgs/settings.svg' }
 	];
 
 	// 底部导航菜单项配置
 	const navMenuItems = [
 		{ path: '/', label: 'ホーム', exact: true, icon: '/mall/首页.svg' },
-		{ path: '/hot', label: '人気商品', exact: false, icon: '/mall/人气.svg' },
-		{ path: '/new', label: '新着商品', exact: false, icon: '/mall/闪电.svg' },
+		{ path: '/hot', label: '人気商品', exact: false, icon :'/mall/人气.svg' },
+		{ path: '/new', label: '新着商品', exact: false, icon :'/mall/闪电.svg' },
 		{
 			path: '/deals',
 			label: 'タイムセール',
 			exact: false,
 			isSpecial: true,
-			icon: '/mall/时间.svg'
+			icon :'/mall/时间.svg'
 		},
 		{ path: '/brands', label: 'ブランド', exact: false, icon: '/mall/砍价记录.svg' },
 		{ path: '/about', label: '会社概要', exact: false, icon: 'info' }
@@ -65,7 +65,7 @@
 			content: 'ご注文の商品#12345が発送されました。',
 			time: '2時間前',
 			read: false,
-			icon: '📦'
+			icon :'📦'
 		},
 		{
 			id: 2,
@@ -74,7 +74,7 @@
 			content: '週末限定！全商品20%オフセール開催中です。',
 			time: '5時間前',
 			read: false,
-			icon: '🎉'
+			icon :'🎉'
 		}
 	];
 
@@ -241,7 +241,7 @@
 				<!-- 移动端汉堡菜单按钮 -->
 				<button
 					class="p-2 text-gray-600 hover:text-gray-900 focus:outline-none lg:hidden"
-					on:click={toggleMobileMenu}
+					onclick={toggleMobileMenu}
 					aria-label="メニューを開く"
 				>
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -283,11 +283,11 @@
 							bind:value={searchKeyword}
 							placeholder="商品やブランドを検索..."
 							class="search-input w-full rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none"
-							on:keypress={(e) => e.key === 'Enter' && handleSearch()}
+							onkeypress={(e) => e.key === 'Enter' && handleSearch()}
 						/>
 						<button
 							class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-gray-800 p-2 text-white transition-all hover:bg-gray-900 active:scale-95"
-							on:click={handleSearch}
+							onclick={handleSearch}
 							aria-label="検索"
 						>
 							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,7 +308,7 @@
 				<!-- 移动端搜索按钮 -->
 				<button
 					class="p-2 text-gray-600 hover:text-gray-900 focus:outline-none lg:hidden"
-					on:click={toggleMobileSearch}
+					onclick={toggleMobileSearch}
 					aria-label="検索"
 				>
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -367,11 +367,11 @@
 						bind:value={searchKeyword}
 						placeholder="商品やブランドを検索..."
 						class="mobile-search-input w-full rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none"
-						on:keypress={(e) => e.key === 'Enter' && handleSearch()}
+						onkeypress={(e) => e.key === 'Enter' && handleSearch()}
 					/>
 					<button
 						class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-gray-800 p-2 text-white transition-all hover:bg-gray-900 active:scale-95"
-						on:click={handleSearch}
+						onclick={handleSearch}
 						aria-label="検索"
 					>
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -385,7 +385,7 @@
 					</button>
 				</div>
 				<button
-					on:click={toggleMobileSearch}
+					onclick={toggleMobileSearch}
 					class="cancel-button rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
 				>
 					キャンセル
@@ -475,7 +475,6 @@
 />
 
 <style>
-	/* 动画效果 */
 	.nav-underline {
 		animation: drawLine 0.4s ease-out;
 	}
@@ -500,14 +499,14 @@
 		outline: none;
 	}
 
-	button:active {
+	buttonactive {
 		transform: scale(0.95);
 	}
 
 	/* 搜索框样式 */
 	.search-input,
 	.mobile-search-input {
-		transition: all 0.2s;
+		transition :all 0.2s;
 	}
 
 	.search-input:focus,

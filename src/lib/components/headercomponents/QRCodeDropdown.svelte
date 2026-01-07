@@ -25,8 +25,8 @@
 
 <div
 	class="qrcode-dropdown-container relative"
-	on:mouseenter={openDropdown}
-	on:mouseleave={closeDropdown}
+	onmouseenter={openDropdown}
+	onmouseleave={closeDropdown}
 >
 	<button
 		class="qrcode-button hidden min-w-[150px] items-center gap-2 rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 lg:flex"
@@ -44,8 +44,8 @@
 	{#if showDropdown}
 		<div
 			class="qrcode-dropdown absolute top-full right-0 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-5 shadow-2xl"
-			on:mouseenter={openDropdown}
-			on:mouseleave={closeDropdown}
+			onmouseenter={openDropdown}
+			onmouseleave={closeDropdown}
 			role="menu"
 		>
 			<!-- Header -->
@@ -118,7 +118,7 @@
 <style>
 	/* PocketBase-inspired styles */
 	.qrcode-dropdown {
-		animation: dropdownFade 0.2s ease-out;
+		animation :dropdownFade 0.2s ease-out;
 		z-index: 50;
 	}
 
@@ -150,7 +150,7 @@
 		width: 100%;
 		height: 100%;
 		background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-		transition: left 0.5s;
+		transition :left 0.5s;
 	}
 
 	.download-link:hover::before {

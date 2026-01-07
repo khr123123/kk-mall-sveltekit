@@ -14,7 +14,7 @@
 //     },
 //     requestedAt: 1587460334340,
 //     userAuthorizationId: "my_user_authorization_id",
-//     orderDescription: "Mune's Favourite Cake",
+//     orderDescription "Mune's Favourite Cake",
 // };
 
 // // Calling the method to create a payment

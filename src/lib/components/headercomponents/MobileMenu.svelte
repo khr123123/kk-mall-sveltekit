@@ -32,11 +32,11 @@
 	<div class="mobile-menu fixed inset-0 z-40 bg-white lg:hidden">
 		<!-- 菜单头部 -->
 		<div class="flex items-center justify-between border-b border-gray-100 px-4 py-4">
-			<a href="/" class="flex items-center gap-2" on:click={close}>
+			<a href="/" class="flex items-center gap-2" onclick={close}>
 				<img src="/logo.png" alt="Logo" class="h-8 w-8 rounded-lg object-cover" />
 				<span class="text-lg font-bold tracking-tight text-gray-900">K. Portfolio</span>
 			</a>
-			<button on:click={close} class="rounded-lg p-2" aria-label="メニューを閉じる">
+			<button onclick={close} class="rounded-lg p-2" aria-label="メニューを閉じる">
 				<svg class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
 						stroke-linecap="round"
@@ -74,7 +74,7 @@
 							.url.pathname === item.path
 							? 'bg-gray-50 font-medium text-gray-900'
 							: ''}"
-						on:click={close}
+						onclick={close}
 					>
 						<span class="flex items-center gap-2">
 							{#if item.icon !== 'info'}
@@ -115,14 +115,14 @@
 						<a
 							href={item.href}
 							class="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition-colors hover:bg-gray-50"
-							on:click={close}
+							onclick={close}
 						>
 							<img src={item.icon} alt={item.label} class="h-5 w-5" />
 							{item.label}
 						</a>
 					{/each}
 					<button
-						on:click={handleLogout}
+						onclick={handleLogout}
 						class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-red-600 transition-colors hover:bg-red-50"
 					>
 						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,7 +139,7 @@
 			{:else}
 				<div class="auth-buttons mb-6 flex gap-3">
 					<button
-						on:click={handleLogin}
+						onclick={handleLogin}
 						class="flex-1 rounded-lg border border-gray-600 py-2.5 text-sm font-medium text-gray-600"
 					>
 						ログイン

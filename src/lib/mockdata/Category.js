@@ -2,7 +2,7 @@
 	{
 		id: 1,
 		name: 'スマホ',
-		icon: '/categorys/手机数码.svg',
+		icon:'/categorys/手机数码.svg',
 		color: 'bg-blue-50 text-blue-600',
 		children: [
 			{ id: 101, name: 'スマートフォン', color: 'text-blue-600' },
@@ -15,7 +15,7 @@
 	{
 		id: 2,
 		name: 'パソコン',
-		icon: '/categorys/电脑办公.svg',
+		icon:'/categorys/电脑办公.svg',
 		color: 'bg-purple-50 text-purple-600',
 		children: [
 			{ id: 201, name: 'ノートPC', color: 'text-purple-600' },
@@ -28,7 +28,7 @@
 	{
 		id: 3,
 		name: '家電',
-		icon: '/categorys/家用电器.svg',
+		icon:'/categorys/家用电器.svg',
 		color: 'bg-green-50 text-green-600',
 		children: [
 			{ id: 301, name: '冷蔵庫', color: 'text-green-600' },
@@ -41,7 +41,7 @@
 	{
 		id: 4,
 		name: '衣裳',
-		icon: '/categorys/服饰鞋包.svg',
+		icon:'/categorys/服饰鞋包.svg',
 		color: 'bg-pink-50 text-pink-600',
 		children: [
 			{ id: 401, name: 'トップス', color: 'text-pink-600' },
@@ -54,7 +54,7 @@
 	{
 		id: 5,
 		name: '美容・健康',
-		icon: '/categorys/美妆个护.svg',
+		icon:'/categorys/美妆个护.svg',
 		color: 'bg-red-50 text-red-600',
 		children: [
 			{ id: 501, name: 'スキンケア', color: 'text-red-600' },
@@ -67,7 +67,7 @@
 	{
 		id: 6,
 		name: '運動・スポーツ用品',
-		icon: '/categorys/运动户外.svg',
+		icon:'/categorys/运动户外.svg',
 		color: 'bg-orange-50 text-orange-600',
 		children: [
 			{ id: 601, name: 'ランニング', color: 'text-orange-600' },
@@ -80,7 +80,7 @@
 	{
 		id: 7,
 		name: '食品・飲料',
-		icon: '/categorys/食品饮料.svg',
+		icon:'/categorys/食品饮料.svg',
 		color: 'bg-yellow-50 text-yellow-600',
 		children: [
 			{ id: 701, name: 'スナック', color: 'text-yellow-600' },
@@ -93,7 +93,7 @@
 	{
 		id: 8,
 		name: 'ベビー・マタニティ用品',
-		icon: '/categorys/母婴玩具.svg',
+		icon:'/categorys/母婴玩具.svg',
 		color: 'bg-indigo-50 text-indigo-600',
 		children: [
 			{ id: 801, name: 'ベビー服', color: 'text-indigo-600' },
@@ -106,7 +106,7 @@
 	{
 		id: 9,
 		name: 'ホーム',
-		icon: '/categorys/家居生活.svg',
+		icon:'/categorys/家居生活.svg',
 		color: 'bg-teal-50 text-teal-600',
 		children: [
 			{ id: 901, name: '家具', color: 'text-teal-600' },
@@ -119,7 +119,7 @@
 	{
 		id: 10,
 		name: '本・文庫',
-		icon: '/categorys/图书文娱.svg',
+		icon:'/categorys/图书文娱.svg',
 		color: 'bg-cyan-50 text-cyan-600',
 		children: [
 			{ id: 1001, name: '小説', color: 'text-cyan-600' },

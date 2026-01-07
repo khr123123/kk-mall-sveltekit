@@ -84,7 +84,7 @@
 			<div class="rounded-lg bg-red-50 p-6 text-center">
 				<p class="text-red-700">{error}</p>
 				<button
-					on:click={() => cart.refresh()}
+					onclick={() => cart.refresh()}
 					class="mt-4 rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
 				>
 					再試行
@@ -98,7 +98,7 @@
 				<p class="mb-6 text-sm text-gray-500">お気に入りの商品を追加してください</p>
 				<button
 					class="rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-					on:click={continueShopping}
+					onclick={continueShopping}
 				>
 					ショッピングを続ける
 				</button>
@@ -119,7 +119,7 @@
 									.filter((item) => item.product.in_stock)
 									.every((item) => item.selected) &&
 									$cart.items.filter((item) => item.product.in_stock).length > 0}
-								on:change={toggleSelectAll}
+								onchange={toggleSelectAll}
 							/>
 							<span class="text-sm font-medium text-gray-700">すべて選択</span>
 						</label>
@@ -146,7 +146,7 @@
 											class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
 											checked={item.selected}
 											disabled={!item.product.in_stock}
-											on:change={() => cart.toggleSelect(item.id)}
+											onchange={() => cart.toggleSelect(item.id)}
 										/>
 									</div>
 
@@ -185,7 +185,7 @@
 											</div>
 											<button
 												class="shrink-0 text-gray-400 transition-colors hover:text-red-500"
-												on:click={() => removeItem(item.id)}
+												onclick={() => removeItem(item.id)}
 												aria-label="削除"
 											>
 												{@html cartDelete}
@@ -209,7 +209,7 @@
 											<div class="flex items-center gap-3">
 												<button
 													class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-													on:click={() => cart.updateQuantity(item.id, -1)}
+													onclick={() => cart.updateQuantity(item.id, -1)}
 													disabled={item.quantity <= 1 || !item.product.in_stock}
 													aria-label="减少数量"
 												>
@@ -220,7 +220,7 @@
 												</span>
 												<button
 													class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-													on:click={() => cart.updateQuantity(item.id, 1)}
+													onclick={() => cart.updateQuantity(item.id, 1)}
 													disabled={!item.product.in_stock}
 													aria-label="增加数量"
 												>
@@ -260,7 +260,7 @@
 
 							<button
 								class="mt-4 w-full rounded-lg bg-gray-900 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-								on:click={goToCheckout}
+								onclick={goToCheckout}
 								disabled={$cartStats.selectedCount === 0}
 							>
 								購入手続きへ ({$cartStats.selectedCount}件)
@@ -268,7 +268,7 @@
 
 							<button
 								class="mt-2 w-full rounded-lg border border-gray-300 bg-white py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-								on:click={continueShopping}
+								onclick={continueShopping}
 							>
 								ショッピングを続ける
 							</button>

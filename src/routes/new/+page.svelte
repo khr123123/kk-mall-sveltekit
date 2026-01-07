@@ -102,7 +102,7 @@
 			<div class="flex items-center gap-2">
 				{#each sortOptions as option}
 					<button
-						on:click={() => handleSort(option.id)}
+						onclick={() => handleSort(option.id)}
 						class="hidden rounded-lg border px-4 py-2 text-sm font-medium transition-colors sm:block {sortBy ===
 						option.id
 							? 'border-gray-900 bg-gray-900 text-white'
@@ -114,7 +114,7 @@
 
 				<select
 					bind:value={sortBy}
-					on:change={(e) => handleSort(e.currentTarget.value)}
+					onchange={(e) => handleSort(e.currentTarget.value)}
 					class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 sm:hidden"
 				>
 					{#each sortOptions as option}

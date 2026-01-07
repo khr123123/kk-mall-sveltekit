@@ -30,7 +30,7 @@
 			content: 'ご注文の商品#12345が発送されました。お届けまでもうしばらくお待ちください。',
 			time: '2時間前',
 			read: false,
-			icon: '📦'
+			icon :'📦'
 		},
 		{
 			id: 2,
@@ -39,7 +39,7 @@
 			content: '週末限定！全商品20%オフセール開催中です。',
 			time: '5時間前',
 			read: false,
-			icon: '🎉'
+			icon :'🎉'
 		},
 		{
 			id: 3,
@@ -48,7 +48,7 @@
 			content: '500ポイントが付与されました。次回のお買い物でご利用いただけます。',
 			time: '1日前',
 			read: false,
-			icon: '💎'
+			icon :'💎'
 		},
 		{
 			id: 4,
@@ -57,7 +57,7 @@
 			content: '購入された商品のレビューをお待ちしています。',
 			time: '2日前',
 			read: false,
-			icon: '⭐'
+			icon :'⭐'
 		},
 		{
 			id: 5,
@@ -66,7 +66,7 @@
 			content: 'プロフィール情報が正常に更新されました。',
 			time: '3日前',
 			read: false,
-			icon: '✓'
+			icon :'✓'
 		}
 	];
 
@@ -117,7 +117,7 @@
 	function getTypeColor(type: string): string {
 		const colors = {
 			order: 'bg-blue-100 text-blue-800',
-			promotion: 'bg-purple-100 text-purple-800',
+			promotion :'bg-purple-100 text-purple-800',
 			system: 'bg-green-100 text-green-800'
 		};
 		return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
@@ -151,7 +151,7 @@
 	<!-- 消息按钮 -->
 	<button
 		class="relative cursor-pointer rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none"
-		on:click={toggleDropdown}
+		onclick={toggleDropdown}
 		aria-label="メッセージ"
 		aria-expanded={isOpen}
 	>
@@ -187,14 +187,14 @@
 						{#if unreadMessages > 0}
 							<button
 								class="rounded-full px-3 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
-								on:click={markAllAsRead}
+								onclick={markAllAsRead}
 							>
 								すべて既読
 							</button>
 						{/if}
 						<button
 							class="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-							on:click={closeDropdown}
+							onclick={closeDropdown}
 							aria-label="閉じる"
 						>
 							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -238,7 +238,7 @@
 							<div
 								class="group px-6 py-4 transition-colors hover:bg-gray-50"
 								role="button"
-								on:click={() => goToMessage(message.id)}
+								onclick={() => goToMessage(message.id)}
 							>
 								<div class="flex gap-4">
 									<!-- 图标 -->
@@ -283,7 +283,7 @@
 											</div>
 											<button
 												class="ml-2 shrink-0 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:text-red-500"
-												on:click|stopPropagation={() => deleteMessage(message.id)}
+												onclick={() => deleteMessage(message.id)}
 												aria-label="メッセージを削除"
 											>
 												<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -307,7 +307,7 @@
 												{#if !message.read}
 													<button
 														class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-700"
-														on:click|stopPropagation={() => markAsRead(message.id)}
+														onclick={() => markAsRead(message.id)}
 													>
 														既読にする
 													</button>
@@ -327,7 +327,7 @@
 				<a
 					href="/messages"
 					class="block rounded-lg bg-gray-900 px-4 py-3 text-center text-sm font-semibold text-white transition-all hover:bg-gray-800 active:scale-[0.98]"
-					on:click={closeDropdown}
+					onclick={closeDropdown}
 				>
 					すべてのメッセージを見る
 				</a>

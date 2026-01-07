@@ -156,7 +156,7 @@
 				body: JSON.stringify({
 					merchantPaymentId,
 					codeType: 'ORDER_QR',
-					orderDescription: `Order ${orderData?.orderId || merchantPaymentId}`,
+					orderDescription:  `Order ${orderData?.orderId || merchantPaymentId}`,
 					amount: {
 						amount: orderAmount, // ✅ 使用真实金额
 						currency: 'JPY'
@@ -358,7 +358,7 @@
 							</a>
 
 							<button
-								on:click={copyPaymentLink}
+								onclick={copyPaymentLink}
 								class="mt-2 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
 							>
 								{@html link}
@@ -463,7 +463,7 @@
 				{/if}
 
 				<button
-					on:click={goToSuccessPage}
+					onclick={goToSuccessPage}
 					class="w-full rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-green-700"
 				>
 					注文完了ページへ
@@ -540,13 +540,13 @@
 				<!-- 操作按钮 -->
 				<div class="space-y-3">
 					<button
-						on:click={retryPayment}
+						onclick={retryPayment}
 						class="w-full rounded-lg bg-red-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-red-700"
 					>
 						再試行
 					</button>
 					<button
-						on:click={backToCheckout}
+						onclick={backToCheckout}
 						class="w-full rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						注文画面に戻る

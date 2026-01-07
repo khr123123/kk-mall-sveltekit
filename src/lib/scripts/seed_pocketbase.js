@@ -346,7 +346,7 @@ const productsData = {
 			isFeatured: false
 		}
 	],
-	Dyson: [
+	Dyson :[
 		{
 			name: 'V15 Detect コードレス掃除機',
 			image: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=500',

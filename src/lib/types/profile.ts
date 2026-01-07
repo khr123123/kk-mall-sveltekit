@@ -59,7 +59,7 @@ export interface UserStats {
 
 export interface RefundForm {
 	refundType: 'full' | 'partial';
-	refundReason: string;
+	refundReason :string;
 	refundAmount: number;
 	returnGoods: boolean;
 	trackingNumber: string;

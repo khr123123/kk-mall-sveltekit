@@ -250,7 +250,7 @@
                             <!-- 跟随按钮 -->
                             {#if !isFavorite}
                                 <button
-                                        on:click={followBrand}
+                                        onclick={followBrand}
                                         class="rounded-lg border border-neutral-300 px-6 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
                                 >
                                     <div class="flex items-center gap-2">
@@ -261,7 +261,7 @@
                             {/if}
                             {#if isFavorite}
                                 <button
-                                        on:click={unfollowBrand}
+                                        onclick={unfollowBrand}
                                         class="rounded-lg border border-neutral-300 px-6 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
                                 >
                                     <div class="flex items-center gap-2">
@@ -419,7 +419,7 @@
 
                                 <!-- 购买按钮 -->
                                 <button
-                                        on:click={(e) => {
+                                        onclick={(e) => {
 										e.stopPropagation();
 										addToCart(product, e);
 									}}

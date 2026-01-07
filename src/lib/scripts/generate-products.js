@@ -411,7 +411,7 @@ function generateProduct(
 		stock,
 		brand,
 		tags,
-		category_id: parentCategoryId, // 请根据你的数据库字段名调整
+		category_id: parentCategoryId,
 		specs
 	};
 }
@@ -427,7 +427,7 @@ async function main() {
 
 		// 2. 获取所有分类数据（包含展开的子分类）
 		const categories = await pb.collection('category').getFullList({
-			expand: 'children' // 展开子分类关系[citation:2]
+			expand: 'children' // 展开子分类关系[citation2]
 		});
 		console.log(`📦 ${categories.length} 個の親カテゴリーを取得しました\n`);
 
@@ -498,7 +498,7 @@ async function main() {
 					}
 
 					try {
-						await pb.collection('products').create(product); // 创建记录[citation:2]
+						await pb.collection('products').create(product); // 创建记录[citation2]
 						generatedForThisTarget++;
 						totalProductsCreated++;
 

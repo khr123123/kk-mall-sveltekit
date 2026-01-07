@@ -42,8 +42,8 @@
 		aria-expanded={showMenu}
 		aria-haspopup="true"
 		class="category-button ml-5 flex min-w-45 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-		on:mouseenter={openMenu}
-		on:mouseleave={closeMenu}
+		onmouseenter={openMenu}
+		onmouseleave={closeMenu}
 	>
 		<img alt="" class="h-5 w-5" src="/mall/分类.svg" />
 		<span class="font-medium">すべてのカテゴリ</span>
@@ -53,8 +53,8 @@
 	{#if showMenu}
 		<div
 			class="category-menu-wrapper absolute top-full left-0 mt-1 flex w-200 rounded-lg border border-gray-200 bg-white shadow-xl"
-			on:mouseenter={openMenu}
-			on:mouseleave={closeMenu}
+			onmouseenter={openMenu}
+			onmouseleave={closeMenu}
 			role="menu"
 			tabindex="0"
 		>
@@ -66,10 +66,10 @@
 						category.id
 							? 'bg-gray-100 text-gray-900'
 							: 'text-gray-700 hover:bg-gray-100'}"
-						on:mouseenter={() => handleMouseEnterCategory(category.id)}
+						onmouseenter={() => handleMouseEnterCategory(category.id)}
 						role="menuitem"
 						tabindex="0"
-						on:click={() => navigateToCategory(category.id)}
+						onclick={() => navigateToCategory(category.id)}
 					>
 						<img src={category.icon} alt={category.name} class="h-5 w-5 object-cover" />
 						<span class="font-medium">{category.name}</span>

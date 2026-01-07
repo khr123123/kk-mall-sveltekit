@@ -589,7 +589,7 @@
         refundingOrder = order;
         refundForm = {
             refundType: 'full',
-            refundReason: '',
+            refundReason :'',
             refundAmount: order.total_amount,
             returnGoods: needsTrackingNumber(order),
             trackingNumber: ''
@@ -988,7 +988,7 @@
         {id: 'orders', label: '注文履歴', icon: aordersIcon},
         {id: 'addresses', label: '住所管理', icon: addressesIcon},
         {id: 'favorites', label: 'お気に入り', icon: favoritesIcon},
-        {id: 'settings', label: '設定', icon: settings}
+        {id: 'settings', label: '設定', icon :settings}
     ];
 
     function changeTab(itemId: string) {
@@ -2355,7 +2355,7 @@
         border: none;
         border-radius: 0.375rem;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition :background-color 0.2s;
     }
 
     .btn-primary:hover:not(:disabled) {
@@ -2399,7 +2399,7 @@
         border: none;
         border-radius: 0.375rem;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition :background-color 0.2s;
     }
 
     .btn-danger:hover:not(:disabled) {
@@ -2485,7 +2485,7 @@
         background-color: white;
         border: 1px solid #e2e8f0;
         border-radius: 0.375rem;
-        transition: border-color 0.2s;
+        transition :border-color 0.2s;
     }
 
     .input-field:focus {
@@ -2551,7 +2551,7 @@
         padding: 1.25rem;
         border: 1px solid #e0e0e0;
         border-radius: 0.5rem;
-        transition: border-color 0.2s;
+        transition :border-color 0.2s;
     }
 
     .address-card:hover {
@@ -2567,7 +2567,7 @@
         border: 1px solid #e0e0e0;
         border-radius: 0.375rem;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition :background-color 0.2s;
     }
 
     .setting-item:hover {
@@ -2603,7 +2603,7 @@
         background: #cbd5e0;
         border-radius: 12px;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition :background-color 0.2s;
     }
 
     .toggle:checked {
@@ -2620,7 +2620,7 @@
         left: 3px;
         background: white;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s;
+        transition :transform 0.2s;
     }
 
     .toggle:checked:before {
@@ -2882,7 +2882,7 @@
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .reason-option:hover {
+    .reason-optionhover {
         border-color: #cbd5e0;
         background: #f7fafc;
     }
@@ -3194,7 +3194,7 @@
 
     .confirm-dialog-header {
         display: flex;
-        flex-direction: column;
+        flex-direction:column;
         align-items: center;
         gap: 0.75rem;
         margin-bottom: 1rem;
@@ -3317,7 +3317,7 @@
 
     .alert-dialog-header {
         display: flex;
-        flex-direction: column;
+        flex-direction:column;
         align-items: center;
         gap: 0.75rem;
         margin-bottom: 1rem;
@@ -3464,7 +3464,7 @@
     }
 
     a {
-        text-decoration: none;
+        text-decoration :none;
     }
 
     :global(.w-5) {

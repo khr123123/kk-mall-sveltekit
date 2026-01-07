@@ -9,7 +9,7 @@
 		messages?: number;
 	};
 	export let isLoggedIn: boolean = false;
-	export let menuItems: Array<{ label: string; href: string; icon: string }> = [];
+	export let menuItems: Array<{ label: string; href: string; icon :string }> = [];
 
 	// Events
 	const dispatch = createEventDispatcher();
@@ -46,10 +46,10 @@
 <div class="user-dropdown-container relative">
 	{#if isLoggedIn}
 		<!-- 已登录状态 -->
-		<div class="hidden lg:block" on:mouseenter={openMenu} on:mouseleave={closeMenu}>
+		<div class="hidden lg:block" onmouseenter={openMenu} onmouseleave={closeMenu}>
 			<button
 				class="user-button flex items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100"
-				on:click={toggleMenu}
+				onclick={toggleMenu}
 				aria-haspopup="true"
 				aria-expanded={showMenu}
 			>
@@ -77,8 +77,8 @@
 			{#if showMenu}
 				<div
 					class="user-menu-dropdown absolute top-full right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-xl"
-					on:mouseenter={openMenu}
-					on:mouseleave={closeMenu}
+					onmouseenter={openMenu}
+					onmouseleave={closeMenu}
 					role="menu"
 				>
 					{#each menuItems as item}
@@ -93,7 +93,7 @@
 					{/each}
 					<div class="my-1 border-t border-gray-100"></div>
 					<button
-						on:click={handleLogout}
+						onclick={handleLogout}
 						class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50"
 					>
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,7 +111,7 @@
 		</div>
 
 		<!-- 移动端用户头像 -->
-		<button class="lg:hidden" on:click={handleLogout} aria-label="ユーザーメニュー">
+		<button class="lg:hidden" onclick={handleLogout} aria-label="ユーザーメニュー">
 			<img
 				src={user.avatar}
 				alt={user.name}
@@ -122,7 +122,7 @@
 		<!-- 未登录状态 -->
 		<div class="flex items-center gap-3">
 			<button
-				on:click={handleLogin}
+				onclick={handleLogin}
 				class="register-button hidden rounded-lg bg-gray-700 px-4 py-2 font-mono text-sm text-white transition-colors hover:bg-gray-600 lg:block"
 			>
 				ログイン / 新規登録
@@ -133,7 +133,7 @@
 
 <style>
 	.user-menu-dropdown {
-		animation: fadeIn 0.2s ease-out;
+		animation :fadeIn 0.2s ease-out;
 		z-index: 50;
 	}
 
@@ -152,7 +152,7 @@
 		transition: all 0.2s ease;
 	}
 
-	button:active {
+	buttonactive {
 		transform: scale(0.98);
 	}
 </style>

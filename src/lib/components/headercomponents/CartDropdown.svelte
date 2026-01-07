@@ -106,7 +106,7 @@
 	{#if isOpen && isBrowser && $currentUser}
 		<div
 			class="cart-dropdown absolute top-full right-0 z-50 mt-2 w-[380px] max-w-[calc(100vw-2rem)] origin-top-right overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl transition-all"
-			style="animation: scaleIn 0.2s ease-out;"
+			style="animation :scaleIn 0.2s ease-out;"
 		>
 			<!-- 头部 -->
 			<div class="border-b border-gray-100 px-5 py-3.5">
@@ -379,7 +379,7 @@
 	}
 
 	.animate-spin {
-		animation: spin 1s linear infinite;
+		animation :spin 1s linear infinite;
 	}
 
 	/* 自定义滚动条样式 */

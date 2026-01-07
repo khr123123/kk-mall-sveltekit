@@ -15,13 +15,13 @@
 <style>
 	.app {
 		display: flex;
-		flex-direction: column;
+		flex-direction:column;
 		min-height: 100vh;
 	}
 	main {
 		flex: 1;
 		display: flex;
-		flex-direction: column;
+		flex-direction:column;
 		padding: 1rem;
 		width: 100%;
 		max-width: 82rem;
