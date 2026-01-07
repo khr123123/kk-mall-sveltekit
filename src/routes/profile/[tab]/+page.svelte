@@ -244,7 +244,7 @@
                 name: editingName.trim()
             });
 
-            await userStore.refresh();
+            userStore.refresh();
             isEditingName = false;
             showAlert({
                 title: '成功',
