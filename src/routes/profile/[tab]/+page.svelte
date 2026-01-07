@@ -48,11 +48,8 @@
     // 优化的 effect，避免多次触发
     $effect(() => {
         const newTab = $page.params.tab ?? 'profile';
-
-        // 只有当 tab 真正改变时才更新
         if (currentTab !== newTab) {
             currentTab = newTab;
-            // 使用 untrack 避免触发其他 effect
             untrack(() => {
                 loadTabData();
             });
@@ -66,8 +63,6 @@
     $effect(() => {
         user = $userStore.user;
         isLoggedIn = $userStore.isLoggedIn;
-
-        // 如果未登录，重定向到登录页
         if (!isLoggedIn && !$userStore.isLoading) {
             goto('/login');
         }
@@ -90,6 +85,11 @@
     let editingAddress: Address | null = $state(null);
     let selectedOrder: Order | null = $state(null);
     let refundingOrder: Order | null = $state(null);
+
+    // ============ 名字编辑状态 ============
+    let isEditingName = $state(false);
+    let editingName = $state('');
+    let isSavingName = $state(false);
 
     // ============ 表单数据 ============
     let addressForm = $state({
@@ -154,10 +154,8 @@
         type: 'warning' as 'warning' | 'danger' | 'info',
         confirmText: '確認',
         cancelText: 'キャンセル',
-        onConfirm: () => {
-        },
-        onCancel: () => {
-        }
+        onConfirm: () => {},
+        onCancel: () => {}
     });
 
     // ============ 自定义提示对话框状态 ============
@@ -213,19 +211,67 @@
         showAlertDialog = false;
     }
 
+    // ============ 名字编辑功能 ============
+    function startEditingName() {
+        if (!user) return;
+        isEditingName = true;
+        editingName = user.name || '';
+    }
+
+    function cancelEditingName() {
+        isEditingName = false;
+        editingName = '';
+    }
+
+    async function saveName() {
+        if (!user?.id || !editingName.trim()) {
+            showAlert({
+                title: '入力エラー',
+                message: '名前を入力してください',
+                type: 'error'
+            });
+            return;
+        }
+
+        if (editingName.trim() === user.name) {
+            cancelEditingName();
+            return;
+        }
+
+        isSavingName = true;
+        try {
+            await pb.collection('users').update(user.id, {
+                name: editingName.trim()
+            });
+
+            await userStore.refresh();
+            isEditingName = false;
+            showAlert({
+                title: '成功',
+                message: '名前を更新しました',
+                type: 'success'
+            });
+        } catch (error: any) {
+            console.error('Name update error:', error);
+            showAlert({
+                title: 'エラー',
+                message: `名前の更新に失敗しました: ${error?.message || '不明なエラー'}`,
+                type: 'error'
+            });
+        } finally {
+            isSavingName = false;
+        }
+    }
+
     // ============ 优化的数据加载函数 ============
     async function loadTabData() {
         if (!user?.id) return;
 
-        // 防止并发加载
         if (loadingTabs[currentTab]) {
-            console.log(`Tab ${currentTab} is already loading, skipping...`);
             return;
         }
 
-        // 如果数据已缓存，直接使用
         if (dataCache[currentTab]) {
-            console.log(`Using cached data for tab: ${currentTab}`);
             restoreFromCache(currentTab);
             return;
         }
@@ -234,8 +280,6 @@
         isLoading = true;
 
         try {
-            console.log(`Loading data for tab: ${currentTab}`);
-
             switch (currentTab) {
                 case 'profile':
                     await loadUserStats();
@@ -256,7 +300,6 @@
         }
     }
 
-    // 从缓存恢复数据
     function restoreFromCache(tab: string) {
         const cached = dataCache[tab];
         if (!cached) return;
@@ -279,7 +322,6 @@
         isLoading = false;
     }
 
-    // 加载用户统计
     async function loadUserStats() {
         if (!user?.id) return;
         const result = await profileService.getUserStats(user.id);
@@ -289,7 +331,6 @@
         }
     }
 
-    // 加载订单
     async function loadOrders() {
         if (!user?.id) return;
         const result = await profileService.getOrders(user.id);
@@ -299,7 +340,6 @@
         }
     }
 
-    // 加载地址
     async function loadAddresses() {
         if (!user?.id) return;
         const result = await profileService.getAddresses(user.id);
@@ -315,26 +355,22 @@
                 id: item.id,
                 product_id: item.product_id,
                 brands_id: item.brands_id,
-                expand: item.expand, // 保留扩展数据
+                expand: item.expand,
                 created: item.created,
                 updated: item.updated
             };
         });
     }
 
-
-    // 加载收藏
     async function loadFavorites() {
         if (!user?.id) return;
         const result = await profileService.getFavorites(user.id);
         if (result.success) {
             favorites = mapFavorites(result.favorites || []) as any
-            console.log(favorites)
             dataCache.favorites = favorites;
         }
     }
 
-    // 清除缓存的辅助函数
     function clearCache(tab: string) {
         dataCache[tab] = null;
     }
@@ -801,14 +837,10 @@
     }
 
     async function enableTwoFactor() {
-        // 模拟API调用
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // 生成示例备份代码
         twoFactorForm.backupCodes = Array.from({length: 8}, (_, i) =>
             Math.random().toString(36).substr(2, 8).toUpperCase()
         );
-
         twoFactorForm.step = 'setup';
     }
 
@@ -822,9 +854,7 @@
             return;
         }
 
-        // 模拟API验证
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
         twoFactorForm.step = 'complete';
         settingsForm.isTwoFactorEnabled = true;
     }
@@ -863,9 +893,7 @@
         });
 
         if (confirmed) {
-            // 模拟API调用
             await new Promise((resolve) => setTimeout(resolve, 1000));
-
             settingsForm.isTwoFactorEnabled = false;
             closeTwoFactorModal();
             showAlert({
@@ -879,8 +907,6 @@
     // ============ 设置页面功能 ============
     function toggleNotification(type: keyof typeof settingsForm.notifications) {
         settingsForm.notifications[type] = !settingsForm.notifications[type];
-        // 这里可以添加保存到API的逻辑
-        console.log('Notification settings updated:', settingsForm.notifications);
     }
 
     async function downloadUserData() {
@@ -1087,7 +1113,7 @@
                     {:else if currentTab === 'profile'}
                         <!-- 个人资料 -->
                         <div class="rounded-lg border border-[#e0e0e0] bg-white p-6">
-                            <div class="mb-6 ">
+                            <div class="mb-6">
                                 <h2 class="text-xl font-semibold text-[#1a1a1a]">プロフィール</h2>
                             </div>
 
@@ -1095,21 +1121,49 @@
                                 <!-- 个人信息 -->
                                 <div class="grid gap-4 md:grid-cols-2">
                                     <div class="space-y-2">
-                                        <!-- svelte-ignore a11y_label_has_associated_control -->
                                         <label class="block text-sm font-medium text-[#4a5568]">お名前</label>
-                                        <div class="input-display flex items-center justify-between">{user.name}
-                                            <button class="btn-secondary h-5">
-                                                {@html editProfile}
-                                                <span>編集</span>
-                                            </button>
-                                        </div>
+                                        {#if isEditingName}
+                                            <div class="flex gap-2">
+                                                <input
+                                                        type="text"
+                                                        bind:value={editingName}
+                                                        class="input-field flex-1"
+                                                        disabled={isSavingName}
+                                                        placeholder="名前を入力"
+                                                />
+                                                <button
+                                                        class="btn-primary px-3"
+                                                        onclick={saveName}
+                                                        disabled={isSavingName}
+                                                >
+                                                    {#if isSavingName}
+                                                        <div class="inline-flex">{@html spinnerSm}</div>
+                                                    {:else}
+                                                        保存
+                                                    {/if}
+                                                </button>
+                                                <button
+                                                        class="btn-secondary px-3"
+                                                        onclick={cancelEditingName}
+                                                        disabled={isSavingName}
+                                                >
+                                                    {@html cancelIcon}
+                                                </button>
+                                            </div>
+                                        {:else}
+                                            <div class="input-display flex items-center justify-between">
+                                                {user.name}
+                                                <button class="btn-secondary h-8 text-xs" onclick={startEditingName}>
+                                                    {@html editProfile}
+                                                    <span>編集</span>
+                                                </button>
+                                            </div>
+                                        {/if}
                                     </div>
                                     <div class="space-y-2">
-                                        <!-- svelte-ignore a11y_label_has_associated_control -->
                                         <label class="block text-sm font-medium text-[#4a5568]">メールアドレス</label>
                                         <div class="input-display">{user.email}</div>
                                     </div>
-                                    <!-- svelte-ignore a11y_label_has_associated_control -->
                                     <div class="space-y-2">
                                         <label class="block text-sm font-medium text-[#4a5568]">会員ランク</label>
                                         <div class="input-display flex items-center gap-2">
@@ -1122,7 +1176,6 @@
                                         </div>
                                     </div>
                                     <div class="space-y-2">
-                                        <!-- svelte-ignore a11y_label_has_associated_control -->
                                         <label class="block text-sm font-medium text-[#4a5568]">会員登録日</label>
                                         <div class="input-display">
                                             {new Date(user.created).toLocaleDateString('ja-JP')}
@@ -1161,24 +1214,12 @@
                                     <table class="w-full">
                                         <thead>
                                         <tr class="border-b border-[#e0e0e0]">
-                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-                                            >注文番号
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-                                            >注文日
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-                                            >商品数
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-                                            >合計金額
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-                                            >ステータス
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]"
-                                            >操作
-                                            </th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">注文番号</th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">注文日</th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">商品数</th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">合計金額</th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">ステータス</th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-[#4a5568]">操作</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -1205,8 +1246,7 @@
                                                 </td>
                                                 <td class="px-4 py-3">
                                                     <div class="flex gap-2">
-                                                        <button class="btn-link"
-                                                                onclick={() => openOrderDetailModal(order)}>
+                                                        <button class="btn-link" onclick={() => openOrderDetailModal(order)}>
                                                             詳細
                                                         </button>
                                                         {#if canRefund(order)}
@@ -1253,9 +1293,7 @@
                                                 <div class="flex items-center gap-2">
                                                     <h3 class="font-semibold text-[#1a1a1a]">{address.label}</h3>
                                                     {#if address.is_default}
-														<span
-                                                                class="rounded bg-[#2d3748] px-2 py-0.5 text-xs font-medium text-white"
-                                                        >
+														<span class="rounded bg-[#2d3748] px-2 py-0.5 text-xs font-medium text-white">
 															既定
 														</span>
                                                     {/if}
@@ -1304,17 +1342,13 @@
                             <div class="mb-6 flex items-center justify-between">
                                 <h2 class="text-xl font-semibold text-[#1a1a1a]">お気に入り</h2>
                                 {#if favorites.length > 0}
-                                    <button
-                                            class="btn-danger text-sm"
-                                            onclick={clearAllFavorites}
-                                    >
+                                    <button class="btn-danger text-sm" onclick={clearAllFavorites}>
                                         すべて削除
                                     </button>
                                 {/if}
                             </div>
 
                             {#if favorites.length > 0}
-                                <!-- 喜欢的商品 -->
                                 <div class="mb-8">
                                     <h3 class="mb-4 text-lg font-semibold text-[#1a1a1a]">商品のお気に入り</h3>
                                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1324,14 +1358,15 @@
                                                     <div class="rounded-lg border border-[#e0e0e0] bg-white p-4">
                                                         <div class="mb-3 aspect-square w-full overflow-hidden rounded-md">
                                                             <img
-                                                                    src={product.images?.[0] }
+                                                                    src={product.images?.[0]}
                                                                     alt={product.name}
                                                                     class="h-full w-full object-cover"
                                                             />
                                                         </div>
                                                         <h4 class="font-semibold text-[#1a1a1a]">{product.name}</h4>
                                                         <p class="text-sm text-[#718096]">
-                                                            ¥{product.price?.toLocaleString('ja-JP')}</p>
+                                                            ¥{product.price?.toLocaleString('ja-JP')}
+                                                        </p>
                                                         <div class="mt-3 flex gap-2">
                                                             <button
                                                                     class="btn-primary flex-1 text-sm"
@@ -1353,7 +1388,6 @@
                                     </div>
                                 </div>
 
-                                <!-- 喜欢的品牌 -->
                                 <div>
                                     <h3 class="mb-4 text-lg font-semibold text-[#1a1a1a]">ブランドのお気に入り</h3>
                                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1399,7 +1433,6 @@
                             <h2 class="mb-6 text-xl font-semibold text-[#1a1a1a]">設定</h2>
 
                             <div class="space-y-6">
-                                <!-- 通知设置 -->
                                 <div class="border-b border-[#e0e0e0] pb-6">
                                     <h3 class="mb-4 text-sm font-semibold text-[#1a1a1a]">通知設定</h3>
                                     <div class="space-y-2">
@@ -1430,7 +1463,6 @@
                                     </div>
                                 </div>
 
-                                <!-- プライバシー -->
                                 <div class="border-b border-[#e0e0e0] pb-6">
                                     <h3 class="mb-4 text-sm font-semibold text-[#1a1a1a]">プライバシー設定</h3>
                                     <div class="space-y-2">
@@ -1439,17 +1471,14 @@
                                             {@html arrow}
                                         </button>
                                         <button class="setting-btn" onclick={openTwoFactorModal}>
-											<span
-                                            >{settingsForm.isTwoFactorEnabled
-                                                ? '2段階認証を管理'
-                                                : '2段階認証を設定'}</span
-                                            >
+											<span>
+                                                {settingsForm.isTwoFactorEnabled ? '2段階認証を管理' : '2段階認証を設定'}
+                                            </span>
                                             {@html arrow}
                                         </button>
                                     </div>
                                 </div>
 
-                                <!-- データ管理 -->
                                 <div>
                                     <h3 class="mb-4 text-sm font-semibold text-[#1a1a1a]">データ管理</h3>
                                     <div class="space-y-2">
@@ -1479,12 +1508,10 @@
 
     <!-- ============ 所有模态框 ============ -->
 
-    <!-- 地址编辑模态框 -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- 地址编辑模态框 - 普通尺寸 -->
     {#if showAddressModal}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="modal-overlay" onclick={closeAddressModal}>
-            <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+            <div class="modal-content modal-normal" onclick={(e) => e.stopPropagation()}>
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#1a1a1a]">
                         {editingAddress ? '住所を編集' : '新しい住所を追加'}
@@ -1502,7 +1529,6 @@
                         class="space-y-4"
                 >
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
                         <label class="mb-1 block text-sm font-medium text-[#4a5568]">ラベル</label>
                         <input
                                 type="text"
@@ -1514,7 +1540,6 @@
                     </div>
 
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
                         <label class="mb-1 block text-sm font-medium text-[#4a5568]">受取人</label>
                         <input
                                 type="text"
@@ -1526,7 +1551,6 @@
                     </div>
 
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
                         <label class="mb-1 block text-sm font-medium text-[#4a5568]">電話番号</label>
                         <input
                                 type="tel"
@@ -1538,7 +1562,6 @@
                     </div>
 
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
                         <label class="mb-1 block text-sm font-medium text-[#4a5568]">郵便番号</label>
                         <input
                                 type="text"
@@ -1550,7 +1573,6 @@
                     </div>
 
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
                         <label class="mb-1 block text-sm font-medium text-[#4a5568]">住所</label>
                         <textarea
                                 bind:value={addressForm.address}
@@ -1577,13 +1599,10 @@
         </div>
     {/if}
 
-    <!-- 头像上传模态框 -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- 头像上传模态框 - 普通尺寸 -->
     {#if showAvatarModal}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="modal-overlay" onclick={closeAvatarModal}>
-            <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+            <div class="modal-content modal-normal" onclick={(e) => e.stopPropagation()}>
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#1a1a1a]">アバターを変更</h3>
                     <button class="icon-btn" onclick={closeAvatarModal}>
@@ -1636,12 +1655,10 @@
         </div>
     {/if}
 
-    <!-- 退款模态框 -->
+    <!-- 退款模态框 - 大尺寸 -->
     {#if showRefundModal && refundingOrder}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="refund-modal-overlay" onclick={closeRefundModal}>
-            <div class="refund-modal-content" onclick={(e) => e.stopPropagation()}>
+        <div class="modal-overlay" onclick={closeRefundModal}>
+            <div class="modal-content modal-wide" onclick={(e) => e.stopPropagation()}>
                 <!-- 头部 -->
                 <div class="refund-modal-header">
                     <div class="flex items-center gap-3">
@@ -1661,9 +1678,7 @@
                 <!-- 订单信息卡片 -->
                 <div class="refund-order-info">
                     <div class="order-info-header">
-						<span class="text-xs font-semibold tracking-wide text-[#718096] uppercase"
-                        >注文情報</span
-                        >
+                        <span class="text-xs font-semibold tracking-wide text-[#718096] uppercase">注文情報</span>
                         <span class="status-badge {getStatusClass(refundingOrder.status)}">
 							{getStatusLabel(refundingOrder.status)}
 						</span>
@@ -1672,9 +1687,7 @@
                     <div class="order-info-details">
                         <div class="order-info-row">
                             <span class="text-sm">注文番号</span>
-                            <span class="font-mono text-sm font-semibold">
-								{refundingOrder.order_number}
-							</span>
+                            <span class="font-mono text-sm font-semibold">{refundingOrder.order_number}</span>
                         </div>
                         <div class="order-info-row">
                             <span class="text-sm">注文金額</span>
@@ -1684,9 +1697,7 @@
                         </div>
                         <div class="order-info-row">
                             <span class="text-sm">返金タイプ</span>
-                            <span class="refund-type-badge">
-								{getRefundTypeText(refundingOrder)}
-							</span>
+                            <span class="refund-type-badge">{getRefundTypeText(refundingOrder)}</span>
                         </div>
                     </div>
                 </div>
@@ -1700,7 +1711,6 @@
                 >
                     <!-- 退款类型选择 -->
                     <div class="form-section">
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
                         <label class="form-label">返金金額</label>
                         <div class="refund-type-grid">
                             <label class="refund-type-card {refundForm.refundType === 'full' ? 'active' : ''}">
@@ -1743,7 +1753,6 @@
                     <!-- 部分退款金额输入 -->
                     {#if refundForm.refundType === 'partial'}
                         <div class="form-section partial-amount-section">
-                            <!-- svelte-ignore a11y_label_has_associated_control -->
                             <label class="form-label">返金金額を入力</label>
                             <div class="amount-input-wrapper">
                                 <span class="amount-currency">¥</span>
@@ -1768,7 +1777,6 @@
                     {/if}
 
                     <!-- 退款理由 -->
-                    <!-- svelte-ignore a11y_label_has_associated_control -->
                     <div class="form-section">
                         <label class="form-label">
                             返金理由 <span class="text-[#e53e3e]">*</span>
@@ -1784,9 +1792,7 @@
                                             class="sr-only"
                                     />
                                     <span class="reason-text">{reason}</span>
-                                    <span class="reason-check">
-										{@html checkCircle}
-									</span>
+                                    <span class="reason-check">{@html checkCircle}</span>
                                 </label>
                             {/each}
                         </div>
@@ -1808,7 +1814,6 @@
                             </div>
 
                             <div class="tracking-input-section">
-                                <!-- svelte-ignore a11y_label_has_associated_control -->
                                 <label class="form-label-dark">
                                     返品追跡番号 <span class="text-[#e53e3e]">*</span>
                                 </label>
@@ -1876,8 +1881,7 @@
                     </div>
                     <div class="refund-notice-content">
                         <p class="refund-notice-text">
-                            返金申請後、<strong>2-5営業日以内</strong
-                        >に処理されます。返金は元の支払い方法に戻されます。
+                            返金申請後、<strong>2-5営業日以内</strong>に処理されます。返金は元の支払い方法に戻されます。
                             {#if needsTrackingNumber(refundingOrder)}
                                 返品された商品が確認された後、返金が処理されます。
                             {/if}
@@ -1888,12 +1892,10 @@
         </div>
     {/if}
 
-    <!-- 订单详情模态框 -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- 订单详情模态框 - 大尺寸，优化后的卡片式布局 -->
     {#if showOrderDetailModal && selectedOrder}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="modal-overlay" onclick={closeOrderDetailModal}>
-            <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+            <div class="modal-content modal-wide" onclick={(e) => e.stopPropagation()}>
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#1a1a1a]">
                         注文詳細: {selectedOrder.order_number}
@@ -1940,87 +1942,69 @@
                             </p>
                         </div>
                     </div>
+
+                    <!-- 商品列表 - 卡片式布局 -->
                     {#if selectedOrder.items && selectedOrder.items.length > 0}
-                        <div class="overflow-x-auto">
-                            <div class="relative max-h-96 overflow-y-auto">
-                                <table class="w-full min-w-max">
-                                    <thead class="sticky top-0 z-10 bg-gray-50">
-                                    <tr class="text-left text-sm">
-                                        <th class="border-b px-4 py-3 font-semibold text-gray-700">商品</th>
-                                        <th class="border-b px-4 py-3 text-right font-semibold text-gray-700">価格
-                                        </th
-                                        >
-                                        <th class="border-b px-4 py-3 text-center font-semibold text-gray-700"
-                                        >数量
-                                        </th
-                                        >
-                                        <th class="border-b px-4 py-3 text-right font-semibold text-gray-700">小計
-                                        </th
-                                        >
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {#each selectedOrder.items as item}
-                                        <tr class="hover:bg-gray-25 border-b border-gray-100 transition-colors">
-                                            <td class="px-4 py-3">
-                                                <div class="flex items-center gap-3">
-                                                    <img
-                                                            src={item.product.image || '/placeholder-image.jpg'}
-                                                            alt={item.product.name}
-                                                            class="h-12 w-12 rounded-md border border-gray-200 object-cover"
-                                                    />
-                                                    <div>
-                                                        <div class="font-medium text-gray-800">{item.product.name}</div>
-                                                        {#if item.skuInfo}
-                                                            <div class="text-xs text-gray-500">
-                                                                {JSON.stringify(item.skuInfo.specs)}
-                                                            </div>
-                                                        {/if}
-                                                    </div>
+                        <div>
+                            <h4 class="mb-3 text-sm font-semibold text-gray-800">注文商品</h4>
+                            <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                                {#each selectedOrder.items as item}
+                                    <div class="flex gap-4 rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
+                                        <img
+                                                src={item.product.image || '/placeholder-image.jpg'}
+                                                alt={item.product.name}
+                                                class="h-20 w-20 flex-shrink-0 rounded-md border border-gray-200 object-cover"
+                                        />
+                                        <div class="flex flex-1 flex-col justify-between">
+                                            <div>
+                                                <h5 class="font-medium text-gray-900">{item.product.name}</h5>
+                                                {#if item.skuInfo}
+                                                    <p class="mt-1 text-xs text-gray-500">
+                                                        {JSON.stringify(item.skuInfo.specs)}
+                                                    </p>
+                                                {/if}
+                                            </div>
+                                            <div class="flex items-end justify-between">
+                                                <div class="text-sm text-gray-600">
+                                                    ¥{item.product.price?.toLocaleString('ja-JP') || '0'} × {item.quantity}
                                                 </div>
-                                            </td>
-                                            <td class="px-4 py-3 text-right text-sm text-gray-600">
-                                                ¥{item.product.price?.toLocaleString('ja-JP') || '0'}
-                                            </td>
-                                            <td class="px-4 py-3 text-center text-sm text-gray-600">{item.quantity}</td>
-                                            <td class="px-4 py-3 text-right text-sm font-semibold text-gray-800">
-                                                ¥{(item.product.price * item.quantity)?.toLocaleString('ja-JP') || '0'}
-                                            </td>
-                                        </tr>
-                                    {/each}
-                                    </tbody>
-                                </table>
+                                                <div class="text-base font-semibold text-gray-900">
+                                                    ¥{(item.product.price * item.quantity)?.toLocaleString('ja-JP') || '0'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {/each}
                             </div>
                         </div>
                     {:else}
-                        <div class="rounded-lg border border-gray-200 p-4 text-center">
+                        <div class="rounded-lg border border-gray-200 p-8 text-center">
                             <p class="text-gray-500">注文商品情報がありません</p>
                         </div>
                     {/if}
+
                     <!-- 金额汇总 -->
                     <div class="rounded-lg bg-gray-50 p-4">
-                        <div class="space-y-2">
-                            <div class="flex justify-between border-t border-gray-200 pt-2 text-base">
-                                <span class="font-semibold text-gray-800">合計:</span>
-                                <span class="font-bold">¥{selectedOrder.total_amount.toLocaleString('ja-JP')}</span>
-                            </div>
+                        <div class="flex items-center justify-between border-t border-gray-200 pt-3">
+                            <span class="text-base font-semibold text-gray-800">合計:</span>
+                            <span class="text-xl font-bold text-gray-900">
+                                ¥{selectedOrder.total_amount.toLocaleString('ja-JP')}
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-6 flex justify-end">
-                    <button class="btn-secondary" onclick={closeOrderDetailModal}> 閉じる</button>
+                    <button class="btn-secondary" onclick={closeOrderDetailModal}>閉じる</button>
                 </div>
             </div>
         </div>
     {/if}
 
-    <!-- 密码修改模态框 -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- 密码修改模态框 - 普通尺寸 -->
     {#if showPasswordModal}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="modal-overlay" onclick={closePasswordModal}>
-            <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+            <div class="modal-content modal-normal" onclick={(e) => e.stopPropagation()}>
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#1a1a1a]">パスワードを変更</h3>
                     <button class="icon-btn" onclick={closePasswordModal}>
@@ -2036,8 +2020,7 @@
                         class="space-y-4"
                 >
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
-                        <label class="mb-1 block text-sm font-medium text-[#4a5568]"> 現在のパスワード </label>
+                        <label class="mb-1 block text-sm font-medium text-[#4a5568]">現在のパスワード</label>
                         <input
                                 type="password"
                                 bind:value={passwordForm.currentPassword}
@@ -2048,8 +2031,7 @@
                     </div>
 
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
-                        <label class="mb-1 block text-sm font-medium text-[#4a5568]"> 新しいパスワード </label>
+                        <label class="mb-1 block text-sm font-medium text-[#4a5568]">新しいパスワード</label>
                         <input
                                 type="password"
                                 bind:value={passwordForm.newPassword}
@@ -2062,10 +2044,7 @@
                     </div>
 
                     <div>
-                        <!-- svelte-ignore a11y_label_has_associated_control -->
-                        <label class="mb-1 block text-sm font-medium text-[#4a5568]">
-                            新しいパスワード（確認）
-                        </label>
+                        <label class="mb-1 block text-sm font-medium text-[#4a5568]">新しいパスワード（確認）</label>
                         <input
                                 type="password"
                                 bind:value={passwordForm.confirmPassword}
@@ -2076,30 +2055,21 @@
                         />
                     </div>
 
-                    <div class="password-strength">
-                        <div class="strength-meter">
-                            <div class="strength-bar"></div>
-                        </div>
-                        <div class="strength-text text-xs text-[#718096]">パスワードの強度: 弱い</div>
-                    </div>
-
                     <div class="flex gap-3 pt-2">
                         <button type="button" class="btn-secondary flex-1" onclick={closePasswordModal}>
                             キャンセル
                         </button>
-                        <button type="submit" class="btn-primary flex-1"> 変更する</button>
+                        <button type="submit" class="btn-primary flex-1">変更する</button>
                     </div>
                 </form>
             </div>
         </div>
     {/if}
 
-    <!-- 双重认证模态框 -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- 双重认证模态框 - 普通尺寸 -->
     {#if showTwoFactorModal}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="modal-overlay" onclick={closeTwoFactorModal}>
-            <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+            <div class="modal-content modal-normal" onclick={(e) => e.stopPropagation()}>
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#1a1a1a]">2段階認証を設定</h3>
                     <button class="icon-btn" onclick={closeTwoFactorModal}>
@@ -2110,14 +2080,10 @@
                 {#if twoFactorForm.step === 'intro'}
                     <div class="space-y-6">
                         <div class="text-center">
-                            <div
-                                    class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100"
-                            >
+                            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
                                 {@html checkCircle}
                             </div>
-                            <h4 class="mb-2 text-lg font-semibold text-[#1a1a1a]">
-                                アカウントのセキュリティを強化
-                            </h4>
+                            <h4 class="mb-2 text-lg font-semibold text-[#1a1a1a]">アカウントのセキュリティを強化</h4>
                             <p class="text-sm text-[#718096]">
                                 2段階認証を有効にすることで、アカウントへの不正アクセスを防ぎます。
                                 ログイン時にパスワードと確認コードの両方が必要になります。
@@ -2143,12 +2109,8 @@
                         </div>
 
                         <div class="flex gap-3">
-                            <button type="button" class="btn-secondary flex-1" onclick={closeTwoFactorModal}>
-                                後で
-                            </button>
-                            <button type="button" class="btn-primary flex-1" onclick={enableTwoFactor}>
-                                設定を開始
-                            </button>
+                            <button type="button" class="btn-secondary flex-1" onclick={closeTwoFactorModal}>後で</button>
+                            <button type="button" class="btn-primary flex-1" onclick={enableTwoFactor}>設定を開始</button>
                         </div>
                     </div>
                 {:else if twoFactorForm.step === 'setup'}
@@ -2169,17 +2131,13 @@
                             </div>
 
                             <div class="flex justify-center">
-                                <div
-                                        class="flex h-48 w-48 items-center justify-center border-4 border-dashed border-gray-300"
-                                >
+                                <div class="flex h-48 w-48 items-center justify-center border-4 border-dashed border-gray-300">
                                     <p class="text-gray-500">QRコードプレビュー</p>
                                 </div>
                             </div>
 
                             <div class="text-center">
-                                <p class="mb-2 text-sm font-semibold text-gray-700">
-                                    シークレットキー: XXXX-XXXX-XXXX
-                                </p>
+                                <p class="mb-2 text-sm font-semibold text-gray-700">シークレットキー: XXXX-XXXX-XXXX</p>
                                 <p class="text-xs text-gray-500">手動で入力する場合はこのキーを使用してください</p>
                             </div>
 
@@ -2205,17 +2163,12 @@
                     <div class="space-y-6">
                         <div class="text-center">
                             <h4 class="mb-2 text-lg font-semibold text-[#1a1a1a]">確認コードを入力</h4>
-                            <p class="text-sm text-[#718096]">
-                                認証アプリに表示される6桁のコードを入力してください
-                            </p>
+                            <p class="text-sm text-[#718096]">認証アプリに表示される6桁のコードを入力してください</p>
                         </div>
 
                         <div class="space-y-4">
                             <div>
-                                <!-- svelte-ignore a11y_label_has_associated_control -->
-                                <label class="mb-1 block text-sm font-medium text-[#4a5568]">
-                                    6桁の確認コード
-                                </label>
+                                <label class="mb-1 block text-sm font-medium text-[#4a5568]">6桁の確認コード</label>
                                 <input
                                         type="text"
                                         bind:value={twoFactorForm.verificationCode}
@@ -2253,22 +2206,16 @@
                 {:else if twoFactorForm.step === 'complete'}
                     <div class="space-y-6">
                         <div class="text-center">
-                            <div
-                                    class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100"
-                            >
+                            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                                 {@html checkCircle}
                             </div>
-                            <h4 class="mb-2 text-lg font-semibold text-[#1a1a1a]">
-                                2段階認証が有効になりました！
-                            </h4>
+                            <h4 class="mb-2 text-lg font-semibold text-[#1a1a1a]">2段階認証が有効になりました！</h4>
                             <p class="text-sm text-[#718096]">次回のログインから2段階認証が必要になります</p>
                         </div>
 
                         {#if !twoFactorForm.showBackupCodes}
                             <div class="rounded-lg bg-yellow-50 p-4">
-                                <h5 class="mb-2 text-sm font-semibold text-yellow-800">
-                                    重要: バックアップコードを保存
-                                </h5>
+                                <h5 class="mb-2 text-sm font-semibold text-yellow-800">重要: バックアップコードを保存</h5>
                                 <p class="text-sm text-yellow-700">
                                     認証アプリにアクセスできない場合、これらのコードを使用してログインできます。
                                     各コードは一度しか使用できません。
@@ -2294,10 +2241,8 @@
                                     </button>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
-                                    {#each twoFactorForm.backupCodes as code, i}
-                                        <div class="rounded bg-gray-100 px-3 py-2 font-mono text-sm">
-                                            {code}
-                                        </div>
+                                    {#each twoFactorForm.backupCodes as code}
+                                        <div class="rounded bg-gray-100 px-3 py-2 font-mono text-sm">{code}</div>
                                     {/each}
                                 </div>
                                 <div class="mt-3 flex gap-2">
@@ -2371,10 +2316,7 @@
     {/if}
 
     <!-- 自定义提示对话框 -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     {#if showAlertDialog}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div class="alert-dialog-overlay" onclick={closeAlertDialog}>
             <div class="alert-dialog-content {alertDialogData.type}" onclick={(e) => e.stopPropagation()}>
                 <div class="alert-dialog-header">
@@ -2397,6 +2339,8 @@
 {/if}
 
 <style>
+
+
     /* ==================== 基础样式 ==================== */
     .btn-primary {
         display: inline-flex;
@@ -2441,6 +2385,25 @@
     .btn-secondary:hover {
         background-color: #edf2f7;
         border-color: #cbd5e0;
+    }
+
+    .btn-danger {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: white;
+        background-color: #e53e3e;
+        border: none;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+        background-color: #c53030;
     }
 
     .btn-link {
@@ -2595,17 +2558,6 @@
         border-color: #cbd5e0;
     }
 
-    .product-card {
-        padding: 1rem;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
-        transition: box-shadow 0.2s;
-    }
-
-    .product-card:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
     .setting-item {
         display: flex;
         align-items: center;
@@ -2675,27 +2627,7 @@
         transform: translateX(20px);
     }
 
-    .password-strength {
-        margin-top: 1rem;
-    }
-
-    .strength-meter {
-        height: 4px;
-        background-color: #e2e8f0;
-        border-radius: 2px;
-        overflow: hidden;
-        margin-bottom: 0.5rem;
-    }
-
-    .strength-bar {
-        height: 100%;
-        width: 30%;
-        background-color: #e53e3e;
-        border-radius: 2px;
-        transition: all 0.3s;
-    }
-
-    /* 模态框样式 */
+    /* ==================== 模态框样式 ==================== */
     .modal-overlay {
         position: fixed;
         inset: 0;
@@ -2705,49 +2637,30 @@
         justify-content: center;
         padding: 1rem;
         z-index: 50;
+        animation: fadeIn 0.2s ease-out;
     }
 
     .modal-content {
         background-color: white;
         border-radius: 0.5rem;
         padding: 1.5rem;
-        max-width: 800px;
         width: 100%;
         max-height: 90vh;
         overflow-y: auto;
-    }
-
-    /* ==================== 退款模态框专属样式 ==================== */
-
-    /* 背景遮罩 - 降低透明度 */
-    .refund-modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(2px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-        z-index: 50;
-        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* 模态框容器 */
-    .refund-modal-content {
-        background: linear-gradient(to bottom, #ffffff 0%, #fafafa 100%);
-        border-radius: 1rem;
-        padding: 0;
-        max-width: 760px;
-        width: 100%;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 10px 10px -5px rgba(0, 0, 0, 0.04);
         animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    /* 模态框头部 */
+    /* 普通尺寸模态框 (地址、头像、密码、双重认证) */
+    .modal-normal {
+        max-width: 500px;
+    }
+
+    /* 大尺寸模态框 (订单详情、退款) */
+    .modal-wide {
+        max-width: 900px;
+    }
+
+    /* ==================== 退款模态框专属样式 ==================== */
     .refund-modal-header {
         display: flex;
         align-items: center;
@@ -2769,7 +2682,6 @@
         color: white;
     }
 
-    /* 订单信息卡片 */
     .refund-order-info {
         margin: 1.5rem;
         background: linear-gradient(135deg, #1a202c 0%, #1a202c 100%);
@@ -2816,7 +2728,6 @@
         border: 1px solid rgba(252, 129, 129, 0.3);
     }
 
-    /* 表单部分 */
     .refund-form {
         padding: 0 1.5rem 1.5rem;
     }
@@ -2833,7 +2744,6 @@
         color: #2d3748;
     }
 
-    /* 退款类型选择卡片 */
     .refund-type-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -2904,7 +2814,6 @@
         transform: scale(1);
     }
 
-    /* 部分退款金额输入 */
     .partial-amount-section {
         animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -2955,7 +2864,6 @@
         padding: 0 0.25rem;
     }
 
-    /* 退款理由网格 */
     .reason-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -3013,7 +2921,6 @@
         transform: scale(1);
     }
 
-    /* 退货单号提示框 */
     .tracking-notice {
         padding: 1.25rem;
         background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
@@ -3093,7 +3000,6 @@
         color: #78350f;
     }
 
-    /* 未发货退货选项 */
     .return-goods-notice {
         padding: 1rem;
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
@@ -3153,7 +3059,6 @@
         line-height: 1.5;
     }
 
-    /* 操作按钮 */
     .modal-actions {
         display: flex;
         gap: 0.75rem;
@@ -3231,7 +3136,6 @@
         transform: translateX(4px);
     }
 
-    /* 底部提示 */
     .refund-notice {
         display: flex;
         gap: 0.75rem;
