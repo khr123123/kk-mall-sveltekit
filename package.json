@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev --mode dev",
+		"dev": "start \"pocketbase\" cmd /c \"cd pocketbase_0.34.2_windows_amd64 && .\\pocketbase.exe serve\" && vite --mode dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
