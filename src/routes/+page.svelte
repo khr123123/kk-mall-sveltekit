@@ -29,7 +29,7 @@
 	let pb: PocketBase | null = null;
 
 	if (browser) {
-		pb = new PocketBase('http://localhost:8090');
+		pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL);
 	}
 
 	// 主轮播图数据
