@@ -29,7 +29,7 @@
 	let pb: PocketBase | null = null;
 
 	if (browser) {
-		pb = new PocketBase("https://1-z0lop540.b4a.run/");
+		pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL);
 	}
 
 	// 主轮播图数据
