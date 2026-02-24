@@ -340,6 +340,7 @@
 							<a
 								href="/forgot-password"
 								class="text-sm text-gray-600 transition-colors hover:text-gray-900 hover:underline"
+								onclick={() => handleCloseModal()}
 							>
 								パスワードを忘れた
 							</a>
