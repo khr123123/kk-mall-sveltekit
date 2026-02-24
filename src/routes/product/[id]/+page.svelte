@@ -4,6 +4,7 @@
 	import { categoryStore } from '$lib/stores/categoryStore';
 	import type { RecordModel } from 'pocketbase';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { cart } from '$lib/stores/cartStore';
 	import { pb } from '$lib/services/PBConfig';
 	import { profileService } from '$lib/services/profileService';
@@ -68,6 +69,8 @@
 	let isLoading = $state<boolean>(false);
 	let message = $state<string>('');
 	let isFavorite = $state<boolean>(false);
+	let isSpecsLoading = $state<boolean>(true);
+	let isFavoriteLoading = $state<boolean>(true);
 	// 获取商品图片
 	const getImages = (): string[] => {
 		if (!product) return [];
@@ -195,7 +198,7 @@
 
 		// 检查登录状态
 		if (!pb.authStore.record) {
-			await goto('/login?redirect=/product/' + product.id);
+await goto(`/login?redirect=/product/${product.id}`);
 			isLoading = false;
 			return;
 		}
@@ -258,6 +261,7 @@
 				});
 				product = responseProd as Product;
 
+				isSpecsLoading = true;
 				const responseProdSkus = await pb.collection('product_skus').getFullList({
 					filter: `product_id = "${productId}"`
 				});
@@ -274,8 +278,9 @@
 					});
 					selectedSpecs = initialSpecs;
 				}
+				isSpecsLoading = false;
 
-				// 检查收藏状态
+				isFavoriteLoading = true;
 				const user = pb.authStore.record;
 				if (user && product?.id) {
 					const favRes = await profileService.isFavorite(user.id, product.id);
@@ -285,9 +290,12 @@
 				} else {
 					isFavorite = false;
 				}
+				isFavoriteLoading = false;
 			}
 		} catch (error) {
 			console.error('Error fetching product:', error);
+		} finally {
+			/* noop */
 		}
 	};
 
@@ -297,6 +305,7 @@
 		pb.authStore.onChange(async () => {
 			if (product?.id) {
 				const user = pb.authStore.record;
+				isFavoriteLoading = true;
 				if (user) {
 					const favRes = await profileService.isFavorite(user.id, product.id);
 					if (favRes.success) {
@@ -305,6 +314,7 @@
 				} else {
 					isFavorite = false;
 				}
+				isFavoriteLoading = false;
 			}
 		});
 	});
@@ -346,14 +356,14 @@
 				<nav class="mb-6">
 					<ol class="flex items-center space-x-2 text-sm">
 						<li>
-							<a href="/product" class="text-gray-500 transition-colors hover:text-gray-700"
+							<a href={resolve('/product')} class="text-gray-500 transition-colors hover:text-gray-700"
 								>商品一覧</a
 							>
 						</li>
 						<li class="text-gray-400">/</li>
 						<li>
 							<a
-								href="/category/{product.category_id}"
+								href={resolve(`/category/${product.category_id}`)}
 								class="text-gray-500 transition-colors hover:text-gray-700">{categoryName}</a
 							>
 						</li>
@@ -448,6 +458,9 @@
 									<span class="ml-2 text-sm text-gray-600">{(product.rating || 0).toFixed(1)}</span>
 								</div>
 								<span class="text-sm text-gray-500">({product.reviews || 0}件のレビュー)</span>
+								{#if isFavoriteLoading}
+									<span class="h-6 w-20 animate-pulse rounded bg-gray-200"></span>
+								{:else}
 								<button
 									onclick={toggleFavorite}
 									class={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs transition-all ${
@@ -473,6 +486,7 @@
 									</svg>
 									{isFavorite ? 'お気に入り済み' : 'お気に入り'}
 								</button>
+								{/if}
 							</div>
 						{/if}
 
@@ -509,7 +523,16 @@
 						</div>
 
 						<!-- SKU 规格选择 -->
-						{#if specOptions.length > 0}
+						{#if isSpecsLoading}
+							<div class="space-y-2">
+								<div class="mb-1 h-4 w-16 rounded bg-gray-200"></div>
+								<div class="flex flex-wrap gap-2">
+									{#each [0,1,2,3,4,5] as i (i)}
+										<div class="h-8 w-16 rounded border border-gray-200 bg-gray-100"></div>
+									{/each}
+								</div>
+							</div>
+						{:else if specOptions.length > 0}
 							<div class="space-y-2">
 								{#each specOptions as spec (spec.name)}
 									<div>
@@ -690,7 +713,7 @@
 											{#if spec.key === 'ブランド'}
 												<td
 													class="cursor-pointer px-6 py-4 text-sm text-blue-600 hover:underline"
-													onclick={() => goto(`/brands/${spec.value}`)}
+													onclick={() => goto(resolve(`/brands/${spec.value}`))}
 												>
 													{product.expand?.brand?.name}
 												</td>
@@ -833,11 +856,28 @@
 					<div class="h-10 w-full animate-pulse rounded bg-gray-200"></div>
 					<div class="h-6 w-24 animate-pulse rounded bg-gray-200"></div>
 					<div class="h-12 w-40 animate-pulse rounded bg-gray-200"></div>
+					<div class="flex items-center gap-3">
+						<div class="flex items-center gap-1">
+							{#each stars as i (i)}
+								<div class="h-5 w-5 animate-pulse rounded bg-gray-200"></div>
+							{/each}
+							<div class="ml-2 h-4 w-10 animate-pulse rounded bg-gray-200"></div>
+						</div>
+						<div class="h-6 w-20 animate-pulse rounded bg-gray-200"></div>
+					</div>
 					<div class="space-y-4">
 						<div class="h-10 w-32 animate-pulse rounded bg-gray-200"></div>
 						<div class="flex space-x-3">
 							<div class="h-12 flex-1 animate-pulse rounded bg-gray-200"></div>
 							<div class="h-12 flex-1 animate-pulse rounded bg-gray-200"></div>
+						</div>
+						<div class="space-y-2">
+							<div class="h-4 w-16 animate-pulse rounded bg-gray-200"></div>
+							<div class="flex flex-wrap gap-2">
+								{#each [0,1,2,3,4,5] as i (i)}
+									<div class="h-8 w-16 animate-pulse rounded bg-gray-200"></div>
+								{/each}
+							</div>
 						</div>
 					</div>
 				</div>
