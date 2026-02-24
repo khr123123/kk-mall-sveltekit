@@ -8,6 +8,7 @@
 	import { cart } from '$lib/stores/cartStore';
 	import { pb } from '$lib/services/PBConfig';
 	import { profileService } from '$lib/services/profileService';
+	import LoginModal from '$lib/components/headercomponents/LoginModal.svelte';
 
 	// 商品数据结构
 	interface Product extends RecordModel {
@@ -71,6 +72,7 @@
 	let isFavorite = $state<boolean>(false);
 	let isSpecsLoading = $state<boolean>(true);
 	let isFavoriteLoading = $state<boolean>(true);
+	let showLoginModal = $state<boolean>(false);
 	// 获取商品图片
 	const getImages = (): string[] => {
 		if (!product) return [];
@@ -198,7 +200,7 @@
 
 		// 检查登录状态
 		if (!pb.authStore.record) {
-await goto(`/login?redirect=/product/${product.id}`);
+			showLoginModal = true;
 			isLoading = false;
 			return;
 		}
@@ -324,7 +326,7 @@ await goto(`/login?redirect=/product/${product.id}`);
 		if (!product) return;
 		const user = pb.authStore.record;
 		if (!user) {
-			await goto(`/login?redirect=/product/${product.id}`);
+			showLoginModal = true;
 			return;
 		}
 
@@ -536,6 +538,7 @@ await goto(`/login?redirect=/product/${product.id}`);
 							<div class="space-y-2">
 								{#each specOptions as spec (spec.name)}
 									<div>
+										<!-- svelte-ignore a11y_label_has_associated_control -->
 										<label class="mb-1 block text-sm font-medium text-gray-700">
 											{spec.name}
 										</label>
@@ -885,6 +888,21 @@ await goto(`/login?redirect=/product/${product.id}`);
 		</div>
 	{/if}
 </main>
+
+<!-- 登录弹窗 -->
+<LoginModal
+	show={showLoginModal}
+	onClose={() => (showLoginModal = false)}
+	on:loginSuccess={async () => {
+		showLoginModal = false;
+		if (product?.id && pb.authStore.record) {
+			const favRes = await profileService.isFavorite(pb.authStore.record.id, product.id);
+			if (favRes.success) {
+				isFavorite = !!favRes.isFavorite;
+			}
+		}
+	}}
+/>
 
 <style>
 	/* PocketBase风格优化 */

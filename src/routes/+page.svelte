@@ -37,28 +37,28 @@
 		{
 			id: 1,
 			image:
-				'https://plus.unsplash.com/premium_photo-1664201889922-66bc3c778c1e?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+				'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&h=400&fit=crop',
 			title: '新年セール',
 			subtitle: '全品50%OFF〜',
 			link: '/'
 		},
 		{
 			id: 2,
-			image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&h=400&fit=crop',
+			image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=400&fit=crop',
 			title: '家電・デジタル',
 			subtitle: '最新ガジェット',
 			link: '/'
 		},
 		{
 			id: 3,
-			image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop',
+			image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=1200&h=400&fit=crop',
 			title: 'ファッション',
 			subtitle: '春の新作',
 			link: '/'
 		},
 		{
 			id: 4,
-			image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop',
+			image: 'https://images.unsplash.com/photo-1505692794403-34d4982f88aa?w=1200&h=400&fit=crop',
 			title: 'ホーム&リビング',
 			subtitle: '暮らしを豊かに',
 			link: '/'
