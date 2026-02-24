@@ -5,8 +5,8 @@
 	import type { RecordModel } from 'pocketbase';
 	import { goto } from '$app/navigation';
 	import { cart } from '$lib/stores/cartStore';
-	import { checkIcon, minus, plus, spinner, spinnerWhite, starRatingMd } from '$lib/icons/svgs';
 	import { pb } from '$lib/services/PBConfig';
+	import { profileService } from '$lib/services/profileService';
 
 	// 商品数据结构
 	interface Product extends RecordModel {
@@ -44,16 +44,7 @@
 		status: boolean;
 	}
 
-	//购物车数据结构
-	interface CartItem extends RecordModel {
-		product: string;
-		user: string;
-		quantity: number;
-		selected: boolean;
-		sku: string;
-		created: string;
-		updated: string;
-	}
+	// 已移除未使用的 CartItem 声明
 
 	// 规格选项结构
 	interface SpecOption {
@@ -76,6 +67,7 @@
 	let quantity = $state<number>(1);
 	let isLoading = $state<boolean>(false);
 	let message = $state<string>('');
+	let isFavorite = $state<boolean>(false);
 	// 获取商品图片
 	const getImages = (): string[] => {
 		if (!product) return [];
@@ -184,6 +176,8 @@
 	let stockCount = $derived<number>(getStockCount());
 
 	const productId: string | undefined = page.params.id;
+	const stars = [0, 1, 2, 3, 4];
+	const thumbPlaceholders = [0, 1, 2, 3];
 
 	// 处理规格选择
 	const handleSpecSelect = (specName: string, value: string): void => {
@@ -280,13 +274,66 @@
 					});
 					selectedSpecs = initialSpecs;
 				}
+
+				// 检查收藏状态
+				const user = pb.authStore.record;
+				if (user && product?.id) {
+					const favRes = await profileService.isFavorite(user.id, product.id);
+					if (favRes.success) {
+						isFavorite = !!favRes.isFavorite;
+					}
+				} else {
+					isFavorite = false;
+				}
 			}
 		} catch (error) {
 			console.error('Error fetching product:', error);
 		}
 	};
 
-	onMount(async () => await loadProduct());
+	onMount(async () => {
+		await loadProduct();
+		// 登录状态改变时同步收藏状态
+		pb.authStore.onChange(async () => {
+			if (product?.id) {
+				const user = pb.authStore.record;
+				if (user) {
+					const favRes = await profileService.isFavorite(user.id, product.id);
+					if (favRes.success) {
+						isFavorite = !!favRes.isFavorite;
+					}
+				} else {
+					isFavorite = false;
+				}
+			}
+		});
+	});
+
+	// 切换收藏状态
+	const toggleFavorite = async (): Promise<void> => {
+		if (!product) return;
+		const user = pb.authStore.record;
+		if (!user) {
+			await goto(`/login?redirect=/product/${product.id}`);
+			return;
+		}
+
+		try {
+			if (isFavorite) {
+				const res = await profileService.removeFavoriteProduct(user.id, product.id);
+				if (res.success) {
+					isFavorite = false;
+				}
+			} else {
+				const res = await profileService.addFavoriteProduct(user.id, product.id, product.brand || '');
+				if (res.success) {
+					isFavorite = true;
+				}
+			}
+		} catch (e) {
+			console.error('切换收藏失败:', e);
+		}
+	};
 </script>
 
 <!-- 模板部分保持不变 -->
@@ -336,8 +383,8 @@
 
 						<!-- 缩略图列表 -->
 						{#if images.length > 1}
-							<div class="flex space-x-3 overflow-x-auto pb-2">
-								{#each images as image, index}
+						<div class="flex space-x-3 overflow-x-auto pb-2">
+							{#each images as image, index (image)}
 									<button
 										onclick={() => (selectedImageIndex = index)}
 										class={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${selectedImageIndex === index ? 'border-gray-900' : 'border-transparent hover:border-gray-300'}`}
@@ -356,7 +403,7 @@
 						{#if product.description}
 							<div class="border-t border-b border-gray-100 py-6">
 								<h3 class="mb-3 text-sm font-medium text-gray-900">商品説明</h3>
-								<p class="leading-relaxed text-gray-600">{@html product.description}</p>
+								<p class="leading-relaxed text-gray-600 whitespace-pre-line">{product.description}</p>
 							</div>
 						{/if}
 					</div>
@@ -389,18 +436,43 @@
 						{#if product.rating !== undefined}
 							<div class="flex items-center space-x-4">
 								<div class="flex items-center">
-									{#each Array(5) as _, i}
-										<div
-											class={i < Math.floor(product.rating || 0)
-												? 'text-yellow-400'
-												: 'text-gray-300'}
+									{#each stars as i (i)}
+										<svg
+											class={i < Math.floor(product.rating || 0) ? 'h-5 w-5 text-yellow-400' : 'h-5 w-5 text-gray-300'}
+											fill="currentColor"
+											viewBox="0 0 20 20"
 										>
-											{@html starRatingMd}
-										</div>
+											<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+										</svg>
 									{/each}
 									<span class="ml-2 text-sm text-gray-600">{(product.rating || 0).toFixed(1)}</span>
 								</div>
 								<span class="text-sm text-gray-500">({product.reviews || 0}件のレビュー)</span>
+								<button
+									onclick={toggleFavorite}
+									class={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs transition-all ${
+										isFavorite
+											? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+											: 'border-gray-300 bg-white text-gray-700 hover:border-gray-900'
+									}`}
+									aria-pressed={isFavorite}
+									title={isFavorite ? 'お気に入り済み' : 'お気に入りに追加'}
+								>
+									<svg
+										class="h-4 w-4"
+										viewBox="0 0 24 24"
+										fill={isFavorite ? 'currentColor' : 'none'}
+										stroke="currentColor"
+										stroke-width="1.8"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
+										/>
+									</svg>
+									{isFavorite ? 'お気に入り済み' : 'お気に入り'}
+								</button>
 							</div>
 						{/if}
 
@@ -439,13 +511,13 @@
 						<!-- SKU 规格选择 -->
 						{#if specOptions.length > 0}
 							<div class="space-y-2">
-								{#each specOptions as spec}
+								{#each specOptions as spec (spec.name)}
 									<div>
 										<label class="mb-1 block text-sm font-medium text-gray-700">
 											{spec.name}
 										</label>
 										<div class="flex flex-wrap gap-2">
-											{#each spec.values as value}
+											{#each spec.values as value (value)}
 												<button
 													onclick={() => handleSpecSelect(spec.name, value)}
 													class={`rounded border px-4 py-2 text-sm transition-all
@@ -509,7 +581,9 @@
 										class="flex h-10 w-10 items-center justify-center rounded-l border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 										disabled={quantity <= 1 || !isStockAvailable}
 									>
-										{@html minus}
+										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+										</svg>
 									</button>
 									<input
 										type="text"
@@ -522,7 +596,9 @@
 										class="flex h-10 w-10 items-center justify-center rounded-r border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 										disabled={quantity >= stockCount || !isStockAvailable}
 									>
-										{@html plus}
+										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+										</svg>
 									</button>
 								</div>
 							</div>
@@ -536,7 +612,10 @@
 								>
 									{#if isLoading}
 										<div class="mr-3 -ml-1 text-gray-900">
-											{@html spinner}
+											<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+												<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+												<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+											</svg>
 										</div>
 										処理中...
 									{:else}
@@ -552,7 +631,10 @@
 									{#if isLoading}
 										<div class="flex items-center justify-center">
 											<div class="mr-3 -ml-1 text-white">
-												{@html spinnerWhite}
+												<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+													<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+													<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+												</svg>
 											</div>
 											処理中...
 										</div>
@@ -578,10 +660,12 @@
 							製品特長
 						</h2>
 						<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-							{#each features as feature}
+							{#each features as feature (feature)}
 								<div class="flex items-start space-x-3">
 									<div class="mt-0.5 shrink-0 text-gray-400">
-										{@html checkIcon}
+										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/>
+										</svg>
 									</div>
 									<span class="text-gray-600">{feature}</span>
 								</div>
@@ -597,7 +681,7 @@
 						<div class="overflow-hidden rounded-lg bg-gray-50">
 							<table class="min-w-full divide-y divide-gray-200">
 								<tbody class="divide-y divide-gray-200 bg-white">
-									{#each specifications as spec}
+									{#each specifications as spec (spec.key)}
 										<tr class="transition-colors hover:bg-gray-50">
 											<td class="w-1/3 px-6 py-4 text-sm font-medium text-gray-900">
 												{spec.key}
@@ -738,8 +822,8 @@
 				<div>
 					<div class="mb-4 h-100 animate-pulse rounded-lg bg-gray-200"></div>
 					<div class="flex space-x-3">
-						{#each Array(4) as _}
-							<div class="h-20 w-20 animate-pulse rounded-lg bg-gray-200"></div>
+						{#each thumbPlaceholders as i (i)}
+							<div class="h-20 w-20 animate-pulse rounded-lg bg-gray-200" data-index={i}></div>
 						{/each}
 					</div>
 				</div>

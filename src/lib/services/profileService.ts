@@ -306,6 +306,54 @@ class ProfileService {
     }
 
     /**
+     * 添加收藏（兼容数组或单值存储）
+     */
+    async addFavoriteProduct(userId: string, productId: string, brandsId?: string) {
+        try {
+            // 查找当前用户的收藏记录（按你的数据结构，可能存在一条记录存多商品）
+            const existing = await pb
+                .collection('favorites')
+                .getFullList({ filter: `user = "${userId}"` });
+
+            if (existing.length > 0) {
+                const record = existing[0];
+                const current = record.product_id as any;
+                let next: any;
+
+                if (Array.isArray(current)) {
+                    if (current.includes(productId)) {
+                        return { success: true, favorite: record };
+                    }
+                    next = [...current, productId];
+                } else if (typeof current === 'string' && current) {
+                    if (current === productId) {
+                        return { success: true, favorite: record };
+                    }
+                    next = [current, productId];
+                } else {
+                    next = [productId];
+                }
+
+                const updated = await pb.collection('favorites').update(record.id, {
+                    product_id: next
+                });
+                return { success: true, favorite: updated };
+            }
+
+            // 不存在则创建
+            const created = await pb.collection('favorites').create({
+                user: userId,
+                product_id: [productId],
+                ...(brandsId ? { brands_id: brandsId } : {})
+            });
+            return { success: true, favorite: created };
+        } catch (error: any) {
+            console.error('添加收藏失败:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * 删除收藏
      */
     async removeFavorite(favoriteId: string) {
@@ -321,6 +369,43 @@ class ProfileService {
                 success: false,
                 error: error.message
             };
+        }
+    }
+
+    /**
+     * 删除某个商品的收藏（兼容数组或单值存储）
+     */
+    async removeFavoriteProduct(userId: string, productId: string) {
+        try {
+            const records = await pb.collection('favorites').getFullList({
+                filter: `user = "${userId}" && (product_id ~ "${productId}" || product_id = "${productId}")`
+            });
+
+            if (records.length === 0) {
+                return { success: true };
+            }
+
+            const record = records[0];
+            const current = record.product_id as any;
+
+            if (Array.isArray(current)) {
+                const next = current.filter((id: string) => id !== productId);
+                if (next.length === 0) {
+                    await pb.collection('favorites').delete(record.id);
+                } else {
+                    await pb.collection('favorites').update(record.id, { product_id: next });
+                }
+                return { success: true };
+            }
+
+            // 单值存储场景，直接删除整条记录
+            if (typeof current === 'string' && current === productId) {
+                await pb.collection('favorites').delete(record.id);
+            }
+            return { success: true };
+        } catch (error: any) {
+            console.error('删除收藏失败:', error);
+            return { success: false, error: error.message };
         }
     }
 
@@ -355,7 +440,8 @@ class ProfileService {
     async isFavorite(userId: string, productId: string) {
         try {
             const records = await pb.collection('favorites').getFullList({
-                filter: `user = "${userId}" && product_id = "${productId}"`
+                // 兼容 product_id 为数组或单值
+                filter: `user = "${userId}" && (product_id ~ "${productId}" || product_id = "${productId}")`
             });
 
             return {
