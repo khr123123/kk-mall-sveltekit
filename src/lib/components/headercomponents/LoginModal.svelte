@@ -39,15 +39,12 @@
 			if (show) {
 				document.body.style.overflow = 'hidden';
 			}
-
-			document.addEventListener('keydown', handleKeydown);
 		}
 	});
 
 	onDestroy(() => {
 		if (isBrowser) {
 			window.removeEventListener('resize', handleResize);
-			document.removeEventListener('keydown', handleKeydown);
 			document.body.style.overflow = '';
 		}
 	});
@@ -197,20 +194,11 @@
 			isLoading = false;
 		}
 	}
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape' && show) {
-			handleCloseModal();
-		}
-	}
 </script>
 
 {#if show}
 	<div
 		class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm transition-opacity duration-200"
-		onclick={handleCloseModal}
-		role="button"
-		tabindex="0"
 		aria-label="モーダルを閉じる"
 		class:opacity-100={show}
 		class:pointer-events-auto={show}
