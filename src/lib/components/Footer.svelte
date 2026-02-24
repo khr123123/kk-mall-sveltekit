@@ -1,4 +1,4 @@
-﻿<script>
+<script>
 	const iconBase = 'w-7 h-7 opacity-80 hover:opacity-100 transition-opacity';
 
 	const socialIcons = [
@@ -9,24 +9,32 @@
 		},
 		{
 			name: 'Instagram',
-			icon :'/svgs/instagram.svg',
+			icon: '/svgs/instagram.svg',
 			href: 'https://github.com/khr123123'
 		},
 		{
 			name: 'Facebook',
-			icon :'/svgs/facebook.svg',
+			icon: '/svgs/facebook.svg',
 			href: 'https://github.com/khr123123'
 		},
 		{
 			name: 'Line',
-			icon :'/svgs/line.svg',
+			icon: '/svgs/line.svg',
 			href: 'https://github.com/khr123123'
 		},
 		{
 			name: 'X',
-			icon :'/svgs/X.svg',
+			icon: '/svgs/X.svg',
 			href: 'https://github.com/khr123123'
 		}
+	];
+
+	const infoLinks = [
+		{ label: 'ご利用案内', href: '/about' },
+		{ label: 'ショップからのお知らせ', href: '/about' },
+		{ label: 'プライバシーポリシー', href: '/privacy' },
+		{ label: '特定商取引法に関する表記', href: '/terms' },
+		{ label: 'サイトポリシー', href: '/terms' }
 	];
 </script>
 
@@ -40,51 +48,16 @@
 					インフォメーション
 				</h3>
 				<ul class="space-y-3 text-sm">
-					<li>
-						<a
-							href="https://github.com/khr123123"
-							target="_blank"
-							class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
-						>
-							ご利用案内
-						</a>
-					</li>
-					<li>
-						<a
-							href="https://github.com/khr123123"
-							target="_blank"
-							class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
-						>
-							ショップからのお知らせ
-						</a>
-					</li>
-					<li>
-						<a
-							href="https://github.com/khr123123"
-							target="_blank"
-							class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
-						>
-							プライバシーポリシー
-						</a>
-					</li>
-					<li>
-						<a
-							href="https://github.com/khr123123"
-							target="_blank"
-							class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
-						>
-							特定商取引法に関する表記
-						</a>
-					</li>
-					<li>
-						<a
-							href="https://github.com/khr123123"
-							target="_blank"
-							class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
-						>
-							サイトポリシー
-						</a>
-					</li>
+					{#each infoLinks as link}
+						<li>
+							<a
+								href={link.href}
+								class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
+							>
+								{link.label}
+							</a>
+						</li>
+					{/each}
 				</ul>
 			</div>
 
@@ -95,8 +68,7 @@
 				</h3>
 				<div class="space-y-4">
 					<a
-						href="https://github.com/khr123123"
-						target="_blank"
+						href="/support"
 						class="block w-full rounded border border-gray-300 px-4 py-3 text-center text-sm
 							   transition-all duration-200 hover:border-gray-900 hover:text-gray-900"
 					>
@@ -104,8 +76,7 @@
 					</a>
 
 					<a
-						href="https://github.com/khr123123"
-						target="_blank"
+						href="/support"
 						class="block w-full rounded border border-gray-300 px-4 py-3 text-center text-sm
 							   transition-all duration-200 hover:border-gray-900 hover:text-gray-900"
 					>
@@ -113,8 +84,8 @@
 					</a>
 
 					<div class="pt-4">
-						<p class="text-lg font-medium tracking-tight text-gray-900">0101-30-3300</p>
-						<p class="mt-1 text-xs text-gray-500">受付時間: 9:00〜18:00</p>
+						<p class="text-lg font-medium tracking-tight text-gray-900">03-1234-5678</p>
+						<p class="mt-1 text-xs text-gray-500">受付時間: 9:00〜18:00（平日）</p>
 					</div>
 				</div>
 			</div>
@@ -129,6 +100,7 @@
 						<a
 							href={icon.href}
 							target="_blank"
+							rel="noopener noreferrer"
 							class="flex items-center gap-3 rounded p-3 transition-colors duration-200 hover:bg-gray-50"
 						>
 							<img src={icon.icon} class={iconBase} alt={icon.name} />
@@ -146,18 +118,28 @@
 			<div class="flex flex-col items-center justify-between gap-4 md:flex-row">
 				<div class="flex gap-6 text-xs">
 					<a
-						href="https://github.com/khr123123"
-						target="_blank"
+						href="/about"
 						class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
 					>
 						会社概要
 					</a>
 					<a
-						href="https://github.com/khr123123"
-						target="_blank"
+						href="/support"
 						class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
 					>
 						法人のお客様はこちら
+					</a>
+					<a
+						href="/terms"
+						class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
+					>
+						利用規約
+					</a>
+					<a
+						href="/privacy"
+						class="text-gray-600 transition-colors duration-200 hover:text-gray-900"
+					>
+						プライバシーポリシー
 					</a>
 				</div>
 				<div class="text-xs text-gray-500">© 2025 K. All Rights Reserved.</div>
