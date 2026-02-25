@@ -37,7 +37,7 @@
 		{
 			id: 1,
 			image:
-				'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&h=400&fit=crop',
+				'https://asa-1019403729774.europe-west1.run.app/api/files/_pb_users_auth_/1rka08d5hb7u79i/1d725b84_1b90_4ecc_9f95_9538e932edac_98qpjryxoo.jpg',
 			title: '新年セール',
 			subtitle: '全品50%OFF〜',
 			link: '/'
