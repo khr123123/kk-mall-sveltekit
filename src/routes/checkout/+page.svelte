@@ -19,6 +19,7 @@
 		shipping,
 		user as userIcon
 	} from '$lib/icons/svgs';
+	import { toast } from '$lib/stores/toastStore';
 
 	// SVG 图标
 	const icons = {
@@ -88,7 +89,7 @@
 	function nextStep() {
 		if (step === 'address') {
 			if (!selectedAddressId) {
-				alert('配送先住所を選択してください');
+				toast.warning('配送先住所を選択してください');
 				return;
 			}
 			step = 'payment';
@@ -110,7 +111,7 @@
 	// 确认订单
 	async function confirmOrder() {
 		if (!$currentUser || !selectedAddressId) {
-			alert('ログイン情報または配送先が不足しています');
+			toast.error('ログイン情報または配送先が不足しています');
 			return;
 		}
 
@@ -177,7 +178,7 @@
 			}
 		} catch (error) {
 			console.error('注文作成エラー:', error);
-			alert('注文の作成に失敗しました。もう一度お試しください。');
+			toast.error('注文の作成に失敗しました。もう一度お試しください。');
 		} finally {
 			isProcessing = false;
 		}
@@ -198,7 +199,7 @@
 	onMount(async () => {
 		// 检查登录状态
 		if (!$currentUser) {
-			alert('ログインが必要です');
+			toast.warning('ログインが必要です');
 			goto('/login');
 			return;
 		}
@@ -216,7 +217,7 @@
 
 		// 检查购物车是否为空
 		if ($cart.items.length === 0) {
-			alert('カートに商品がありません');
+			toast.warning('カートに商品がありません');
 			goto('/cart');
 		}
 	});

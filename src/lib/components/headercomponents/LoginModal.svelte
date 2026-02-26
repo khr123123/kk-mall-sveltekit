@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { userStore } from '$lib/stores/userStore';
+	import { toast } from '$lib/stores/toastStore';
 
 	export let show = false;
 	export let onClose: () => void;
@@ -101,6 +102,7 @@
 
 			if (result.success) {
 				successMessage = 'ログインに成功しました！';
+				toast.success('ログインしました！');
 				dispatch('loginSuccess', result.user);
 
 				setTimeout(() => {
@@ -108,10 +110,12 @@
 				}, 1000);
 			} else {
 				errorMessage = result.error || 'ログインに失敗しました';
+				toast.error(errorMessage);
 			}
 		} catch (error) {
 			console.error('登录错误:', error);
 			errorMessage = 'ログインに失敗しました。もう一度お試しください。';
+			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
 		}
@@ -126,6 +130,7 @@
 		// 验证密码
 		if (registerPassword !== registerPasswordConfirm) {
 			errorMessage = 'パスワードが一致しません';
+			toast.warning(errorMessage);
 			isLoading = false;
 			return;
 		}
@@ -133,6 +138,7 @@
 		// 验证密码长度
 		if (registerPassword.length < 8) {
 			errorMessage = 'パスワードは8文字以上である必要があります';
+			toast.warning(errorMessage);
 			isLoading = false;
 			return;
 		}
@@ -140,6 +146,7 @@
 		// 验证条款
 		if (!agreeTerms) {
 			errorMessage = '利用規約に同意してください';
+			toast.warning(errorMessage);
 			isLoading = false;
 			return;
 		}
@@ -154,6 +161,7 @@
 
 			if (result.success) {
 				successMessage = '登録に成功しました！ログイン中...';
+				toast.success('アカウントを作成しました！');
 				dispatch('registerSuccess', result.user);
 
 				setTimeout(() => {
@@ -161,10 +169,12 @@
 				}, 1500);
 			} else {
 				errorMessage = result.error || '登録に失敗しました';
+				toast.error(errorMessage);
 			}
 		} catch (error) {
 			console.error('注册错误:', error);
 			errorMessage = '登録に失敗しました。もう一度お試しください。';
+			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
 		}
@@ -179,6 +189,7 @@
 
 			if (result.success) {
 				successMessage = `${provider}でログインしました！`;
+				toast.success(successMessage);
 				dispatch('loginSuccess', result.user);
 
 				setTimeout(() => {
@@ -186,10 +197,12 @@
 				}, 1000);
 			} else {
 				errorMessage = result.error || `${provider}ログインに失敗しました`;
+				toast.error(errorMessage);
 			}
 		} catch (error) {
 			console.error(`${provider}登录错误:`, error);
 			errorMessage = `${provider}ログインに失敗しました`;
+			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
 		}

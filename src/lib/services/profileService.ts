@@ -1,538 +1,507 @@
-﻿import {pb} from './PBConfig';
+import { pb } from './PBConfig';
+import { toast } from '$lib/stores/toastStore';
 
 export interface Order {
-    id: string;
-    order_number: string;
-    user: string;
-    order_date: string;
-    total_amount: number;
-    status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-    items_count: number;
-    items?: any[];
-    shipping_address?: string;
-    payment_id: string;
-    amount: any;
-    payment_method: string;
-    created: string;
-    updated: string;
+	id: string;
+	order_number: string;
+	user: string;
+	order_date: string;
+	total_amount: number;
+	status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+	items_count: number;
+	items?: any[];
+	shipping_address?: string;
+	payment_id: string;
+	amount: any;
+	payment_method: string;
+	created: string;
+	updated: string;
 }
 
 export interface Address {
-    id: string;
-    user: string;
-    label: string;
-    recipient: string;
-    phone: string;
-    postal_code: string;
-    address: string;
-    is_default: boolean;
-    created: string;
-    updated: string;
+	id: string;
+	user: string;
+	label: string;
+	recipient: string;
+	phone: string;
+	postal_code: string;
+	address: string;
+	is_default: boolean;
+	created: string;
+	updated: string;
 }
 
 export interface Favorite {
-    id: string;
-    user: string;
-    product_id: string;
-    brands_id: string;
-    created: string;
-    updated: string;
-    expand?: any;
+	id: string;
+	user: string;
+	product_id: string;
+	brands_id: string;
+	created: string;
+	updated: string;
+	expand?: any;
 }
 
 class ProfileService {
-    // ============ 订单管理 ============
-    /**
-     * 获取用户订单列表
-     */
-    async getOrders(userId: string, page = 1, perPage = 10) {
-        try {
-            const records = await pb.collection('orders').getList(page, perPage, {
-                filter: `user = "${userId}"`,
-                sort: '-order_date',
-                expand: 'shipping_address'
-            });
+	// ============ Order Management ============
+	async getOrders(userId: string, page = 1, perPage = 10) {
+		try {
+			const records = await pb.collection('orders').getList(page, perPage, {
+				filter: `user = "${userId}"`,
+				sort: '-order_date',
+				expand: 'shipping_address'
+			});
 
-            return {
-                success: true,
-                orders: records.items,
-                totalPages: records.totalPages,
-                totalItems: records.totalItems
-            };
-        } catch (error: any) {
-            console.error('获取订单失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			return {
+				success: true,
+				orders: records.items,
+				totalPages: records.totalPages,
+				totalItems: records.totalItems
+			};
+		} catch (error: any) {
+			console.error('Failed to get orders:', error);
+			toast.error('注文の読み込みに失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    /**
-     * 获取订单详情
-     */
-    async getOrderById(orderId: string) {
-        try {
-            const record = await pb.collection('orders').getOne(orderId, {
-                expand: 'shipping_address'
-            });
+	async getOrderById(orderId: string) {
+		try {
+			const record = await pb.collection('orders').getOne(orderId, {
+				expand: 'shipping_address'
+			});
 
-            return {
-                success: true,
-                order: record
-            };
-        } catch (error: any) {
-            console.error('获取订单详情失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			return {
+				success: true,
+				order: record
+			};
+		} catch (error: any) {
+			console.error('Failed to get order details:', error);
+			toast.error('注文詳細の読み込みに失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    /**
-     * 取消订单
-     */
-    async cancelOrder(orderId: string) {
-        try {
-            const record = await pb.collection('orders').update(orderId, {
-                status: 'cancelled'
-            });
+	async cancelOrder(orderId: string) {
+		try {
+			const record = await pb.collection('orders').update(orderId, {
+				status: 'cancelled'
+			});
 
-            return {
-                success: true,
-                order: record
-            };
-        } catch (error: any) {
-            console.error('取消订单失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			toast.success('注文をキャンセルしました');
+			return {
+				success: true,
+				order: record
+			};
+		} catch (error: any) {
+			console.error('Failed to cancel order:', error);
+			toast.error('注文のキャンセルに失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    // ============ 地址管理 ============
-    /**
-     * 获取用户地址列表
-     */
-    async getAddresses(userId: string) {
-        try {
-            const records = await pb.collection('addresses').getFullList({
-                filter: `user = "${userId}"`,
-                sort: '-is_default,-created'
-            });
+	// ============ Address Management ============
+	async getAddresses(userId: string) {
+		try {
+			const records = await pb.collection('addresses').getFullList({
+				filter: `user = "${userId}"`,
+				sort: '-is_default,-created'
+			});
 
-            return {
-                success: true,
-                addresses: records
-            };
-        } catch (error: any) {
-            console.error('获取地址列表失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			return {
+				success: true,
+				addresses: records
+			};
+		} catch (error: any) {
+			console.error('Failed to get addresses:', error);
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    /**
-     * 创建地址
-     */
-    async createAddress(userId: string, addressData: Partial<Address>) {
-        try {
-            // 如果设置为默认地址,先取消其他默认地址
-            if (addressData.is_default) {
-                await this.clearDefaultAddresses(userId);
-            }
+	async createAddress(userId: string, addressData: Partial<Address>) {
+		try {
+			if (addressData.is_default) {
+				await this.clearDefaultAddresses(userId);
+			}
 
-            const record = await pb.collection('addresses').create({
-                user: userId,
-                ...addressData
-            });
+			const record = await pb.collection('addresses').create({
+				user: userId,
+				...addressData
+			});
 
-            return {
-                success: true,
-                address: record
-            };
-        } catch (error: any) {
-            console.error('创建地址失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			toast.success('住所を追加しました');
+			return {
+				success: true,
+				address: record
+			};
+		} catch (error: any) {
+			console.error('Failed to create address:', error);
+			toast.error('住所の追加に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    /**
-     * 更新地址
-     */
-    async updateAddress(addressId: string, userId: string, addressData: Partial<Address>) {
-        try {
-            // 如果设置为默认地址,先取消其他默认地址
-            if (addressData.is_default) {
-                await this.clearDefaultAddresses(userId);
-            }
+	async updateAddress(addressId: string, userId: string, addressData: Partial<Address>) {
+		try {
+			if (addressData.is_default) {
+				await this.clearDefaultAddresses(userId);
+			}
 
-            const record = await pb.collection('addresses').update(addressId, addressData);
+			const record = await pb.collection('addresses').update(addressId, addressData);
 
-            return {
-                success: true,
-                address: record
-            };
-        } catch (error: any) {
-            console.error('更新地址失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			toast.success('住所を更新しました');
+			return {
+				success: true,
+				address: record
+			};
+		} catch (error: any) {
+			console.error('Failed to update address:', error);
+			toast.error('住所の更新に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    /**
-     * 删除地址
-     */
-    async deleteAddress(addressId: string) {
-        try {
-            await pb.collection('addresses').delete(addressId);
+	async deleteAddress(addressId: string) {
+		try {
+			await pb.collection('addresses').delete(addressId);
 
-            return {
-                success: true
-            };
-        } catch (error: any) {
-            console.error('删除地址失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			toast.success('住所を削除しました');
+			return {
+				success: true
+			};
+		} catch (error: any) {
+			console.error('Failed to delete address:', error);
+			toast.error('住所の削除に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    /**
-     * 设置默认地址
-     */
-    async setDefaultAddress(addressId: string, userId: string) {
-        try {
-            // 先取消其他默认地址
-            await this.clearDefaultAddresses(userId);
+	async setDefaultAddress(addressId: string, userId: string) {
+		try {
+			await this.clearDefaultAddresses(userId);
 
-            // 设置新的默认地址
-            const record = await pb.collection('addresses').update(addressId, {
-                is_default: true
-            });
+			const record = await pb.collection('addresses').update(addressId, {
+				is_default: true
+			});
 
-            return {
-                success: true,
-                address: record
-            };
-        } catch (error: any) {
-            console.error('设置默认地址失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			toast.success('デフォルト住所を設定しました');
+			return {
+				success: true,
+				address: record
+			};
+		} catch (error: any) {
+			console.error('Failed to set default address:', error);
+			toast.error('デフォルト住所の設定に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-    /**
-     * 清除所有默认地址
-     */
-    private async clearDefaultAddresses(userId: string) {
-        try {
-            const addresses = await pb.collection('addresses').getFullList({
-                filter: `user = "${userId}" && is_default = true`
-            });
+	private async clearDefaultAddresses(userId: string) {
+		try {
+			const addresses = await pb.collection('addresses').getFullList({
+				filter: `user = "${userId}" && is_default = true`
+			});
 
-            for (const address of addresses) {
-                await pb.collection('addresses').update(address.id, {
-                    is_default: false
-                });
-            }
-        } catch (error) {
-            console.error('清除默认地址失败:', error);
-        }
-    }
+			for (const address of addresses) {
+				await pb.collection('addresses').update(address.id, {
+					is_default: false
+				});
+			}
+		} catch (error) {
+			console.error('Failed to clear default addresses:', error);
+		}
+	}
 
-    // ============ 收藏管理 ============
-    /**
-     * 获取用户收藏列表
-     */
-    async getFavorites(userId: string) {
-        try {
-            const records = await pb.collection('favorites').getFullList({
-                filter: `user = "${userId}"`,
-                expand: 'product_id,brands_id',  // 扩展关联数据
-                sort: '-created'
-            });
+	// ============ Favorites Management ============
+	async getFavorites(userId: string) {
+		try {
+			const records = await pb.collection('favorites').getFullList({
+				filter: `user = "${userId}"`,
+				expand: 'product_id,brands_id',
+				sort: '-created'
+			});
 
-            return {
-                success: true,
-                favorites: records
-            };
-        } catch (error: any) {
-            console.error('获取收藏列表失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			return {
+				success: true,
+				favorites: records
+			};
+		} catch (error: any) {
+			console.error('Failed to get favorites:', error);
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
+	async addFavorite(
+		userId: string,
+		favoriteData: Omit<Favorite, 'id' | 'user' | 'created' | 'updated'>
+	) {
+		try {
+			const record = await pb.collection('favorites').create({
+				user: userId,
+				...favoriteData
+			});
 
-    /**
-     * 添加收藏
-     */
-    async addFavorite(
-        userId: string,
-        favoriteData: Omit<Favorite, 'id' | 'user' | 'created' | 'updated'>
-    ) {
-        try {
-            const record = await pb.collection('favorites').create({
-                user: userId,
-                ...favoriteData
-            });
+			toast.success('お気に入りに追加しました');
+			return {
+				success: true,
+				favorite: record
+			};
+		} catch (error: any) {
+			console.error('Failed to add favorite:', error);
+			toast.error('お気に入りの追加に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-            return {
-                success: true,
-                favorite: record
-            };
-        } catch (error: any) {
-            console.error('添加收藏失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+	async addFavoriteProduct(userId: string, productId: string, brandsId?: string) {
+		try {
+			const existing = await pb
+				.collection('favorites')
+				.getFullList({ filter: `user = "${userId}"` });
 
-    /**
-     * 添加收藏（兼容数组或单值存储）
-     */
-    async addFavoriteProduct(userId: string, productId: string, brandsId?: string) {
-        try {
-            // 查找当前用户的收藏记录（按你的数据结构，可能存在一条记录存多商品）
-            const existing = await pb
-                .collection('favorites')
-                .getFullList({ filter: `user = "${userId}"` });
+			if (existing.length > 0) {
+				const record = existing[0];
+				const current = record.product_id as any;
+				let next: any;
 
-            if (existing.length > 0) {
-                const record = existing[0];
-                const current = record.product_id as any;
-                let next: any;
+				if (Array.isArray(current)) {
+					if (current.includes(productId)) {
+						toast.info('すでにお気に入りに追加されています');
+						return { success: true, favorite: record };
+					}
+					next = [...current, productId];
+				} else if (typeof current === 'string' && current) {
+					if (current === productId) {
+						toast.info('すでにお気に入りに追加されています');
+						return { success: true, favorite: record };
+					}
+					next = [current, productId];
+				} else {
+					next = [productId];
+				}
 
-                if (Array.isArray(current)) {
-                    if (current.includes(productId)) {
-                        return { success: true, favorite: record };
-                    }
-                    next = [...current, productId];
-                } else if (typeof current === 'string' && current) {
-                    if (current === productId) {
-                        return { success: true, favorite: record };
-                    }
-                    next = [current, productId];
-                } else {
-                    next = [productId];
-                }
+				const updated = await pb.collection('favorites').update(record.id, {
+					product_id: next
+				});
+				toast.success('お気に入りに追加しました');
+				return { success: true, favorite: updated };
+			}
 
-                const updated = await pb.collection('favorites').update(record.id, {
-                    product_id: next
-                });
-                return { success: true, favorite: updated };
-            }
+			const created = await pb.collection('favorites').create({
+				user: userId,
+				product_id: [productId],
+				...(brandsId ? { brands_id: brandsId } : {})
+			});
+			toast.success('お気に入りに追加しました');
+			return { success: true, favorite: created };
+		} catch (error: any) {
+			console.error('Failed to add favorite:', error);
+			toast.error('お気に入りの追加に失敗しました');
+			return { success: false, error: error.message };
+		}
+	}
 
-            // 不存在则创建
-            const created = await pb.collection('favorites').create({
-                user: userId,
-                product_id: [productId],
-                ...(brandsId ? { brands_id: brandsId } : {})
-            });
-            return { success: true, favorite: created };
-        } catch (error: any) {
-            console.error('添加收藏失败:', error);
-            return { success: false, error: error.message };
-        }
-    }
+	async removeFavorite(favoriteId: string) {
+		try {
+			await pb.collection('favorites').delete(favoriteId);
 
-    /**
-     * 删除收藏
-     */
-    async removeFavorite(favoriteId: string) {
-        try {
-            await pb.collection('favorites').delete(favoriteId);
+			toast.success('お気に入りから削除しました');
+			return {
+				success: true
+			};
+		} catch (error: any) {
+			console.error('Failed to remove favorite:', error);
+			toast.error('お気に入りの削除に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-            return {
-                success: true
-            };
-        } catch (error: any) {
-            console.error('删除收藏失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+	async removeFavoriteProduct(userId: string, productId: string) {
+		try {
+			const records = await pb.collection('favorites').getFullList({
+				filter: `user = "${userId}" && (product_id ~ "${productId}" || product_id = "${productId}")`
+			});
 
-    /**
-     * 删除某个商品的收藏（兼容数组或单值存储）
-     */
-    async removeFavoriteProduct(userId: string, productId: string) {
-        try {
-            const records = await pb.collection('favorites').getFullList({
-                filter: `user = "${userId}" && (product_id ~ "${productId}" || product_id = "${productId}")`
-            });
+			if (records.length === 0) {
+				return { success: true };
+			}
 
-            if (records.length === 0) {
-                return { success: true };
-            }
+			const record = records[0];
+			const current = record.product_id as any;
 
-            const record = records[0];
-            const current = record.product_id as any;
+			if (Array.isArray(current)) {
+				const next = current.filter((id: string) => id !== productId);
+				if (next.length === 0) {
+					await pb.collection('favorites').delete(record.id);
+				} else {
+					await pb.collection('favorites').update(record.id, { product_id: next });
+				}
+				toast.success('お気に入りから削除しました');
+				return { success: true };
+			}
 
-            if (Array.isArray(current)) {
-                const next = current.filter((id: string) => id !== productId);
-                if (next.length === 0) {
-                    await pb.collection('favorites').delete(record.id);
-                } else {
-                    await pb.collection('favorites').update(record.id, { product_id: next });
-                }
-                return { success: true };
-            }
+			if (typeof current === 'string' && current === productId) {
+				await pb.collection('favorites').delete(record.id);
+			}
+			toast.success('お気に入りから削除しました');
+			return { success: true };
+		} catch (error: any) {
+			console.error('Failed to remove favorite:', error);
+			toast.error('お気に入りの削除に失敗しました');
+			return { success: false, error: error.message };
+		}
+	}
 
-            // 单值存储场景，直接删除整条记录
-            if (typeof current === 'string' && current === productId) {
-                await pb.collection('favorites').delete(record.id);
-            }
-            return { success: true };
-        } catch (error: any) {
-            console.error('删除收藏失败:', error);
-            return { success: false, error: error.message };
-        }
-    }
+	async clearFavorites(userId: string) {
+		try {
+			const favorites = await pb.collection('favorites').getFullList({
+				filter: `user = "${userId}"`
+			});
 
-    /**
-     * 清空收藏
-     */
-    async clearFavorites(userId: string) {
-        try {
-            const favorites = await pb.collection('favorites').getFullList({
-                filter: `user = "${userId}"`
-            });
+			for (const favorite of favorites) {
+				await pb.collection('favorites').delete(favorite.id);
+			}
 
-            for (const favorite of favorites) {
-                await pb.collection('favorites').delete(favorite.id);
-            }
+			toast.success('お気に入りをすべて削除しました');
+			return {
+				success: true
+			};
+		} catch (error: any) {
+			console.error('Failed to clear favorites:', error);
+			toast.error('お気に入りの削除に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-            return {
-                success: true
-            };
-        } catch (error: any) {
-            console.error('清空收藏失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+	async isFavorite(userId: string, productId: string) {
+		try {
+			const records = await pb.collection('favorites').getFullList({
+				filter: `user = "${userId}" && (product_id ~ "${productId}" || product_id = "${productId}")`
+			});
 
-    /**
-     * 检查是否已收藏
-     */
-    async isFavorite(userId: string, productId: string) {
-        try {
-            const records = await pb.collection('favorites').getFullList({
-                // 兼容 product_id 为数组或单值
-                filter: `user = "${userId}" && (product_id ~ "${productId}" || product_id = "${productId}")`
-            });
+			return {
+				success: true,
+				isFavorite: records.length > 0,
+				favoriteId: records.length > 0 ? records[0].id : null
+			};
+		} catch (error: any) {
+			console.error('Failed to check favorite status:', error);
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-            return {
-                success: true,
-                isFavorite: records.length > 0,
-                favoriteId: records.length > 0 ? records[0].id : null
-            };
-        } catch (error: any) {
-            console.error('检查收藏状态失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+	// ============ Avatar Management ============
+	async updateAvatar(userId: string, avatarFile: File) {
+		try {
+			const formData = new FormData();
+			formData.append('avatar', avatarFile);
 
-    // ============ 头像管理 ============
-    /**
-     * 更新用户头像
-     */
-    async updateAvatar(userId: string, avatarFile: File) {
-        try {
-            const formData = new FormData();
-            formData.append('avatar', avatarFile);
+			const record = await pb.collection('users').update(userId, formData);
 
-            const record = await pb.collection('users').update(userId, formData);
+			toast.success('プロフィール画像を更新しました');
+			return {
+				success: true,
+				user: record,
+				avatarUrl: pb.getFileUrl(record, record.avatar)
+			};
+		} catch (error: any) {
+			console.error('Failed to update avatar:', error);
+			toast.error('プロフィール画像の更新に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-            return {
-                success: true,
-                user: record,
-                avatarUrl: pb.getFileUrl(record, record.avatar)
-            };
-        } catch (error: any) {
-            console.error('更新头像失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+	async deleteAvatar(userId: string) {
+		try {
+			const record = await pb.collection('users').update(userId, {
+				avatar: null
+			});
 
-    /**
-     * 删除用户头像
-     */
-    async deleteAvatar(userId: string) {
-        try {
-            const record = await pb.collection('users').update(userId, {
-                avatar: null
-            });
+			toast.success('プロフィール画像を削除しました');
+			return {
+				success: true,
+				user: record
+			};
+		} catch (error: any) {
+			console.error('Failed to delete avatar:', error);
+			toast.error('プロフィール画像の削除に失敗しました');
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 
-            return {
-                success: true,
-                user: record
-            };
-        } catch (error: any) {
-            console.error('删除头像失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+	// ============ User Stats ============
+	async getUserStats(userId: string) {
+		try {
+			const [ordersResult, favoritesResult, addressesResult] = await Promise.all([
+				this.getOrders(userId, 1, 1),
+				this.getFavorites(userId),
+				this.getAddresses(userId)
+			]);
 
-    // ============ 用户统计 ============
-    /**
-     * 获取用户统计信息
-     */
-    async getUserStats(userId: string) {
-        try {
-            const [ordersResult, favoritesResult, addressesResult] = await Promise.all([
-                this.getOrders(userId, 1, 1),
-                this.getFavorites(userId),
-                this.getAddresses(userId)
-            ]);
-
-            return {
-                success: true,
-                stats: {
-                    totalOrders: ordersResult.success ? ordersResult.totalItems || 0 : 0,
-                    totalFavorites: favoritesResult.success ? favoritesResult.favorites?.length || 0 : 0,
-                    totalAddresses: addressesResult.success ? addressesResult.addresses?.length || 0 : 0
-                }
-            };
-        } catch (error: any) {
-            console.error('获取用户统计失败:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+			return {
+				success: true,
+				stats: {
+					totalOrders: ordersResult.success ? ordersResult.totalItems || 0 : 0,
+					totalFavorites: favoritesResult.success
+						? favoritesResult.favorites?.length || 0
+						: 0,
+					totalAddresses: addressesResult.success
+						? addressesResult.addresses?.length || 0
+						: 0
+				}
+			};
+		} catch (error: any) {
+			console.error('Failed to get user stats:', error);
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	}
 }
 
 export const profileService = new ProfileService();
