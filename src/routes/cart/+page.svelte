@@ -3,6 +3,7 @@
     import {cart, cartStats} from '$lib/stores/cartStore';
     import {onMount} from 'svelte';
     import {cartDelete, cartEmpty, cartMinus, cartPlus} from '$lib/icons/svgs';
+    import { toast } from '$lib/stores/toastStore';
 
     let loading: boolean = true;
 	let error: string | null = null;
@@ -42,7 +43,7 @@
 			try {
 				await cart.removeItem(itemId);
 			} catch (err) {
-				alert('削除に失敗しました');
+				toast.error('削除に失敗しました');
 			}
 		}
 	}
@@ -50,7 +51,7 @@
 	// 结算
 	function goToCheckout() {
 		if ($cartStats.selectedCount === 0) {
-			alert('商品を選択してください');
+			toast.warning('商品を選択してください');
 			return;
 		}
 		goto('/checkout');

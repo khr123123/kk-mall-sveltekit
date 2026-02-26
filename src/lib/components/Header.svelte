@@ -13,6 +13,7 @@
 	import { CategoryService, type Category } from '$lib/services/categoryService';
 	import { categoryStore } from '$lib/stores/categoryStore';
 	import { userStore, currentUser, isLoggedIn } from '$lib/stores/userStore';
+	import { toast } from '$lib/stores/toastStore';
 
 	let searchKeyword = '';
 	let showAuthModal = false;
@@ -56,27 +57,7 @@
 		{ path: '/about', label: '会社概要', exact: false, icon: 'info' }
 	];
 
-	// 消息数据
-	const messageItems = [
-		{
-			id: 1,
-			type: 'order',
-			title: '注文が発送されました',
-			content: 'ご注文の商品#12345が発送されました。',
-			time: '2時間前',
-			read: false,
-			icon :'📦'
-		},
-		{
-			id: 2,
-			type: 'promotion',
-			title: '限定セール開始',
-			content: '週末限定！全商品20%オフセール開催中です。',
-			time: '5時間前',
-			read: false,
-			icon :'🎉'
-		}
-	];
+	// Message data is now handled by MessageDropdown via notificationStore
 
 	// 购物车数据
 	const cartItems = [
@@ -128,12 +109,8 @@
 	}
 
 	function handleUserLogout() {
-		// 调用 userStore 的 logout 方法
 		userStore.logout();
-		console.log('用户已登出');
-
-		// 可选：显示退出成功提示
-		// toast.success('ログアウトしました');
+		toast.success('ログアウトしました');
 	}
 
 	// AuthModal关闭时的处理
@@ -141,20 +118,14 @@
 		showAuthModal = false;
 	}
 
-	// AuthModal登录成功后的处理
 	function handleLoginSuccess(event: CustomEvent) {
-		console.log('登录成功:', event.detail);
 		showAuthModal = false;
-		// 可选：显示登录成功提示
-		// toast.success('ログインしました！');
+		toast.success('ログインしました！');
 	}
 
-	// AuthModal注册成功后的处理
 	function handleRegisterSuccess(event: CustomEvent) {
-		console.log('注册成功:', event.detail);
 		showAuthModal = false;
-		// 可选：显示注册成功提示
-		// toast.success('アカウントを作成しました！');
+		toast.success('アカウントを作成しました！');
 	}
 
 	function handleLocaleChange(event: CustomEvent) {
@@ -168,28 +139,7 @@
 		}
 	}
 
-	// 处理消息相关事件
-	function handleMessageOpen() {
-		console.log('消息面板打开');
-	}
-
-	function handleMarkRead(event: CustomEvent) {
-		console.log('标记为已读:', event.detail);
-	}
-
-	function handleMarkAllRead() {
-		console.log('全部标记为已读');
-		displayUser.messages = 0;
-	}
-
-	function handleDeleteMessage(event: CustomEvent) {
-		console.log('删除消息:', event.detail);
-	}
-
-	function handleMessageClick(event: CustomEvent) {
-		console.log('点击消息:', event.detail);
-		goto(`/messages/${event.detail}`);
-	}
+	// Message events now handled internally by MessageDropdown via notificationStore
 
 	// 处理购物车相关事件
 	function handleCartOpen() {
@@ -334,16 +284,8 @@
 					on:removeItem={handleRemoveItem}
 				/>
 
-				<!-- 消息下拉组件 -->
-				<MessageDropdown
-					messages={messageItems}
-					unreadCount={displayUser.messages}
-					on:open={handleMessageOpen}
-					on:markRead={handleMarkRead}
-					on:markAllRead={handleMarkAllRead}
-					on:delete={handleDeleteMessage}
-					on:messageClick={handleMessageClick}
-				/>
+				<!-- Message notification dropdown -->
+				<MessageDropdown />
 
 				<!-- 用户下拉组件 -->
 				<UserDropdown

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Footer from '$lib/components/Footer.svelte';
 	import Header from '$lib/components/Header.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	import './layout.css';
 
 	let { children } = $props();
@@ -11,6 +12,9 @@
 	<main>{@render children()}</main>
 	<Footer />
 </div>
+
+<!-- Global Toast Notification System -->
+<Toast />
 
 <style>
 	.app {

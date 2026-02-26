@@ -3,6 +3,7 @@ import { derived, get, writable } from 'svelte/store';
 import { cartAPI } from '$lib/services/cartService';
 import { pb } from '$lib/services/PBConfig';
 import { currentUser } from '$lib/stores/userStore';
+import { toast } from '$lib/stores/toastStore';
 
 export interface CartItem {
 	id: string;
@@ -109,6 +110,7 @@ const createCartStore = () => {
 
 		await cartAPI.addToCart(user.id, productId, quantity, skuId, specs);
 		await loadCart();
+		toast.success('カートに追加しました');
 	};
 
 	/* ---------- 更新数量 ---------- */
@@ -170,6 +172,7 @@ const createCartStore = () => {
 			...s,
 			items: s.items.filter((i) => i.id !== itemId)
 		}));
+		toast.success('商品を削除しました');
 	};
 
 	/* ---------- 批量删除选中的商品 ---------- */
@@ -216,6 +219,7 @@ const createCartStore = () => {
 
 		await cartAPI.clearCart(user.id);
 		set({ items: [], loading: false, error: null });
+		toast.success('カートを空にしました');
 	};
 
 	// 监听用户登录状态

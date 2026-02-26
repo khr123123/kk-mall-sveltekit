@@ -1,84 +1,38 @@
-﻿<!-- MessageDropdown.svelte -->
+<!-- MessageDropdown.svelte - Real notification data from PocketBase -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { createEventDispatcher } from 'svelte';
-
-	const dispatch = createEventDispatcher();
-
-	export let messages: Array<{
-		id: number;
-		type: string;
-		title: string;
-		content: string;
-		time: string;
-		read: boolean;
-		icon: string;
-	}> = [];
-
-	export let unreadCount = 0;
+	import { goto } from '$app/navigation';
+	import { notificationStore, unreadCount } from '$lib/stores/notificationStore';
+	import { NotificationService, type Notification } from '$lib/services/notificationService';
+	import { currentUser } from '$lib/stores/userStore';
 
 	let isOpen = false;
 	let dropdownElement: HTMLElement;
 	let isBrowser = false;
+	let latestNotifications: Notification[] = [];
+	let displayCount = 0;
 
-	// 模拟消息数据
-	const mockMessages = [
-		{
-			id: 1,
-			type: 'order',
-			title: '注文が発送されました',
-			content: 'ご注文の商品#12345が発送されました。お届けまでもうしばらくお待ちください。',
-			time: '2時間前',
-			read: false,
-			icon :'📦'
-		},
-		{
-			id: 2,
-			type: 'promotion',
-			title: '限定セール開始',
-			content: '週末限定！全商品20%オフセール開催中です。',
-			time: '5時間前',
-			read: false,
-			icon :'🎉'
-		},
-		{
-			id: 3,
-			type: 'system',
-			title: 'ポイント付与のお知らせ',
-			content: '500ポイントが付与されました。次回のお買い物でご利用いただけます。',
-			time: '1日前',
-			read: false,
-			icon :'💎'
-		},
-		{
-			id: 4,
-			type: 'order',
-			title: 'レビュー依頼',
-			content: '購入された商品のレビューをお待ちしています。',
-			time: '2日前',
-			read: false,
-			icon :'⭐'
-		},
-		{
-			id: 5,
-			type: 'system',
-			title: 'アカウント更新',
-			content: 'プロフィール情報が正常に更新されました。',
-			time: '3日前',
-			read: false,
-			icon :'✓'
-		}
-	];
+	// Subscribe to stores
+	$: user = $currentUser;
+	$: displayCount = $unreadCount;
 
-	// 使用模拟数据或传入的数据
-	$: displayMessages = messages.length > 0 ? messages : mockMessages;
-	$: unreadMessages = displayMessages.filter((m) => !m.read).length;
-	$: displayCount = unreadCount > 0 ? unreadCount : unreadMessages;
+	// Get latest 5 notifications for dropdown
+	$: if (user && isOpen) {
+		loadLatest();
+	}
+
+	async function loadLatest() {
+		if (!user) return;
+		const result = await import('$lib/services/notificationService').then((m) =>
+			m.notificationService.getLatestUnread(user!.id, 5)
+		);
+		latestNotifications = result;
+	}
 
 	function toggleDropdown() {
 		isOpen = !isOpen;
-		if (isOpen) {
-			dispatch('open');
+		if (isOpen && user) {
+			loadLatest();
 		}
 	}
 
@@ -92,44 +46,58 @@
 		}
 	}
 
-	function markAsRead(messageId: number) {
-		displayMessages = displayMessages.map((msg) =>
-			msg.id === messageId ? { ...msg, read: true } : msg
+	async function markAsRead(notificationId: string) {
+		await notificationStore.markAsRead(notificationId);
+		latestNotifications = latestNotifications.map((n) =>
+			n.id === notificationId ? { ...n, isRead: true } : n
 		);
-		dispatch('markRead', messageId);
 	}
 
-	function markAllAsRead() {
-		displayMessages = displayMessages.map((msg) => ({ ...msg, read: true }));
-		dispatch('markAllRead');
+	async function markAllAsRead() {
+		await notificationStore.markAllAsRead();
+		latestNotifications = latestNotifications.map((n) => ({ ...n, isRead: true }));
 	}
 
-	function deleteMessage(messageId: number) {
-		displayMessages = displayMessages.filter((msg) => msg.id !== messageId);
-		dispatch('delete', messageId);
+	async function deleteMessage(notificationId: string) {
+		await notificationStore.deleteNotification(notificationId);
+		latestNotifications = latestNotifications.filter((n) => n.id !== notificationId);
 	}
 
-	function goToMessage(messageId: number) {
-		dispatch('messageClick', messageId);
+	function goToNotification(notification: Notification) {
+		// Mark as read
+		if (!notification.isRead) {
+			markAsRead(notification.id);
+		}
+
 		closeDropdown();
+
+		// Navigate to link or notification center
+		if (notification.link) {
+			goto(notification.link);
+		} else {
+			goto('/notification');
+		}
+	}
+
+	function goToAllNotifications() {
+		closeDropdown();
+		goto('/notification');
 	}
 
 	function getTypeColor(type: string): string {
-		const colors = {
-			order: 'bg-blue-100 text-blue-800',
-			promotion :'bg-purple-100 text-purple-800',
-			system: 'bg-green-100 text-green-800'
-		};
-		return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+		return NotificationService.getTypeColor(type as any);
 	}
 
 	function getTypeLabel(type: string): string {
-		const labels = {
-			order: '注文',
-			promotion: 'お知らせ',
-			system: 'システム'
-		};
-		return labels[type as keyof typeof labels] || type;
+		return NotificationService.getTypeLabel(type as any);
+	}
+
+	function getTypeIcon(type: string): string {
+		return NotificationService.getTypeIcon(type as any);
+	}
+
+	function formatTime(dateStr: string): string {
+		return NotificationService.formatRelativeTime(dateStr);
 	}
 
 	onMount(() => {
@@ -138,6 +106,11 @@
 		if (isBrowser) {
 			document.addEventListener('click', handleClickOutside);
 		}
+
+		// Initialize notification store when user is available
+		if (user) {
+			notificationStore.init(user.id);
+		}
 	});
 
 	onDestroy(() => {
@@ -145,38 +118,45 @@
 			document.removeEventListener('click', handleClickOutside);
 		}
 	});
+
+	// Re-initialize when user changes
+	$: if (user) {
+		notificationStore.init(user.id);
+	} else {
+		notificationStore.destroy();
+	}
 </script>
 
 <div class="relative" bind:this={dropdownElement}>
-	<!-- 消息按钮 -->
+	<!-- Message button -->
 	<button
 		class="relative cursor-pointer rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none"
 		onclick={toggleDropdown}
-		aria-label="メッセージ"
+		aria-label="Notification"
 		aria-expanded={isOpen}
 	>
 		<img src="/svgs/mail.svg" alt="message" class="h-5 w-5" />
 		{#if displayCount > 0}
 			<span
 				class="absolute -top-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white"
-				aria-label="{displayCount}件の未読メッセージ"
+				aria-label="{displayCount} unread"
 			>
 				{displayCount > 99 ? '99+' : displayCount}
 			</span>
 		{/if}
 	</button>
 
-	<!-- 下拉面板 -->
+	<!-- Dropdown panel -->
 	{#if isOpen && isBrowser}
 		<div
 			class="absolute top-full right-0 z-50 mt-2 w-96 origin-top-right overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl transition-all"
 			style="animation: scaleIn 0.2s ease-out;"
 		>
-			<!-- 头部 -->
+			<!-- Header -->
 			<div class="border-b border-gray-100 px-6 py-4">
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-3">
-						<h3 class="text-lg font-semibold text-gray-900">メッセージ</h3>
+						<h3 class="text-lg font-semibold text-gray-900">通知</h3>
 						{#if displayCount > 0}
 							<span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
 								{displayCount}件未読
@@ -184,7 +164,7 @@
 						{/if}
 					</div>
 					<div class="flex items-center gap-2">
-						{#if unreadMessages > 0}
+						{#if displayCount > 0}
 							<button
 								class="rounded-full px-3 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
 								onclick={markAllAsRead}
@@ -195,7 +175,7 @@
 						<button
 							class="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
 							onclick={closeDropdown}
-							aria-label="閉じる"
+							aria-label="Close"
 						>
 							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path
@@ -210,9 +190,13 @@
 				</div>
 			</div>
 
-			<!-- 消息列表 -->
+			<!-- Notification list -->
 			<div class="max-h-[32rem] overflow-y-auto">
-				{#if displayMessages.length === 0}
+				{#if !user}
+					<div class="flex flex-col items-center justify-center py-12">
+						<p class="text-sm text-gray-500">ログインして通知を確認してください</p>
+					</div>
+				{:else if latestNotifications.length === 0}
 					<div class="flex flex-col items-center justify-center py-12">
 						<div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
 							<svg
@@ -229,62 +213,57 @@
 								/>
 							</svg>
 						</div>
-						<p class="mb-1 text-sm font-medium text-gray-900">メッセージはありません</p>
+						<p class="mb-1 text-sm font-medium text-gray-900">未読の通知はありません</p>
 						<p class="text-sm text-gray-500">新しい通知が届くとここに表示されます</p>
 					</div>
 				{:else}
 					<div class="divide-y divide-gray-100">
-						{#each displayMessages as message (message.id)}
+						{#each latestNotifications as notification (notification.id)}
 							<div
 								class="group px-6 py-4 transition-colors hover:bg-gray-50"
 								role="button"
-								onclick={() => goToMessage(message.id)}
+								tabindex="0"
+								onclick={() => goToNotification(notification)}
+								onkeydown={(e) => e.key === 'Enter' && goToNotification(notification)}
 							>
 								<div class="flex gap-4">
-									<!-- 图标 -->
+									<!-- Icon -->
 									<div class="flex shrink-0 flex-col items-center">
 										<div
-											class={`flex h-12 w-12 items-center justify-center rounded-full text-xl ${!message.read ? 'bg-blue-50' : 'bg-gray-100'}`}
+											class="flex h-12 w-12 items-center justify-center rounded-full text-xl {!notification.isRead ? 'bg-blue-50' : 'bg-gray-100'}"
 										>
-											{#if message.type === 'order'}
-												<img src="/logo.png" alt="order" class="h-9 w-9" />
-											{/if}
-											{#if message.type === 'promotion'}
-												<img src="/svgs/notification.svg" alt="notification" class="h-9 w-9" />
-											{/if}
-											{#if message.type === 'system'}
-												<img src="/svgs/system.svg" alt="system" class="h-5 w-5" />
-											{/if}
-											{#if message.type === 'message'}
-												<img src="/svgs/message.svg" alt="message" class="h-5 w-5" />
-											{/if}
+											<img
+												src={getTypeIcon(notification.type)}
+												alt={notification.type}
+												class="h-7 w-7"
+											/>
 										</div>
 										<div class="mt-2">
 											<span
-												class={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${getTypeColor(message.type)}`}
+												class="inline-block rounded-full px-2 py-0.5 text-xs font-medium {getTypeColor(notification.type)}"
 											>
-												{getTypeLabel(message.type)}
+												{getTypeLabel(notification.type)}
 											</span>
 										</div>
 									</div>
 
-									<!-- 内容 -->
+									<!-- Content -->
 									<div class="min-w-0 flex-1">
 										<div class="mb-2 flex items-start justify-between">
-											<div class="gap小二 flex items-center">
+											<div class="flex items-center gap-2">
 												<h4
-													class={`text-sm font-semibold ${!message.read ? 'text-gray-900' : 'text-gray-700'}`}
+													class="text-sm font-semibold {!notification.isRead ? 'text-gray-900' : 'text-gray-700'}"
 												>
-													{message.title}
+													{notification.title}
 												</h4>
-												{#if !message.read}
+												{#if !notification.isRead}
 													<span class="h-2 w-2 rounded-full bg-blue-500"></span>
 												{/if}
 											</div>
 											<button
 												class="ml-2 shrink-0 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:text-red-500"
-												onclick={() => deleteMessage(message.id)}
-												aria-label="メッセージを削除"
+												onclick={(e) => { e.stopPropagation(); deleteMessage(notification.id); }}
+												aria-label="Delete notification"
 											>
 												<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 													<path
@@ -297,17 +276,17 @@
 											</button>
 										</div>
 										<p class="mb-3 line-clamp-2 text-sm text-gray-600 group-hover:text-gray-900">
-											{message.content}
+											{notification.content}
 										</p>
 										<div class="flex items-center justify-between">
 											<span class="text-xs text-gray-500">
-												{message.time}
+												{formatTime(notification.created)}
 											</span>
 											<div class="flex gap-2">
-												{#if !message.read}
+												{#if !notification.isRead}
 													<button
 														class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-700"
-														onclick={() => markAsRead(message.id)}
+														onclick={(e) => { e.stopPropagation(); markAsRead(notification.id); }}
 													>
 														既読にする
 													</button>
@@ -322,15 +301,14 @@
 				{/if}
 			</div>
 
-			<!-- 底部 -->
+			<!-- Footer -->
 			<div class="border-t border-gray-100 bg-gray-50 px-6 py-4">
-				<a
-					href="/messages"
-					class="block rounded-lg bg-gray-900 px-4 py-3 text-center text-sm font-semibold text-white transition-all hover:bg-gray-800 active:scale-[0.98]"
-					onclick={closeDropdown}
+				<button
+					class="block w-full rounded-lg bg-gray-900 px-4 py-3 text-center text-sm font-semibold text-white transition-all hover:bg-gray-800 active:scale-[0.98]"
+					onclick={goToAllNotifications}
 				>
-					すべてのメッセージを見る
-				</a>
+					すべての通知を見る
+				</button>
 			</div>
 		</div>
 	{/if}
@@ -348,7 +326,6 @@
 		}
 	}
 
-	/* 自定义滚动条 */
 	.max-h-\[32rem\]::-webkit-scrollbar {
 		width: 8px;
 	}

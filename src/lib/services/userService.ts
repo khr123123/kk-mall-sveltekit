@@ -1,5 +1,6 @@
-﻿// PocketBase 服务封装
+// PocketBase service wrapper with global toast integration
 import PocketBase from 'pocketbase';
+import { toast } from '$lib/stores/toastStore';
 
 const PB_URL = import.meta.env.VITE_POCKETBASE_URL || 'http://127.0.0.1:8090';
 
@@ -8,19 +9,33 @@ class PocketBaseService {
 
 	constructor() {
 		this.pb = new PocketBase(PB_URL);
-		// 自动刷新 token
 		this.pb.autoCancellation(false);
+
+		// Intercept responses for global error handling
+		if (typeof window !== 'undefined') {
+			this.pb.afterSend = (response: Response, data: any) => {
+				if (response.status === 401) {
+					toast.error('セッションが期限切れです。再度ログインしてください');
+					this.pb.authStore.clear();
+				} else if (response.status === 403) {
+					toast.error('権限がありません');
+				} else if (response.status >= 500) {
+					toast.error('サーバーエラーが発生しました。しばらくしてから再度お試しください');
+				}
+				return data;
+			};
+		}
 	}
 
 	/**
-	 * 获取 PocketBase 实例
+	 * Get PocketBase instance
 	 */
 	getInstance() {
 		return this.pb;
 	}
 
 	/**
-	 * 用户注册
+	 * User registration
 	 */
 	async register(email: string, password: string, passwordConfirm: string, name?: string) {
 		try {
@@ -34,11 +49,10 @@ class PocketBaseService {
 
 			const record = await this.pb.collection('users').create(data);
 
-			// 发送验证邮件（如果配置了）
 			try {
 				await this.pb.collection('users').requestVerification(email);
 			} catch (e) {
-				console.warn('邮件验证发送失败:', e);
+				console.warn('Email verification send failed:', e);
 			}
 
 			return {
@@ -46,16 +60,16 @@ class PocketBaseService {
 				user: record
 			};
 		} catch (error: any) {
-			console.error('注册失败:', error);
+			console.error('Registration failed:', error);
 			return {
 				success: false,
-				error: error.message || '注册失败，请重试'
+				error: error.message || '登録に失敗しました'
 			};
 		}
 	}
 
 	/**
-	 * 用户登录
+	 * User login
 	 */
 	async login(email: string, password: string) {
 		try {
@@ -67,16 +81,16 @@ class PocketBaseService {
 				token: authData.token
 			};
 		} catch (error: any) {
-			console.error('登录失败:', error);
+			console.error('Login failed:', error);
 			return {
 				success: false,
-				error: error.message || '登录失败，请检查邮箱和密码'
+				error: error.message || 'ログインに失敗しました'
 			};
 		}
 	}
 
 	/**
-	 * OAuth 登录 (Google/GitHub)
+	 * OAuth login (Google/GitHub)
 	 */
 	async loginWithOAuth(provider: 'google' | 'github') {
 		try {
@@ -88,37 +102,37 @@ class PocketBaseService {
 				token: authData.token
 			};
 		} catch (error: any) {
-			console.error(`${provider} 登录失败:`, error);
+			console.error(`${provider} login failed:`, error);
 			return {
 				success: false,
-				error: error.message || `${provider} 登录失败`
+				error: error.message || `${provider}ログインに失敗しました`
 			};
 		}
 	}
 
 	/**
-	 * 退出登录
+	 * Logout
 	 */
 	logout() {
 		this.pb.authStore.clear();
 	}
 
 	/**
-	 * 获取当前用户
+	 * Get current user
 	 */
 	getCurrentUser() {
 		return this.pb.authStore.model;
 	}
 
 	/**
-	 * 检查是否已登录
+	 * Check if logged in
 	 */
 	isLoggedIn() {
 		return this.pb.authStore.isValid;
 	}
 
 	/**
-	 * 获取用户头像 URL
+	 * Get user avatar URL
 	 */
 	getUserAvatarUrl(user: any, filename?: string) {
 		if (!user || !filename) return '/logo.png';
@@ -126,36 +140,40 @@ class PocketBaseService {
 	}
 
 	/**
-	 * 更新用户信息
+	 * Update user info
 	 */
 	async updateUser(userId: string, data: any) {
 		try {
 			const record = await this.pb.collection('users').update(userId, data);
+			toast.success('ユーザー情報を更新しました');
 			return {
 				success: true,
 				user: record
 			};
 		} catch (error: any) {
-			console.error('更新用户信息失败:', error);
+			console.error('Update user failed:', error);
+			toast.error('更新に失敗しました');
 			return {
 				success: false,
-				error: error.message || '更新失败'
+				error: error.message || '更新に失敗しました'
 			};
 		}
 	}
 
 	/**
-	 * 请求密码重置
+	 * Request password reset
 	 */
 	async requestPasswordReset(email: string) {
 		try {
 			await this.pb.collection('users').requestPasswordReset(email);
+			toast.success('パスワードリセットのメールを送信しました');
 			return {
 				success: true,
 				message: 'パスワードリセットのメールを送信しました'
 			};
 		} catch (error: any) {
-			console.error('密码重置请求失败:', error);
+			console.error('Password reset request failed:', error);
+			toast.error('メール送信に失敗しました');
 			return {
 				success: false,
 				error: error.message || 'メール送信に失敗しました'
@@ -164,13 +182,13 @@ class PocketBaseService {
 	}
 
 	/**
-	 * 监听认证状态变化
+	 * Listen for auth state changes
 	 */
 	onAuthChange(callback: (token: string, model: any) => void) {
 		return this.pb.authStore.onChange(callback);
 	}
 }
 
-// 导出单例
+// Export singleton
 export const pbService = new PocketBaseService();
 export default pbService;
